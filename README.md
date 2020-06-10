@@ -4,7 +4,7 @@ _Tools for creating, moving, and discretizing rigid bodies_
 
 | Documentation | Build Status |
 |:---:|:---:|
-|  | [![Build Status](https://travis-ci.com/JuliaIBPM/RigidBodyTools.svg?branch=master)](https://travis-ci.com/JuliaIBPM/RigidBodyTools) [![Build status](https://ci.appveyor.com/api/projects/status/6tokpjqb4x8999g0?svg=true)](https://ci.appveyor.com/project/JuliaIBPM/cartesiangrids-jl) [![codecov](https://codecov.io/gh/JuliaIBPM/RigidBodyTools.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaIBPM/RigidBodyTools.jl) |
+|  | [![Build Status](https://travis-ci.com/JuliaIBPM/RigidBodyTools.svg?branch=master)](https://travis-ci.com/JuliaIBPM/RigidBodyTools) [![Build status](https://ci.appveyor.com/api/projects/status/6tokpjqb4x8999g0?svg=true)](https://ci.appveyor.com/project/JuliaIBPM/rigidbodytools-jl) [![codecov](https://codecov.io/gh/JuliaIBPM/RigidBodyTools.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaIBPM/RigidBodyTools.jl) |
 
 ## About the package
 
