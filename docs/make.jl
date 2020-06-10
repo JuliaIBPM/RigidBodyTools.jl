@@ -1,16 +1,12 @@
-using Documenter, CartesianGrids
+using Documenter, RigidBodyTools
 
 makedocs(
-    sitename = "CartesianGrids.jl",
+    sitename = "RigidBodyTools.jl",
     doctest = true,
     clean = true,
     pages = [
         "Home" => "index.md",
-        "Manual" => ["manual/overview.md",
-                     "manual/fielddata.md",
-                     "manual/finitediff.md",
-                     "manual/immersed.md",
-                     "manual/methods.md"
+        "Manual" => ["manual/methods.md"
                      ]
         #"Internals" => [ "internals/properties.md"]
     ],
@@ -31,7 +27,7 @@ makedocs(
 
 #if "DOCUMENTER_KEY" in keys(ENV)
 deploydocs(
-     repo = "github.com/JuliaIBPM/CartesianGrids.jl.git",
+     repo = "github.com/JuliaIBPM/RigidBodyTools.jl.git",
      target = "build",
      deps = nothing,
      make = nothing
