@@ -16,6 +16,8 @@ point-discretized surfaces. It includes methods for
 * rigid-body motion and transformation of surface points
 * collections of multiple rigid bodies
 
+These tools support a variety of classes of problems, including those that involve bodies interacting with fluids, in which we would immerse these point-discretized representations into a computational grid.
+
 <!--
 Documentation can be found at https://JuliaIBPM.github.io/RigidBodyTools.jl/latest.
 
