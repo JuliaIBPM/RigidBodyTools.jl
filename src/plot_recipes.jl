@@ -17,7 +17,7 @@ const myblue = RGBA{Float64}(74/255,144/255,226/255,1)
     linecolor --> mygreen
     fillrange --> 0
     fillcolor --> mygreen
-    ratio := 1
+    aspect_ratio := 1
     legend := :none
     grid := false
     x := x
@@ -31,31 +31,31 @@ end
     ux = map(ti -> real(m(ti)[2]),t)
     uy = map(ti -> imag(m(ti)[2]),t)
     adot = map(ti -> m(ti)[5],t)
-    xlim --> (0,tmax)
+    xlims --> (0,tmax)
   layout := 3
   grid --> :none
   linewidth --> 1
   legend --> :none
   framestyle --> :frame
-  xlabel --> L"t"
+  xguide --> L"t"
   ulim = min(minimum(ux),minimum(uy)),max(maximum(ux),maximum(uy))
   alim = extrema(adot)
   @series begin
       subplot := 1
-      ylim --> ulim
-      ylabel --> L"u"
+      ylims --> ulim
+      yguide --> L"u"
       t, ux
     end
   @series begin
       subplot := 2
-      ylim --> ulim
-      ylabel --> L"v"
+      ylims --> ulim
+      yguide --> L"v"
       t, uy
     end
    @series begin
       subplot := 3
-      ylim --> alim
-      ylabel --> L"\dot{\alpha}"
+      ylims --> alim
+      yguide --> L"\dot{\alpha}"
       t, adot
     end
 end
