@@ -83,11 +83,13 @@ and rotation specified by the given transform `T`.
 vec(T::RigidTransform) = [T.trans[1],T.trans[2],T.α]
 
 """
-    vec(tl::Vector{RigidTransform}) -> NTuple{N,Vector{Float64}}
+    vec(tl::Vector{RigidTransform}) -> Vector{Float64}
 
-Returns a tuple of length-3 vectors of the form [x,y,α] corresponding to the translation
+Returns a concatenation of length-3 vectors of the form [x,y,α] corresponding to the translation
 and rotation specified by the given by the list of transforms `tl`.
 """
+vec(tl::Vector{RigidTransform}) where {N} = mapreduce(vec,vcat,tl)
+#=
 function vec(tl::Union{Vector{RigidTransform},NTuple{N,RigidTransform}}) where {N}
 
   u = (vec(tl[1]),)
@@ -97,7 +99,7 @@ function vec(tl::Union{Vector{RigidTransform},NTuple{N,RigidTransform}}) where {
   return u
 
 end
-
+=#
 
 function (T::RigidTransform)(x̃::Float64,ỹ::Float64)
     Xr = T.rot*[x̃,ỹ]
