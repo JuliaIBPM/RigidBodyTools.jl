@@ -1,15 +1,19 @@
 using Dierckx
+using Statistics: mean
 
 export BasicBody,Ellipse,Circle,Rectangle,Square,Plate,SplinedBody,NACA4
 
 """
-    BasicBody(x,y) <: Body
+    BasicBody(x,y[,closuretype=ClosedBody]) <: Body
 
 Construct a body by simply passing in the `x` and `y` coordinate vectors. The last
 point will be automatically connected to the first point. The coordinate vectors
-are assumed to be expressed in the body-fixed coordinate system.
+are assumed to be expressed in the body-fixed coordinate system. The optional
+`closuretype` specifies whether the body is closed (`ClosedBody`) or open (`OpenBody`).
+If closed, then the first and last points are assumed joined in operations that
+require neighbor points.
 """
-mutable struct BasicBody{N} <: Body{N}
+mutable struct BasicBody{N,C<:BodyClosureType} <: Body{N,C}
   cent :: Tuple{Float64,Float64}
   α :: Float64
 
@@ -21,12 +25,12 @@ mutable struct BasicBody{N} <: Body{N}
 
 end
 
-function BasicBody(x::Vector{T},y::Vector{T}) where {T <: Real}
+function BasicBody(x::Vector{T},y::Vector{T};closuretype::BodyClosureType=ClosedBody) where {T <: Real}
     @assert length(x) == length(y)
-    BasicBody{length(x)}((0.0,0.0),0.0,x,y,x,y)
+    BasicBody{length(x),closuretype}((0.0,0.0),0.0,x,y,x,y)
 end
 
-function Base.show(io::IO, body::BasicBody{N}) where {N}
+function Base.show(io::IO, body::BasicBody{N,C}) where {N,C}
     println(io, "Basic pointwise-specified body with $N points")
     println(io, "   Current position: ($(body.cent[1]),$(body.cent[2]))")
     println(io, "   Current angle (rad): $(body.α)")
@@ -38,7 +42,7 @@ end
 Construct an elliptical body with semi-major axis `a` and semi-minor axis `b`,
 with `n` points distributed on the body perimeter.
 """
-mutable struct Ellipse{N} <: Body{N}
+mutable struct Ellipse{N} <: Body{N,ClosedBody}
   a :: Float64
   b :: Float64
   cent :: Tuple{Float64,Float64}
@@ -52,7 +56,7 @@ mutable struct Ellipse{N} <: Body{N}
 
 end
 
-function Ellipse(a::Float64,b::Float64,N::Int)
+function Ellipse(a::Real,b::Real,N::Int)
     x̃ = zeros(N)
     ỹ = zeros(N)
     θ = range(0,stop=2π,length=N+1)
@@ -69,7 +73,7 @@ end
 Construct a circular body with radius `a`
 and with `n` points distributed on the body perimeter.
 """
-Circle(a::Float64,N::Int) = Ellipse(a,a,N)
+Circle(a::Real,N::Int) = Ellipse(a,a,N)
 
 function Base.show(io::IO, body::Ellipse{N}) where {N}
     if body.a == body.b
@@ -88,7 +92,7 @@ Construct a rectangular body with x̃ side half-length `a` and ỹ side half-len
 with `na` points distributed on the x̃ side (including both corners). The centroid
 of the rectangle is placed at the origin (so that the lower left corner is at (-a,-b)).
 """
-mutable struct Rectangle{N} <: Body{N}
+mutable struct Rectangle{N} <: Body{N,ClosedBody}
   a :: Float64
   b :: Float64
   cent :: Tuple{Float64,Float64}
@@ -155,7 +159,7 @@ and `1.0` are accepted.
 
 The constructor `Plate(length,n,[λ=1.0])` creates a plate of zero thickness.
 """
-mutable struct Plate{N} <: Body{N}
+mutable struct Plate{N,C<:BodyClosureType} <: Body{N,C}
   len :: Float64
   thick :: Float64
   cent :: Tuple{Float64,Float64}
@@ -170,7 +174,7 @@ mutable struct Plate{N} <: Body{N}
 end
 
 
-function Plate(len::Float64,N::Int;λ::Float64=1.0)
+function Plate(len::Real,N::Int;λ::Float64=1.0)
 
     # set up points on plate
     #x = [[len*(-0.5 + 1.0*(i-1)/(N-1)),0.0] for i=1:N]
@@ -181,11 +185,11 @@ function Plate(len::Float64,N::Int;λ::Float64=1.0)
     x̃ = -0.5*len .+ Δϕ*cumsum([0.0; Jϕ])
     ỹ = zero(x̃)
 
-    Plate{N}(len,0.0,(0.0,0.0),0.0,x̃,ỹ,x̃,ỹ)
+    Plate{N,OpenBody}(len,0.0,(0.0,0.0),0.0,x̃,ỹ,x̃,ỹ)
 
 end
 
-function Plate(len::Float64,thick::Float64,N::Int;λ::Float64=1.0)
+function Plate(len::Real,thick::Real,N::Int;λ::Float64=1.0)
     # input N is the number of panels on one side only
 
     # set up points on flat sides
@@ -222,7 +226,7 @@ function Plate(len::Float64,thick::Float64,N::Int;λ::Float64=1.0)
       push!(ỹ,yedge[i])
     end
 
-    Plate{length(x̃)}(len,thick,(0.0,0.0),0.0,x̃,ỹ,x̃,ỹ)
+    Plate{length(x̃),ClosedBody}(len,thick,(0.0,0.0),0.0,x̃,ỹ,x̃,ỹ)
 
 end
 
@@ -233,20 +237,21 @@ function Base.show(io::IO, body::Plate{N}) where {N}
 end
 
 """
-    SplinedBody(X,Δx) -> BasicBody
+    SplinedBody(X,Δx[,closuretype=ClosedBody]) -> BasicBody
 
 Using control points in `X` (assumed to be N x 2, where N is the number of points), create a set of points
 that are uniformly spaced (with spacing `Δx`) on a curve that passes through the control points. A cubic
-parametric spline algorithm is used.
+parametric spline algorithm is used. If the optional parameter `closuretype` is set
+to `OpenBody`, then the end points are not joined together.
 """
-function SplinedBody(Xpts_raw::Array{Float64,2},Δx::Float64)
+function SplinedBody(Xpts_raw::Array{Float64,2},Δx::Float64;closuretype::BodyClosureType=ClosedBody)
     # Assume Xpts are in the form N x 2
     Xpts = copy(Xpts_raw)
     if Xpts[1,:] != Xpts[end,:]
         Xpts = vcat(Xpts,Xpts[1,:]')
     end
 
-    spl = ParametricSpline(Xpts',periodic=true)
+    spl = (closuretype = ClosedBody) ? ParametricSpline(Xpts',periodic=true) : ParametricSpline(Xpts')
     tfine = range(0,1,length=1001)
     dX = derivative(spl,tfine)
 
@@ -256,7 +261,7 @@ function SplinedBody(Xpts_raw::Array{Float64,2},Δx::Float64)
     x = [X[1] for X in spl.(tsamp[1:end-1])]
     y = [X[2] for X in spl.(tsamp[1:end-1])]
 
-    return BasicBody(x,y)
+    return BasicBody(x,y,closuretype=closuretype)
 end
 
 """
@@ -278,7 +283,7 @@ the vertices (which is set to the origin by default). The optional parameter
 julia> w = Bodies.NACA4(0.0,0.0,0.12);
 ```
 """
-mutable struct NACA4{N} <: Body{N}
+mutable struct NACA4{N} <: Body{N,ClosedBody}
   len :: Float64
   camber :: Float64
   pos :: Float64

@@ -1,6 +1,6 @@
 module RigidBodyTools
 
-include("bodies/tools.jl")
+include("bodies/bodies.jl")
 
 include("motions/rigidbodymotions.jl")
 
