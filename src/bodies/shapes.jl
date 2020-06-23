@@ -36,6 +36,10 @@ function Base.show(io::IO, body::BasicBody{N,C}) where {N,C}
     println(io, "   Current angle (rad): $(body.α)")
 end
 
+
+
+#### Ellipses and circles ####
+
 """
     Ellipse(a,b,n) <: Body
 
@@ -67,6 +71,10 @@ function Ellipse(a::Real,b::Real,N::Int)
     Ellipse{N}(a,b,(0.0,0.0),0.0,x̃,ỹ,x̃,ỹ)
 end
 
+
+#Ellipse(a::Real,b::Real,targetsize::Float64;kwargs...) =
+#    Ellipse(a,b,_adjustnumber(targetsize,Ellipse,a,b);kwargs...)
+
 """
     Circle(a,n) <: Body
 
@@ -74,6 +82,14 @@ Construct a circular body with radius `a`
 and with `n` points distributed on the body perimeter.
 """
 Circle(a::Real,N::Int) = Ellipse(a,a,N)
+
+"""
+    Circle(a,targetsize::Float64) <: Body
+
+Construct a circular body with radius `a` with spacing between points set
+approximately to `targetsize`.
+"""
+Circle(a::Real,targetsize::Float64) = Ellipse(a,a,targetsize)
 
 function Base.show(io::IO, body::Ellipse{N}) where {N}
     if body.a == body.b
@@ -84,6 +100,9 @@ function Base.show(io::IO, body::Ellipse{N}) where {N}
     println(io, "   Current position: ($(body.cent[1]),$(body.cent[2]))")
     println(io, "   Current angle (rad): $(body.α)")
 end
+
+#### Rectangles and squares ####
+
 
 """
     Rectangle(a,b,na) <: Body
@@ -130,6 +149,9 @@ function Rectangle(a::Real,b::Real,na::Int)
     Rectangle{N}(a,b,(0.0,0.0),0.0,x̃,ỹ,x̃,ỹ)
 end
 
+#Rectangle(a::Real,b::Real,targetsize::Float64;kwargs...) =
+#    Rectangle(a,b,_adjustnumber(targetsize,Rectangle,a,b);kwargs...)
+
 """
     Square(a,na) <: Body
 
@@ -137,6 +159,8 @@ Construct a square body with side half-length `a`
 and with `na` points distributed on each side (including both corners).
 """
 Square(a::Real,na::Int) = Rectangle(a,a,na)
+
+Square(a::Real,targetsize::Float64) = Rectangle(a,a,targetsize)
 
 function Base.show(io::IO, body::Rectangle{N}) where {N}
     if body.a == body.b
@@ -148,6 +172,8 @@ function Base.show(io::IO, body::Rectangle{N}) where {N}
     println(io, "   Current angle (rad): $(body.α)")
 end
 
+#### Plates ####
+
 """
     Plate(length,thick,n,[λ=1.0]) <: Body
 
@@ -158,6 +184,8 @@ The optional parameter `λ` distributes the points differently. Values between `
 and `1.0` are accepted.
 
 The constructor `Plate(length,n,[λ=1.0])` creates a plate of zero thickness.
+
+Alternatively, either form can be specified with a target spacing in place of `n`.
 """
 mutable struct Plate{N,C<:BodyClosureType} <: Body{N,C}
   len :: Float64
@@ -188,6 +216,10 @@ function Plate(len::Real,N::Int;λ::Float64=1.0)
     Plate{N,OpenBody}(len,0.0,(0.0,0.0),0.0,x̃,ỹ,x̃,ỹ)
 
 end
+
+#Plate(a::Real,targetsize::Float64;kwargs...) =
+#    Plate(a,_adjustnumber(targetsize,Plate,a);kwargs...)
+
 
 function Plate(len::Real,thick::Real,N::Int;λ::Float64=1.0)
     # input N is the number of panels on one side only
@@ -230,11 +262,17 @@ function Plate(len::Real,thick::Real,N::Int;λ::Float64=1.0)
 
 end
 
+#Plate(a::Real,b::Real,targetsize::Float64;kwargs...) =
+#    Plate(a,b,_adjustnumber(targetsize,Plate,a,b);kwargs...)
+
 function Base.show(io::IO, body::Plate{N}) where {N}
     println(io, "Plate with $N points and length $(body.len) and thickness $(body.thick)")
     println(io, "   Current position: ($(body.cent[1]),$(body.cent[2]))")
     println(io, "   Current angle (rad): $(body.α)")
 end
+
+#### Splined body ####
+
 
 """
     SplinedBody(X,Δx[,closuretype=ClosedBody]) -> BasicBody
@@ -264,18 +302,17 @@ function SplinedBody(Xpts_raw::Array{Float64,2},Δx::Float64;closuretype::BodyCl
     return BasicBody(x,y,closuretype=closuretype)
 end
 
+#### NACA 4-digit airfoil ####
+
 """
-    NACA4(cam,pos,thick[;np=20][,Xc=(0.0,0.0)][,len=1.0]) <: Body{N}
+    NACA4(cam,pos,thick,np,[len=1.0]) <: Body{N}
 
 Generates points in the shape of a NACA 4-digit airfoil of chord length 1. The
 relative camber is specified by `cam`, the position of
 maximum camber (as fraction of chord) by `pos`, and the relative thickness
-by `thick`.
-
-The optional parameter `np` specifies the number of points on the upper
-or lower surface. The optional parameter `Zc` specifies the mean position of
-the vertices (which is set to the origin by default). The optional parameter
-`len` specifies the chord length.
+by `thick`. The parameter `np` specifies the number of points on the upper
+or lower surface. The optional parameter `len` specifies the chord length,
+which defaults to 1.0.
 
 # Example
 
@@ -301,7 +338,7 @@ mutable struct NACA4{N} <: Body{N,ClosedBody}
 end
 
 
-function NACA4(cam::Number,pos::Number,t::Number;np=20,Xc=(0.0,0.0),len=1.0)
+function NACA4(cam::Real,pos::Real,t::Real,np::Int;len=1.0)
 
 # Here, cam is the fractional camber, pos is the fractional chordwise position
 # of max camber, and t is the fractional thickness.
@@ -389,12 +426,30 @@ x̃ = real.(w)
 ỹ = imag.(w)
 
 
-NACA4{length(x̃)}(len,cam,pos,t,Xc,0.0,x̃,ỹ,x̃,ỹ)
+NACA4{length(x̃)}(len,cam,pos,t,(0.0,0.0),0.0,x̃,ỹ,x̃,ỹ)
 
 end
+
+#NACA4(a::Real,b::Real,c::Real,targetsize::Float64;kwargs...) =
+#    NACA4(a,b,c,_adjustnumber(targetsize,NACA4,a,b,c);kwargs...)
+
 
 function Base.show(io::IO, body::NACA4{N}) where {N}
     println(io, "NACA 4-digit airfoil with $N points and length $(body.len) and thickness $(body.thick)")
     println(io, "   Current position: ($(body.cent[1]),$(body.cent[2]))")
     println(io, "   Current angle (rad): $(body.α)")
+end
+
+
+####
+
+function _adjustnumber(targetsize::Real,shapefcn::Type{T},params...;kwargs...) where {T <: Body}
+    ntrial = 501
+    return floor(Int,ntrial*mean(dlength(shapefcn(params...,ntrial;kwargs...)))/targetsize)
+end
+
+for shape in (:Ellipse,:Rectangle,:Plate,:NACA4)
+    @eval RigidBodyTools.$shape(params...;kwargs...) =
+        $shape(Base.front(params)...,
+          _adjustnumber(Base.last(params),$shape,Base.front(params)...;kwargs...);kwargs...)
 end

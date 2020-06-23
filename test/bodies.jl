@@ -1,3 +1,5 @@
+using Statistics
+
 @testset "Bodies" begin
 
   p = Plate(1,101)
@@ -14,8 +16,13 @@
   c = Rectangle(1,2,101)
   dx, dy = diff(c)
   @test length(dx) == 600
-  @test sum(dlength(c)) ≈ 12.0 
+  @test sum(dlength(c)) ≈ 12.0
 
+  c = Square(1,0.01)
+  @test isapprox(mean(dlength(c)),0.01,atol=1e-4)
+
+  c = Ellipse(1,2,0.01)
+  @test isapprox(mean(dlength(c)),0.01,atol=1e-4)
 
 
 
