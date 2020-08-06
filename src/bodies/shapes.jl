@@ -25,7 +25,7 @@ mutable struct BasicBody{N,C<:BodyClosureType} <: Body{N,C}
 
 end
 
-function BasicBody(x::Vector{T},y::Vector{T};closuretype::BodyClosureType=ClosedBody) where {T <: Real}
+function BasicBody(x::Vector{T},y::Vector{T};closuretype::Type{<:BodyClosureType}=ClosedBody) where {T <: Real}
     @assert length(x) == length(y)
     BasicBody{length(x),closuretype}((0.0,0.0),0.0,x,y,x,y)
 end
@@ -282,7 +282,7 @@ that are uniformly spaced (with spacing `Δx`) on a curve that passes through th
 parametric spline algorithm is used. If the optional parameter `closuretype` is set
 to `OpenBody`, then the end points are not joined together.
 """
-function SplinedBody(Xpts_raw::Array{Float64,2},Δx::Float64;closuretype::BodyClosureType=ClosedBody)
+function SplinedBody(Xpts_raw::Array{Float64,2},Δx::Float64;closuretype::Type{<:BodyClosureType}=ClosedBody)
     # Assume Xpts are in the form N x 2
     Xpts = copy(Xpts_raw)
     if Xpts[1,:] != Xpts[end,:]
