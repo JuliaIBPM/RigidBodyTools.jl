@@ -289,7 +289,7 @@ function SplinedBody(Xpts_raw::Array{Float64,2},Δx::Float64;closuretype::Type{<
         Xpts = vcat(Xpts,Xpts[1,:]')
     end
 
-    spl = (closuretype = ClosedBody) ? ParametricSpline(Xpts',periodic=true) : ParametricSpline(Xpts')
+    spl = (closuretype == ClosedBody) ? ParametricSpline(Xpts',periodic=true) : ParametricSpline(Xpts')
     tfine = range(0,1,length=1001)
     dX = derivative(spl,tfine)
 
