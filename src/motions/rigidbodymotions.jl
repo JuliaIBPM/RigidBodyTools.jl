@@ -83,6 +83,7 @@ function assign_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
 end
 
 
+
 function show(io::IO, m::RigidBodyMotion)
     println(io, "Rigid Body Motion:")
     println(io, "  ċ = $(round(m.ċ, digits=2))")
