@@ -178,7 +178,7 @@ this provides a vector that is one element shorter than the number of points.
 function normal(b::Union{Body,BodyList})
   dx, dy = diff(b)
   ds = dlength(b)
-  return -dy./ds, dx./ds
+  return dy./ds, -dx./ds
 end
 
 """
@@ -187,10 +187,10 @@ end
 Compute the current normals (in inertial components) of the faces formed between
 midpoints on the perimeter of body `body` (or each body in list `body`). For an `OpenBody`,
 the normals for the first and last points are calculated for the face adjoining
-with the adjacent midpoints. 
+with the adjacent midpoints.
 """
 function normalmid(b::Union{Body,BodyList})
   dx, dy = centraldiff(b)
   ds = dlengthmid(b)
-  return -dy./ds, dx./ds
+  return dy./ds, -dx./ds
 end
