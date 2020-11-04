@@ -23,9 +23,9 @@ using Statistics
 
   c = Ellipse(1,2,0.01)
   @test isapprox(mean(dlength(c)),0.01,atol=1e-4)
-  nx, ny = normalmid(c)
 
   c = Ellipse(1,2,100)
+  nx, ny = normalmid(c)
   @test nx[1] == ny[26] == -nx[51] == -ny[76] == 1.0
 
 
