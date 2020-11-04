@@ -27,6 +27,8 @@ using Statistics
   c = Ellipse(1,2,100)
   nx, ny = normalmid(c)
   @test nx[1] == ny[26] == -nx[51] == -ny[76] == 1.0
+  @test abs(sum(nx)) < 1000.0*eps(1.0)
+  @test abs(sum(ny)) < 1000.0*eps(1.0)
 
 
 end
