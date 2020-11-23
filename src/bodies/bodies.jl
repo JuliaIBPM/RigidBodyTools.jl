@@ -6,7 +6,9 @@ abstract type ClosedBody <: BodyClosureType end
 
 abstract type Body{N,C<:BodyClosureType} end
 
-include("bodylist.jl")
+include("rigidbodymotions.jl")
 include("rigidtransform.jl")
+include("bodylist.jl")
+
 include("tools.jl")
 include("shapes.jl")

@@ -1,28 +1,45 @@
 import Base: @propagate_inbounds,getindex, setindex!,iterate,size,length,push!,
               collect,view
 
-export BodyList, getrange, numpts
+export BodyList, RigidMotionList, RigidTransformList, getrange, numpts
 
-struct BodyList
-    list :: Vector{Body}
+abstract type SetOfBodies end
+
+const LISTS = [:BodyList, :Body],
+              [:RigidMotionList, :RigidBodyMotion],
+              [:RigidTransformList, :RigidTransform]
+
+
+
+for (listtype,listelement) in LISTS
+
+  @eval struct $listtype <: SetOfBodies
+      list :: Vector{$listelement}
+  end
+
+  @eval Base.eltype(f::$listtype) = Base.eltype(f.list)
+
+  @eval $listtype() = $listtype($listelement[])
+
+  @eval @propagate_inbounds getindex(A::$listtype, i::Int) = A.list[i]
+  @eval @propagate_inbounds setindex!(A::$listtype, v::$listelement, i::Int) = A.list[i] = v
+  @eval @propagate_inbounds getindex(A::$listtype, I...) = A.list[I...]
+  @eval @propagate_inbounds setindex!(A::$listtype, v, I...) = A.list[I...] = v
+
+  @eval iterate(A::$listtype) = iterate(A.list)
+  @eval iterate(A::$listtype,I) = iterate(A.list,I)
+  @eval size(A::$listtype) = size(A.list)
+  @eval length(A::$listtype) = length(A.list)
+
+  @eval push!(bl::$listtype,b::$listelement) = push!(bl.list,b)
+
+
 end
 
-BodyList() = BodyList(Body[])
 
-@propagate_inbounds getindex(A::BodyList, i::Int) = A.list[i]
-@propagate_inbounds setindex!(A::BodyList, v::Body, i::Int) = A.list[i] = v
-@propagate_inbounds getindex(A::BodyList, I...) = A.list[I...]
-@propagate_inbounds setindex!(A::BodyList, v, I...) = A.list[I...] = v
-
-iterate(A::BodyList) = iterate(A.list)
-iterate(A::BodyList,I) = iterate(A.list,I)
-size(A::BodyList) = size(A.list)
-length(A::BodyList) = length(A.list)
-numpts(A::BodyList) = mapreduce(b -> length(b.x),+,A)
 
 numpts(A::Body{N}) where {N} = N
-
-push!(bl::BodyList,b::Body) = push!(bl.list,b)
+numpts(A::BodyList) = mapreduce(b -> length(b.x),+,A)
 
 """
     collect(bl::bodylist) -> Vector{Float64}, Vector{Float64}
@@ -39,13 +56,13 @@ function collect(bl::BodyList)
     end
     return xtmp,ytmp
 end
-
 collect(body::Body) = collect(BodyList([body]))
 
 """
     getrange(bl::BodyList,i::Int) -> Range
 
-Return the range of indices in the global set of Lagrange point data corresponding to body `i` in body list `bl`.
+Return the subrange of indices in the global set of surface point data
+corresponding to body `i` in a BodyList `bl`.
 """
 function getrange(bl::BodyList,i::Int)
     i <= length(bl) || error("Unavailable body")
@@ -63,7 +80,7 @@ end
     view(f::AbstractVector,bl::BodyList,i::Int) -> SubArray
 
 Provide a view of the range of values in vector `f` corresponding to the Lagrange
-points of the body with index `i` in body list `bl`.
+points of the body with index `i` in a BodyList `bl`.
 """
 function Base.view(f::AbstractVector,bl::BodyList,i::Int)
     length(f) == numpts(bl) || error("Inconsistent size of data for viewing")

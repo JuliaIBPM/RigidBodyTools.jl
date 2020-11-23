@@ -32,3 +32,39 @@ using Statistics
 
 
 end
+
+@testset "Lists" begin
+
+  n1 = 101
+  n2 = 201
+  p = Plate(1,n1)
+  c = Rectangle(1,2,n2)
+
+  bl = BodyList([p,c])
+  @test length(bl) == 2
+
+  @test eltype(bl) == Body
+
+  m1 = RigidBodyMotion(complex(0.0),0.0)
+  m2 = RigidBodyMotion(RigidBodyTools.PitchHeave(1.0, 11.0, 0.2, 0.0, 0.0, 0.5, 1.0, 0.0))
+
+  ml = RigidMotionList([m1,m2])
+  @test length(ml) == 2
+  @test eltype(ml) == RigidBodyMotion
+
+  t1 = RigidTransform((0.0,0.0),0.0)
+  t2 = RigidTransform((1.0,0.0),π/2)
+
+  tl = RigidTransformList([t1,t2])
+  push!(tl,t1)
+  @test length(tl) == 3
+  @test eltype(tl) == RigidTransform
+
+  v = rand(numpts(bl))
+  @test numpts(bl) == length(p)+length(c)
+  @test v[1:length(p)] == view(v,bl,1)
+  @test v[(length(p)+1):(length(p)+length(c))] == view(v,bl,2)
+
+
+
+end
