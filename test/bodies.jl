@@ -68,3 +68,31 @@ end
 
 
 end
+
+@testset "Assign velocity" begin
+    b = Circle(1.0,100)
+    T = RigidTransform((rand(),rand()),0.0)
+    T(b)
+
+    ċ = rand(ComplexF64)
+    m = RigidBodyMotion(ċ,1.0)
+    u,v = assign_velocity(b,T,m,0.0)
+    @test u[26] == -1.0+real(ċ)
+    @test v[51] == -1.0+imag(ċ)
+
+    b2 = Circle(1.0,100)
+    T2 = RigidTransform((rand(),rand()),0.0)
+    T2(b2)
+    ċ2 = rand(ComplexF64)
+    m2 = RigidBodyMotion(ċ2,1.0)
+
+    bl = BodyList([b,b2])
+    tl = RigidTransformList([T,T2])
+    ml = RigidMotionList([m,m2])
+    u, v = assign_velocity(bl,tl,ml,0.0)
+    @test u[26] == -1.0+real(ċ)
+    @test u[126] == -1.0+real(ċ2)
+    @test v[151] == -1.0+imag(ċ2)
+
+
+end

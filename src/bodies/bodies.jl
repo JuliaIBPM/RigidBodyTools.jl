@@ -10,5 +10,7 @@ include("rigidbodymotions.jl")
 include("rigidtransform.jl")
 include("bodylist.jl")
 
+
 include("tools.jl")
+include("assignvelocity.jl")
 include("shapes.jl")

@@ -1,5 +1,5 @@
 
-export RigidBodyMotion, Kinematics, d_dt, assign_velocity!
+export RigidBodyMotion, Kinematics, d_dt, assign_velocity!, assign_velocity
 
 using DocStringExtensions
 import ForwardDiff
@@ -72,6 +72,9 @@ based on supplied motion `motion` for the body.
 function assign_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
                           x::AbstractVector{Float64},y::AbstractVector{Float64},
                           xc::Real,yc::Real,α::Real,m::RigidBodyMotion,t::Real)
+
+  length(u) == length(v) == length(x) == length(y) || error("Inconsistent lengths of vectors")
+
    _,ċ,_,_,α̇,_ = m(t)
   for i = 1:length(x)
       Δz = (x[i]-xc)+im*(y[i]-yc)
@@ -79,9 +82,20 @@ function assign_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
       u[i] = real(ċi)
       v[i] = imag(ċi)
   end
-  nothing
+  return u, v
 end
 
+"""
+    assign_velocity(x::AbstractVector{Float64},y::AbstractVector{Float64},
+                    xc::Real,yc::Real,α::Real,motion,t::Real)
+
+Return the components of rigid body velocities (in inertial components) at positions
+described by coordinates `x`, `y` (also in inertial coordinate system) at time `t`,
+based on supplied motion `motion` for the body.
+"""
+assign_velocity(x::AbstractVector{Float64},y::AbstractVector{Float64},
+                xc::Real,yc::Real,α::Real,m::RigidBodyMotion,t::Real) =
+                assign_velocity!(similar(x),similar(y),x,y,xc,yc,α,m,t)
 
 
 function show(io::IO, m::RigidBodyMotion)
