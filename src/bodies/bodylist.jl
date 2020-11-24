@@ -94,3 +94,14 @@ Compute a sum of the elements of vector `f` corresponding to body `i` in body
 list `bl`.
 """
 Base.sum(f::AbstractVector,bl::BodyList,i::Int) = sum(view(f,bl,i))
+
+"""
+    (tl::RigidTransformList)(bl::BodyList) -> BodyList
+
+Carry out in-place transformations of each body in `bl` with the
+corresponding transformation in `tl`. 
+"""
+@inline function (tl::RigidTransformList)(bl::BodyList)
+  length(tl) == length(bl) || error("Inconsistent lengths of lists")
+  map((T,b) -> T(b),tl,bl)
+end

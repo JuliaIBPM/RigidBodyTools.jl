@@ -65,6 +65,12 @@ end
   @test v[1:length(p)] == view(v,bl,1)
   @test v[(length(p)+1):(length(p)+length(c))] == view(v,bl,2)
 
+  tl = RigidTransformList([t1,t2])
+  tl(bl)
+  @test bl[1].cent == tl[1].trans
+  @test bl[2].cent == tl[2].trans
+  @test bl[1].α == tl[1].α
+  @test bl[2].α == tl[2].α
 
 
 end

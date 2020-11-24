@@ -113,3 +113,9 @@ function (T::RigidTransform)(b::Body{N}) where {N}
   b.cent = T.trans
   return b
 end
+
+
+# Things to do here:
+#  - add an inverse operation
+#  - should be composite operations
+#  - probably should distinguish in-place and non-in-place versions
