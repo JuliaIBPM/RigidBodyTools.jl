@@ -17,8 +17,13 @@ assign_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
 Return the components of rigid body velocity (in inertial coordinate system)
 at positions described by coordinates inertial coordinates in body in `body` at time `t`,
 based on supplied motions in the RigidBodyMotion `motion` for the body.
+
+As a shorthand, you can also apply this as `motion(t,body)`.
 """
 assign_velocity(b::Body,a...) = assign_velocity!(zero(b.x),zero(b.y),b,a...)
+
+
+(m::RigidBodyMotion)(t::Real,b::Body) = assign_velocity(b,m,t)
 
 
 """
@@ -44,6 +49,10 @@ end
 Return the components of rigid body velocity (in inertial coordinate system)
 at positions described by coordinates inertial coordinates in each body in `bl` at time `t`,
 based on supplied motions in the RigidMotionList `ml` for each body.
+
+As a shorthand, you an also apply this as `ml(t,bl)`.
 """
 assign_velocity(bl::BodyList,ml::RigidMotionList,t::Real) =
     assign_velocity!(zeros(Float64,numpts(bl)),zeros(Float64,numpts(bl)),bl,ml,t)
+
+(ml::RigidMotionList)(t::Real,bl::BodyList) = assign_velocity(bl,ml,t)

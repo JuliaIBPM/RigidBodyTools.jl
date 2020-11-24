@@ -80,6 +80,9 @@ end
     @test u[26] == -1.0+real(ċ)
     @test v[51] == -1.0+imag(ċ)
 
+    u2, v2 = m(0.0,b)
+    @test u == u2 && v == v2
+
     b2 = Circle(1.0,100)
     T2 = RigidTransform((rand(),rand()),0.0)
     T2(b2)
@@ -92,6 +95,9 @@ end
     @test u[26] == -1.0+real(ċ)
     @test u[126] == -1.0+real(ċ2)
     @test v[151] == -1.0+imag(ċ2)
+
+    u2, v2 = ml(0.0,bl)
+    @test u2 == u && v2 == v
 
 
 end
