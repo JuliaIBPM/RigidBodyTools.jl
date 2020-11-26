@@ -75,13 +75,18 @@ function assign_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
 
   length(u) == length(v) == length(x) == length(y) || error("Inconsistent lengths of vectors")
 
-   _,ċ,_,_,α̇,_ = m(t)
+  _,ċ,_,_,α̇,_ = m(t)
+  uc = ċ .+ im*α̇*((x .- xc) .+ im*(y .- yc))
+  u .= real.(uc)
+  v .= imag.(uc)
+  #=
   for i = 1:length(x)
       Δz = (x[i]-xc)+im*(y[i]-yc)
       ċi = ċ + im*α̇*Δz
       u[i] = real(ċi)
       v[i] = imag(ċi)
   end
+  =#
   return u, v
 end
 
