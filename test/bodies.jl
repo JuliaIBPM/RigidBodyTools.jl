@@ -105,5 +105,10 @@ end
     u2, v2 = ml(0.0,bl)
     @test u2 == u && v2 == v
 
+    vel = rigidbodyvelocity(ml,0.0)
+    @test vel[3] == 1.0
+    @test vel[1]+im*vel[2] == ċ
+    @test vel[4]+im*vel[5] == ċ2
+    @test vel[6] == 1.0
 
 end

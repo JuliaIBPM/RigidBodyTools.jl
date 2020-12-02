@@ -99,9 +99,24 @@ Base.sum(f::AbstractVector,bl::BodyList,i::Int) = sum(view(f,bl,i))
     (tl::RigidTransformList)(bl::BodyList) -> BodyList
 
 Carry out in-place transformations of each body in `bl` with the
-corresponding transformation in `tl`. 
+corresponding transformation in `tl`.
 """
 @inline function (tl::RigidTransformList)(bl::BodyList)
   length(tl) == length(bl) || error("Inconsistent lengths of lists")
   map((T,b) -> T(b),tl,bl)
+end
+
+"""
+    rigidbodyvelocity(ml::RigidMotionList,t::Real) -> Vector
+
+Return the velocity components (as a vector) of a `RigidMotionList`
+at the given time `t`.
+"""
+function rigidbodyvelocity(ml::RigidMotionList,t::Real)
+    u = Float64[]
+    for m in ml
+      ui = rigidbodyvelocity(m,t)
+      append!(u,ui)
+    end
+    return u
 end
