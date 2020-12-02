@@ -1,5 +1,5 @@
 
-export RigidBodyMotion, Kinematics, d_dt, assign_velocity!, assign_velocity
+export RigidBodyMotion, Kinematics, d_dt, rigidbodyvelocity, assign_velocity!, assign_velocity
 
 using DocStringExtensions
 import ForwardDiff
@@ -57,6 +57,17 @@ function (m::RigidBodyMotion)(t,x̃::Tuple{Real,Real})
   m.c, m.ċ, m.c̈, m.α, m.α̇, m.α̈ = m.kin(t)
   z = exp(im*m.α)*z̃
   return m.c + z, m.ċ + im*m.α̇*z, m.c̈ + (im*m.α̈-m.α̇^2)*z
+end
+
+"""
+    rigidbodyvelocity(m::RigidBodyMotion,t::Real)
+
+Return the velocity components (as a vector) of a `RigidBodyMotion`
+at the given time `t`.
+"""
+function rigidbodyvelocity(motion::RigidBodyMotion,t::Real)
+  _,ċ,_,_,α̇,_ = motion(t)
+  return [real(ċ),imag(ċ),α̇]
 end
 
 """
