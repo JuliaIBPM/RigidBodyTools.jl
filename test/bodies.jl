@@ -2,6 +2,9 @@ using Statistics
 
 @testset "Bodies" begin
 
+  bn = nothing
+  @test numpts(bn) == 0
+
   p = Plate(1,101)
   dx, dy = diff(p)
   @test maximum(dx) ≈ minimum(dx) ≈ 0.01

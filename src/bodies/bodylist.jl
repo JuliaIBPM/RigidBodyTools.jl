@@ -37,9 +37,7 @@ for (listtype,listelement) in LISTS
 end
 
 
-
-numpts(A::Body{N}) where {N} = N
-numpts(A::BodyList) = mapreduce(b -> length(b.x),+,A)
+numpts(bl::BodyList) = mapreduce(numpts,+,bl)
 
 """
     collect(bl::bodylist) -> Vector{Float64}, Vector{Float64}
