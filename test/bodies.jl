@@ -114,4 +114,12 @@ end
     @test vel[4]+im*vel[5] == ċ2
     @test vel[6] == 1.0
 
+    x = rand(15)
+    tl = RigidTransformList(x)
+    @test tl[4].trans[1] == x[10]
+    @test tl[4].trans[2] == x[11]
+    @test tl[4].α == x[12]
+
+
+
 end

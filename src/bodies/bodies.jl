@@ -1,5 +1,9 @@
 export Body
 
+const NDIM = 2
+const CHUNK = 3*(NDIM-1)
+
+
 abstract type BodyClosureType end
 abstract type OpenBody <: BodyClosureType end
 abstract type ClosedBody <: BodyClosureType end

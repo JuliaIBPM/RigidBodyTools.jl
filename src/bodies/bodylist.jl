@@ -105,6 +105,34 @@ corresponding transformation in `tl`.
 end
 
 """
+    vec(tl::RigidTransformList) -> Vector{Float64}
+
+Returns a concatenation of length-3 vectors of the form [x,y,α] corresponding to the translation
+and rotation specified by the given by the list of transforms `tl`.
+"""
+vec(tl::RigidTransformList) where {N} = mapreduce(vec,vcat,tl)
+
+"""
+    RigidTransformList(x::Vector)
+
+Parses vector `x`, containing rigid-body configuration data ordered as
+x, y, α for each body, into a `RigidTransformList`.
+"""
+function RigidTransformList(x::Vector{T}) where T <: Real
+    nb, md = _length_and_mod(x)
+    md == 0 || error("Invalid length of vector")
+    first = 0
+    tl = RigidTransformList()
+    for i in 1:nb
+        push!(tl,RigidTransform(view(x,first+1:first+CHUNK)))
+        first += CHUNK
+    end
+    return tl
+end
+
+_length_and_mod(x::Vector{T}) where T <: Real = (n = length(x); return n ÷ CHUNK, n % CHUNK)
+
+"""
     rigidbodyvelocity(ml::RigidMotionList,t::Real) -> Vector
 
 Return the velocity components (as a vector) of a `RigidMotionList`

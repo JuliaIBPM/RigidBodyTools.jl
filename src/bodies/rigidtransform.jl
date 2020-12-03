@@ -54,11 +54,10 @@ function RigidTransform(x::Tuple{Float64,Float64},α::Float64)
     RigidTransform(α,rot,x)
 end
 
-RigidTransform(x::Union{Vector{Float64},NTuple{3,Float64}}) = RigidTransform((x[1],x[2]),x[3])
+RigidTransform(x::Union{AbstractVector{T},NTuple{3,T}}) where {T<:Real} = RigidTransform((x[1],x[2]),x[3])
 
 RigidTransform(c::ComplexF64,α::Float64) = RigidTransform((real(c),imag(c)),α)
 
-#RigidTransform(x::Vector{Vector{Float64}}) =
 
 function Base.show(io::IO, T::RigidTransform)
     name = "Rigid-body transform"
@@ -75,24 +74,7 @@ and rotation specified by the given transform `T`.
 """
 vec(T::RigidTransform) = [T.trans[1],T.trans[2],T.α]
 
-"""
-    vec(tl::Vector{RigidTransform}) -> Vector{Float64}
 
-Returns a concatenation of length-3 vectors of the form [x,y,α] corresponding to the translation
-and rotation specified by the given by the list of transforms `tl`.
-"""
-vec(tl::Vector{RigidTransform}) where {N} = mapreduce(vec,vcat,tl)
-#=
-function vec(tl::Union{Vector{RigidTransform},NTuple{N,RigidTransform}}) where {N}
-
-  u = (vec(tl[1]),)
-  for i = 2:length(tl)
-    u = u...,vec(tl[i])
-  end
-  return u
-
-end
-=#
 
 function (T::RigidTransform)(x̃::Float64,ỹ::Float64)
     Xr = T.rot*[x̃,ỹ]
