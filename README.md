@@ -4,7 +4,7 @@ _Tools for creating, moving, and discretizing rigid bodies_
 
 | Documentation | Build Status |
 |:---:|:---:|
-|  [![docs](https://img.shields.io/badge/docs-latest-blue.svg)](https://JuliaIBPM.github.io/RigidBodyTools.jl/latest) | [![Build Status](https://travis-ci.org/JuliaIBPM/RigidBodyTools.jl.svg?branch=master)](https://travis-ci.org/JuliaIBPM/RigidBodyTools.jl) [![Build status](https://ci.appveyor.com/api/projects/status/6tokpjqb4x8999g0?svg=true)](https://ci.appveyor.com/project/JuliaIBPM/rigidbodytools-jl) [![codecov](https://codecov.io/gh/JuliaIBPM/RigidBodyTools.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaIBPM/RigidBodyTools.jl) |
+| [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://JuliaIBPM.github.io/RigidBodyTools.jl/stable) [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://JuliaIBPM.github.io/RigidBodyTools.jl/dev) | [![Build Status](https://github.com/JuliaIBPM/RigidBodyTools.jl/workflows/CI/badge.svg)](https://github.com/JuliaIBPM/RigidBodyTools.jl/actions) [![Coverage](https://codecov.io/gh/JuliaIBPM/RigidBodyTools.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaIBPM/RigidBodyTools.jl) |
 
 ## About the package
 
