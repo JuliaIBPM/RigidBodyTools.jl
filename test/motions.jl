@@ -77,7 +77,17 @@ Ay = rand()
   @test real(c̈) ≈ 0.0
   @test imag(c̈) ≈ -Ay*Ω^2*sin(Ω*t-ϕy)
 
+  ro = RigidBodyTools.RotationalOscillation(Ω,Δα,ϕα)
 
+  t = rand()
+  c, ċ, c̈, α,α̇,α̈ = ro(t)
+
+  @test α ≈ Δα*sin(Ω*t-ϕα)
+  @test α̇ ≈ Δα*Ω*cos(Ω*t-ϕα)
+  @test α̈ ≈ -Δα*Ω^2*sin(Ω*t-ϕα)
+  @test c ≈ 0.0
+  @test ċ ≈ 0.0
+  @test c̈ ≈ 0.0
 
 
 

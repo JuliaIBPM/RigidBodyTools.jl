@@ -82,7 +82,8 @@ rotational axis, located at `ax`, `ay` (expressed relative to the body centroid,
 
 ``
 x(t) = U_x t + A_x\\sin(\\Omega t - \\phi_x), \\quad y(t) = U_y t + A_y\\sin(\\Omega t - \\phi_y),
- \\quad \\alpha(t) = \\alpha_0 + \\dot{\\alpha}_0 t + \\Delta\\alpha \\sin(\\Omega t - \\phi_{\\alpha})
+ \\quad \\alpha(t) = \\alpha_0 + \\dot{\\alpha}_0 t +
+ \\Delta\\alpha \\sin(\\Omega t - \\phi_{\\alpha})
  ``
 
 """
@@ -227,6 +228,30 @@ y(t) = U_y t + A_y \\sin(\\Omega t - \\phi_y)
 ``
 """
 OscillationY(Uy,Ω,Ay,ϕy) = Oscillation(0, Uy, 0, 0, 0, Ω, 0, Ay, 0, ϕy, 0, 0, 0)
+
+"""
+    RotationalOscillation(ax,ay,Ω,α₀,α̇₀,Δα,ϕα)
+
+Set oscillatory rotational kinematics about an axis located at `ax`, `ay`
+(expressed relative to the body centroid, in a body-fixed coordinate system), of the form
+
+``
+\\alpha(t) = \\alpha_0 + \\dot{\\alpha}_0 t +
+\\Delta\\alpha \\sin(\\Omega t - \\phi_{\\alpha})
+``
+"""
+RotationalOscillation(ax,ay,Ω,α₀,α̇₀,Δα,ϕα) = Oscillation(0, 0, α̇₀, ax, ay, Ω, 0, 0, 0, 0, α₀, Δα, ϕα)
+
+"""
+    RotationalOscillation(Ω,Δα,ϕα)
+
+Set oscillatory rotational kinematics about the centroid of the form
+
+``
+\\alpha(t) = \\Delta\\alpha \\sin(\\Omega t - \\phi_{\\alpha})
+``
+"""
+RotationalOscillation(Ω,Δα,ϕα) = RotationalOscillation(0,0,Ω,0,0,Δα,ϕα)
 
 
 

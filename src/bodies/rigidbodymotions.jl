@@ -1,5 +1,7 @@
 
 export RigidBodyMotion, Kinematics, d_dt, rigidbodyvelocity, assign_velocity!, assign_velocity
+export Oscillation, OscillationX, OscillationY, OscillationXY, RotationalOscillation,
+        PitchHeave, Pitchup, EldredgeRamp, ColoniusRamp
 
 using DocStringExtensions
 import ForwardDiff
