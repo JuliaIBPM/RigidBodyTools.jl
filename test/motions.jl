@@ -33,5 +33,52 @@ Ay = rand()
   @test imag(c̈) ≈ -Ay*Ω^2*sin(Ω*t-ϕy) + α̈*(ay*sin(α) - ax*cos(α)) + α̇^2*(ay*cos(α) + ax*sin(α))
 
 
+  ph = RigidBodyTools.PitchHeave(Ux,ax,Ω,α₀,Δα,ϕα,Ay,ϕy)
+
+  t = rand()
+  c, ċ, c̈, α,α̇,α̈ = ph(t)
+
+  @test α ≈ α₀ + Δα*sin(Ω*t-ϕα)
+  @test α̇ ≈ Δα*Ω*cos(Ω*t-ϕα)
+  @test α̈ ≈ -Δα*Ω^2*sin(Ω*t-ϕα)
+
+  @test real(c) ≈ Ux*t - ax*cos(α)
+  @test imag(c) ≈ Ay*sin(Ω*t-ϕy) - ax*sin(α)
+  @test real(ċ) ≈ Ux + α̇*ax*sin(α)
+  @test imag(ċ) ≈ Ay*Ω*cos(Ω*t-ϕy) - α̇*ax*cos(α)
+  @test real(c̈) ≈ α̈*ax*sin(α) + α̇^2*ax*cos(α)
+  @test imag(c̈) ≈ -Ay*Ω^2*sin(Ω*t-ϕy) - α̈*ax*cos(α) + α̇^2*ax*sin(α)
+
+  ox = RigidBodyTools.OscillationX(Ux,Ω,Ax,ϕx)
+
+  t = rand()
+  c, ċ, c̈, α,α̇,α̈ = ox(t)
+  @test α ≈ 0.0
+  @test α̇ ≈ 0.0
+  @test α̈ ≈ 0.0
+  @test real(c) ≈ Ux*t + Ax*sin(Ω*t-ϕx)
+  @test imag(c) ≈ 0.0
+  @test real(ċ) ≈ Ux + Ax*Ω*cos(Ω*t-ϕx)
+  @test imag(ċ) ≈ 0.0
+  @test real(c̈) ≈ -Ax*Ω^2*sin(Ω*t-ϕx)
+  @test imag(c̈) ≈ 0.0
+
+  oy = RigidBodyTools.OscillationY(Uy,Ω,Ay,ϕy)
+
+  t = rand()
+  c, ċ, c̈, α,α̇,α̈ = oy(t)
+  @test α ≈ 0.0
+  @test α̇ ≈ 0.0
+  @test α̈ ≈ 0.0
+  @test real(c) ≈ 0.0
+  @test imag(c) ≈ Uy*t + Ay*sin(Ω*t-ϕy)
+  @test real(ċ) ≈ 0.0
+  @test imag(ċ) ≈ Uy + Ay*Ω*cos(Ω*t-ϕy)
+  @test real(c̈) ≈ 0.0
+  @test imag(c̈) ≈ -Ay*Ω^2*sin(Ω*t-ϕy)
+
+
+
+
 
 end

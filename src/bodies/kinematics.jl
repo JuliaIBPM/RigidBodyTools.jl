@@ -12,13 +12,15 @@ Constant(ċ, α̇) = Constant(complex(ċ), α̇)
 show(io::IO, c::Constant) = print(io, "Constant (ċ = $(c.ċ), α̇ = $(c.α̇))")
 
 """
-    Pitchup <: Kinematics
+    Pitchup(U₀,a,K,α₀,t₀,Δα,ramp=EldredgeRamp) <: Kinematics
 
-Kinematics describing a pitchup motion (horizontal translation with rotation)
-
-# Constructors
-# Fields
-$(FIELDS)
+Kinematics describing a pitch-ramp motion (horizontal translation with rotation)
+starting at time ``t_0`` about an axis at `a` (expressed relative to the centroid, in the ``\\tilde{x}``
+  direction in the body-fixed coordinate system), with translational velocity `U₀`
+in the inertial ``x`` direction, initial angle ``\\alpha_0``, and angular
+change ``\\Delta\\alpha``. The optional ramp argument is assumed to be
+given by the smooth ramp `EldredgeRamp`, though this can be changed to
+`ColoniusRamp`.
 """
 struct Pitchup <: Kinematics
     "Freestream velocity"
@@ -42,7 +44,7 @@ struct Pitchup <: Kinematics
     α̈::Profile
 end
 
-function Pitchup(U₀, a, K, α₀, t₀, Δα, ramp)
+function Pitchup(U₀, a, K, α₀, t₀, Δα, ramp=EldredgeRamp)
     Δt = 0.5Δα/K
     p = ConstantProfile(α₀) + 2K*((ramp >> t₀) - (ramp >> (t₀ + Δt)))
     ṗ = d_dt(p)
@@ -177,189 +179,56 @@ function show(io::IO, p::Oscillation)
     println(io, "     α amplitude Δα, phase lag ϕα = ($(p.Δα), $(p.ϕα))")
 end
 
-"""
-    PitchHeave <: Kinematics
-
-Kinematics describing an oscillatory pitching and heaving (i.e. plunging) motion
-
-# Constructors
-# Fields
-$(FIELDS)
-"""
-struct PitchHeave <: Kinematics
-    "Freestream velocity"
-    U₀::Float64
-
-    "Axis of pitch rotation, relative to the plate centroid"
-    a::Float64
-
-    "Reduced frequency ``K = \\frac{\\Omega c}{2U_0}``"
-    K::Float64
-
-    "Phase of pitch (in radians)"
-    ϕp::Float64
-
-    "Phase of heave (in radians)"
-    ϕh::Float64
-
-    "Mean angle of attack"
-    α₀::Float64
-
-    "Amplitude of pitching"
-    Δα::Float64
-
-    "Amplitude of translational heaving"
-    A::Float64
-
-    Y::Profile
-    Ẏ::Profile
-    Ÿ::Profile
-
-    α::Profile
-    α̇::Profile
-    α̈::Profile
-end
-
-function PitchHeave(U₀, a, K, ϕp, α₀, Δα, A, ϕh)
-    p = A*(Sinusoid(2K) >> (ϕh/(2K)))
-    ṗ = d_dt(p)
-    p̈ = d_dt(ṗ)
-    α = ConstantProfile(α₀) + Δα*(Sinusoid(2K) >> (ϕp/(2K)))
-    α̇ = d_dt(α)
-    α̈ = d_dt(α̇)
-    PitchHeave(U₀, a, K, ϕp, ϕh, α₀, Δα, A, p, ṗ, p̈, α, α̇, α̈)
-end
-
-function (p::PitchHeave)(t)
-    α = p.α(t)
-    α̇ = p.α̇(t)
-    α̈ = p.α̈(t)
-
-    c = p.U₀*t + im*p.Y(t) - p.a*exp(im*α)
-    ċ = p.U₀ + im*p.Ẏ(t) - p.a*im*α̇*exp(im*α)
-    c̈ = im*p.Ÿ(t) + p.a*exp(im*α)*(α̇^2 - im*α̈)
-
-    return c, ċ, c̈, α, α̇, α̈
-end
-
-function show(io::IO, p::PitchHeave)
-    println(io, "Oscillatory pitch-heave kinematics with")
-    println(io, "     Reduced frequency K = $(p.K)")
-    println(io, "     Heaving amplitude A = $(p.A)")
-    println(io, "     Pitching amplitude Δα = $(p.Δα)")
-    println(io, "     Pitch lag ϕp = $(p.ϕp)")
-    println(io, "     Heave lag ϕh = $(p.ϕh)")
-end
 
 """
-    OscillationXY(Ω,Ax,ϕx,Ay,ϕy) <: Kinematics
+    PitchHeave(U₀,a,Ω,α₀,Δα,ϕp,A,ϕh)
+
+Create oscillatory pitching and heaving kinematics of a pitch axis at location ``a`` (expressed
+relative to the centroid in the ``\\tilde{x}`` direction of the body-fixed coordinate system),
+of the form (in inertial coordinates)
+
+``
+x(t) = U_0, \\quad y(t) = A\\sin(\\Omega t - \\phi_h),
+ \\quad \\alpha(t) = \\alpha_0 + \\Delta\\alpha \\sin(\\Omega t - \\phi_p)
+ ``
+"""
+PitchHeave(U₀, a, Ω, α₀, Δα, ϕp, A, ϕh) = Oscillation(U₀, 0, 0, a, 0, Ω, 0, A, 0, ϕh, α₀, Δα, ϕp)
+
+
+"""
+    OscillationXY(Ux,Uy,Ω,Ax,ϕx,Ay,ϕy)
 
 Set oscillatory kinematics in the ``x`` and ``y`` directions, of the form
 
 ``
-x(t) = A_x \\sin(\\Omega t + \\phi_x), \\quad y(t) = A_y \\sin(\\Omega t + \\phi_y)
+x(t) = U_x t + A_x \\sin(\\Omega t - \\phi_x), \\quad y(t) = U_y t + A_y \\sin(\\Omega t - \\phi_y)
 ``
 """
-struct OscillationXY <: Kinematics
-    "Angular frequency"
-    Ω :: Float64
+OscillationXY(Ux,Uy,Ω,Ax,ϕx,Ay,ϕy) = Oscillation(Ux, Uy, 0, 0, 0, Ω, Ax, Ay, ϕx, ϕy, 0, 0, 0)
 
-    "Amplitude x direction"
-    Ax:: Float64
+"""
+    OscillationX(Ux,Ω,Ax,ϕx)
 
-    "Phase in x direction."
-    ϕx :: Float64
+Set oscillatory kinematics in the ``x`` direction, of the form
 
-    "Amplitude y direction"
-    Ay:: Float64
+``
+x(t) = U_x t + A_x \\sin(\\Omega t - \\phi_x),
+``
+"""
+OscillationX(Ux,Ω,Ax,ϕx) = Oscillation(Ux, 0, 0, 0, 0, Ω, Ax, 0, ϕx, 0, 0, 0, 0)
 
-    "Phase in y direction."
-    ϕy :: Float64
+"""
+    OscillationY(Uy,Ω,Ay,ϕy)
 
-    cx::Profile
-    ċx::Profile
-    c̈x::Profile
+Set oscillatory kinematics in the ``y`` direction, of the form
 
-    cy::Profile
-    ċy::Profile
-    c̈y::Profile
+``
+y(t) = U_y t + A_y \\sin(\\Omega t - \\phi_y)
+``
+"""
+OscillationY(Uy,Ω,Ay,ϕy) = Oscillation(0, Uy, 0, 0, 0, Ω, 0, Ay, 0, ϕy, 0, 0, 0)
 
-end
 
-function OscillationXY(Ω,Ax,ϕx,Ay,ϕy)
-    Δtx = ϕx/Ω
-    px = Ax*(Sinusoid(Ω) << Δtx)
-    ṗx = d_dt(px)
-    p̈x = d_dt(ṗx)
-
-    Δty = ϕy/Ω
-    py = Ay*(Sinusoid(Ω) << Δty)
-    ṗy = d_dt(py)
-    p̈y = d_dt(ṗy)
-    OscillationXY(Ω, Ax, ϕx, Ay, ϕy, px, ṗx, p̈x, py, ṗy, p̈y)
-end
-
-function (p::OscillationXY)(t)
-    α = 0.0
-    α̇ = 0.0
-    α̈ = 0.0
-
-    c = ComplexF64(p.cx(t)) + im*ComplexF64(p.cy(t))
-    ċ = ComplexF64(p.ċx(t)) + im*ComplexF64(p.ċy(t))
-    c̈ = ComplexF64(p.c̈x(t)) + im*ComplexF64(p.c̈y(t))
-    return c, ċ, c̈, α, α̇, α̈
-
-    #return [p.ċ(t),0.0], [p.c̈(t),0.0], α̇
-end
-function show(io::IO, p::OscillationXY)
-    println(io, "Oscillatory xy kinematics with")
-    println(io, "     Frequency K = $(p.Ω)")
-    println(io, "     x amplitude Ax = $(p.Ax)")
-    println(io, "     x phase ϕx = $(p.ϕx)")
-    println(io, "     y amplitude Ay = $(p.Ay)")
-    println(io, "     y phase ϕy = = $(p.ϕy)")
-end
-
-struct OscilX <: Kinematics
-    "Angular frequency"
-    Ω :: Float64
-
-    "Mean velocity"
-    Umean :: Float64
-
-    "Velocity amplitude"
-    Ux:: Float64
-
-    "Velocity phase"
-    ϕx :: Float64
-
-    cx::Profile
-    ċx::Profile
-    c̈x::Profile
-
-end
-
-function OscilX(Ω,Umean,Ux,ϕx)
-    Δtx = ϕx/Ω
-    px = ConstantProfile(0.0)
-    ṗx = ConstantProfile(Umean) + Ux*(Sinusoid(Ω) << Δtx)
-    p̈x = d_dt(ṗx)
-
-    OscilX(Ω, Umean, Ux, ϕx, px, ṗx, p̈x)
-end
-
-function (p::OscilX)(t)
-    α = 0.0
-    α̇ = 0.0
-    α̈ = 0.0
-
-    c = ComplexF64(p.cx(t))
-    ċ = ComplexF64(p.ċx(t))
-    c̈ = ComplexF64(p.c̈x(t))
-    return c, ċ, c̈, α, α̇, α̈
-
-    #return [p.ċ(t),0.0], [p.c̈(t),0.0], α̇
-end
 
 abstract type Switch end
 abstract type SwitchOn <: Switch end
