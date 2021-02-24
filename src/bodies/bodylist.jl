@@ -1,13 +1,15 @@
 import Base: @propagate_inbounds,getindex, setindex!,iterate,size,length,push!,
               collect,view
 
-export BodyList, RigidMotionList, RigidTransformList, getrange, numpts
+export BodyList, RigidMotionList, RigidTransformList, DirectlySpecifiedMotionList,
+          getrange, numpts
 
 abstract type SetOfBodies end
 
 const LISTS = [:BodyList, :Body],
               [:RigidMotionList, :RigidBodyMotion],
-              [:RigidTransformList, :RigidTransform]
+              [:RigidTransformList, :RigidTransform],
+              [:DirectlySpecifiedMotionList,:DirectlySpecifiedMotion]
 
 
 
