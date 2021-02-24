@@ -92,3 +92,14 @@ Ay = rand()
 
 
 end
+
+@testset "Direct motions" begin
+
+  m = RigidBodyTools.BasicDirectMotion()
+
+  ml = RigidBodyTools.DirectlySpecifiedMotionList([m])
+
+  push!(ml,m)
+
+
+end
