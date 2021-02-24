@@ -14,6 +14,7 @@ numpts(::Body{N}) where {N} = N
 numpts(::Nothing) = 0
 
 include("rigidbodymotions.jl")
+include("directmotions.jl")
 include("motionprofiles.jl")
 include("kinematics.jl")
 
