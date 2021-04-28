@@ -16,17 +16,17 @@ abstract type Body{N,C<:BodyClosureType} end
 numpts(::Body{N}) where {N} = N
 numpts(::Nothing) = 0
 
-include("bodies/rigidbodymotions.jl")
-include("bodies/directmotions.jl")
-include("bodies/kinematics.jl")
+include("rigidbodymotions.jl")
+include("directmotions.jl")
+include("kinematics.jl")
 
-include("bodies/rigidtransform.jl")
-include("bodies/bodylist.jl")
+include("rigidtransform.jl")
+include("bodylist.jl")
 
 
-include("bodies/tools.jl")
-include("bodies/assignvelocity.jl")
-include("bodies/shapes.jl")
+include("tools.jl")
+include("assignvelocity.jl")
+include("shapes.jl")
 
 include("plot_recipes.jl")
 
