@@ -2,6 +2,8 @@
 Kinematics
 =#
 
+using SpaceTimeFields
+import SpaceTimeFields: Abstract1DProfile, >>
 
 struct Constant{C <: Complex, A <: Real} <: Kinematics
     ċ::C
@@ -39,9 +41,9 @@ struct Pitchup <: Kinematics
     "Total pitching angle"
     Δα::Float64
 
-    α::Profile
-    α̇::Profile
-    α̈::Profile
+    α::Abstract1DProfile
+    α̇::Abstract1DProfile
+    α̈::Abstract1DProfile
 end
 
 function Pitchup(U₀, a, K, α₀, t₀, Δα, ramp=EldredgeRamp)
@@ -126,17 +128,17 @@ struct Oscillation <: Kinematics
     ϕα::Float64
 
 
-    px::Profile
-    ṗx::Profile
-    p̈x::Profile
+    px::Abstract1DProfile
+    ṗx::Abstract1DProfile
+    p̈x::Abstract1DProfile
 
-    py::Profile
-    ṗy::Profile
-    p̈y::Profile
+    py::Abstract1DProfile
+    ṗy::Abstract1DProfile
+    p̈y::Abstract1DProfile
 
-    α::Profile
-    α̇::Profile
-    α̈::Profile
+    α::Abstract1DProfile
+    α̇::Abstract1DProfile
+    α̈::Abstract1DProfile
 end
 
 function Oscillation(Ux, Uy, α̇₀, ax, ay, Ω, Ax, Ay, ϕx, ϕy, α₀, Δα, ϕa)

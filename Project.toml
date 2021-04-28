@@ -11,8 +11,8 @@ DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 PlotUtils = "995b91a9-d308-5afd-9ec6-746e21dbc043"
-Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
+SpaceTimeFields = "0af78db0-3b7c-4df8-88bd-686b7cc5245d"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [compat]
@@ -22,11 +22,11 @@ DocStringExtensions = "0.8.1"
 ForwardDiff = "0.10.10"
 LaTeXStrings = "^1.0, 1.1"
 PlotUtils = "1.0"
-Plots = "1.3, 1.4"
 RecipesBase = "1.0"
 julia = "1"
 
 [extras]
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
