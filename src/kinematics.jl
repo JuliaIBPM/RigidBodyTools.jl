@@ -3,7 +3,7 @@ Kinematics
 =#
 
 using SpaceTimeFields
-import SpaceTimeFields: Abstract1DProfile, >>
+import SpaceTimeFields: Abstract1DProfile, >>, ConstantProfile, d_dt
 
 struct Constant{C <: Complex, A <: Real} <: Kinematics
     ċ::C
