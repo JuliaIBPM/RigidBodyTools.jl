@@ -111,7 +111,7 @@ Construct a rectangular body with x̃ side half-length `a` and ỹ side half-len
 with `na` points distributed on the x̃ side (including both corners). The centroid
 of the rectangle is placed at the origin (so that the lower left corner is at (-a,-b)).
 """
-mutable struct Rectangle{N} <: Body{N,ClosedBody}
+mutable struct Rectangle{N,PS} <: Body{N,ClosedBody}
   a :: Float64
   b :: Float64
   cent :: Tuple{Float64,Float64}
@@ -123,34 +123,66 @@ mutable struct Rectangle{N} <: Body{N,ClosedBody}
   x :: Vector{Float64}
   y :: Vector{Float64}
 
+  x̃mid :: Union{Vector{Float64},Nothing}
+  ỹmid :: Union{Vector{Float64},Nothing}
+
+  xmid :: Union{Vector{Float64},Nothing}
+  ymid :: Union{Vector{Float64},Nothing}
+
 end
 
-function Rectangle(a::Real,b::Real,na::Int)
-    Δsa = 2a/(na-1)
-    nb = ceil(Int,2b/Δsa)+1
-    Δsb = 2b/(nb-1)
+Rectangle(a::Real,b::Real,na::Int;shifted=false) = _rectangle(a,b,na,Val(shifted))
 
-    N = 2(na-1)+2(nb-1)
-    x̃ = zeros(N)
-    ỹ = zeros(N)
+function _rectangle(a::Real,b::Real,na::Int,::Val{false})
+    x̃, ỹ = _rectangle_points(a::Real,b::Real,na::Int)
+    Rectangle{length(x̃),Unshifted}(a,b,(0.0,0.0),0.0,x̃,ỹ,x̃,ỹ,nothing,nothing,nothing,nothing)
+end
 
-    @. x̃[1:na-1] = -a + Δsa*(0:na-2)
-    @. ỹ[1:na-1] = -b
+function _rectangle(a::Real,b::Real,na::Int,::Val{true})
+    x̃mid, ỹmid = _rectangle_points(a::Real,b::Real,na::Int)
+    x̃, ỹ = _midpoints(x̃mid,ỹmid,ClosedBody)
+    Rectangle{length(x̃),Shifted}(a,b,(0.0,0.0),0.0,x̃,ỹ,x̃,ỹ,x̃mid,ỹmid,x̃mid,ỹmid)
+end
 
-    @. x̃[na:na+nb-2] =  a
-    @. ỹ[na:na+nb-2] = -b + Δsb*(0:nb-2)
+function _rectangle_points(a::Real,b::Real,na::Int)
+  Δsa = 2a/(na-1)
+  nb = ceil(Int,2b/Δsa)+1
+  Δsb = 2b/(nb-1)
 
-    @. x̃[(na+nb-1):(2na+nb-3)] = -a + Δsa*(na-1:-1:1)
-    @. ỹ[(na+nb-1):(2na+nb-3)] = b
+  N = 2(na-1)+2(nb-1)
+  x = zeros(N)
+  y = zeros(N)
 
-    @. x̃[(2na+nb-2):(2na+2nb-4)] = -a
-    @. ỹ[(2na+nb-2):(2na+2nb-4)] =  -b + Δsb*(nb-1:-1:1)
+  @. x[1:na-1] = -a + Δsa*(0:na-2)
+  @. y[1:na-1] = -b
 
-    Rectangle{N}(a,b,(0.0,0.0),0.0,x̃,ỹ,x̃,ỹ)
+  @. x[na:na+nb-2] =  a
+  @. y[na:na+nb-2] = -b + Δsb*(0:nb-2)
+
+  @. x[(na+nb-1):(2na+nb-3)] = -a + Δsa*(na-1:-1:1)
+  @. y[(na+nb-1):(2na+nb-3)] = b
+
+  @. x[(2na+nb-2):(2na+2nb-4)] = -a
+  @. y[(2na+nb-2):(2na+2nb-4)] =  -b + Δsb*(nb-1:-1:1)
+
+  return x, y
+
 end
 
 #Rectangle(a::Real,b::Real,targetsize::Float64;kwargs...) =
 #    Rectangle(a,b,_adjustnumber(targetsize,Rectangle,a,b);kwargs...)
+
+centraldiff(b::Rectangle{N,Shifted}) where {N} = _diff(b.xmid,b.ymid,ClosedBody)
+
+
+function (T::RigidTransform)(b::Rectangle{N,Shifted}) where {N}
+  b.xmid, b.ymid = T(b.x̃mid,b.ỹmid)
+  b.x, b.y = T(b.x̃,b.ỹ)
+  b.α = T.α
+  b.cent = T.trans
+  return b
+end
+
 
 """
     Square(a,na) <: Body

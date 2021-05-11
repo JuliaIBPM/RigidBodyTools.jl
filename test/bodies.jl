@@ -1,5 +1,7 @@
 using Statistics
 
+const MYEPS = 20*eps()
+
 @testset "Bodies" begin
 
   bn = nothing
@@ -32,6 +34,42 @@ using Statistics
   @test nx[1] == ny[26] == -nx[51] == -ny[76] == 1.0
   @test abs(sum(nx)) < 1000.0*eps(1.0)
   @test abs(sum(ny)) < 1000.0*eps(1.0)
+
+
+end
+
+@testset "Shifted rectangle" begin
+
+  b = Rectangle(0.5,1.0,11,shifted=true)
+  nx, ny = normalmid(b)
+  nx, ny = normalmid(b)
+  @test all(isapprox.(nx[1:10],0.0,atol=MYEPS)) &&
+        all(isapprox.(nx[11:30],1.0,atol=MYEPS)) &&
+        all(isapprox.(nx[31:40],0.0,atol=MYEPS)) &&
+        all(isapprox.(nx[41:60],-1.0,atol=MYEPS))
+  @test all(isapprox.(ny[1:10],-1.0,atol=MYEPS)) &&
+        all(isapprox.(ny[11:30],0.0,atol=MYEPS)) &&
+        all(isapprox.(ny[31:40],1.0,atol=MYEPS)) &&
+        all(isapprox.(ny[41:60],0.0,atol=MYEPS))
+
+  ds = dlengthmid(b)
+  @test all(ds .≈ 0.1)
+
+  T = RigidTransform((1.0,-1.0),π/2)
+  T(b)
+
+  nx, ny = normalmid(b)
+  @test all(isapprox.(nx[1:10],1.0,atol=MYEPS)) &&
+        all(isapprox.(nx[11:30],0.0,atol=MYEPS)) &&
+        all(isapprox.(nx[31:40],-1.0,atol=MYEPS)) &&
+        all(isapprox.(nx[41:60],0.0,atol=MYEPS))
+  @test all(isapprox.(ny[1:10],0.0,atol=MYEPS)) &&
+        all(isapprox.(ny[11:30],1.0,atol=MYEPS)) &&
+        all(isapprox.(ny[31:40],0.0,atol=MYEPS)) &&
+        all(isapprox.(ny[41:60],-1.0,atol=MYEPS))
+
+  ds = dlengthmid(b)
+  @test all(ds .≈ 0.1)
 
 
 end
@@ -74,6 +112,16 @@ end
   @test bl[2].cent == tl[2].trans
   @test bl[1].α == tl[1].α
   @test bl[2].α == tl[2].α
+
+  b1 = Rectangle(0.5,1.0,11,shifted=true)
+  b2 = Rectangle(0.5,1.0,11,shifted=false)
+  bl = BodyList()
+  push!(bl,b1)
+  push!(bl,b2)
+  nx, ny = normalmid(bl)
+  nxb1, nyb1 = normalmid(b1)
+  nxb2, nyb2 = normalmid(b2)
+  @test nx[1:60] == nxb1 && ny[1:60] == nyb1 && nx[61:120] == nxb2 && ny[61:120] == nyb2
 
 
 end
