@@ -39,9 +39,25 @@ function _diff(x::Vector{Float64},y::Vector{Float64},::Type{ClosedBody})
   N = length(x)
   @assert N == length(y)
 
-  ip1(i) = 1+mod(i,N)
-  dxtmp = [x[ip1(i)] - x[i] for i = 1:N]
-  dytmp = [y[ip1(i)] - y[i] for i = 1:N]
+  dxtmp = circshift(x,-1) .- x
+  dytmp = circshift(y,-1) .- y
+  #ip1(i) = 1+mod(i,N)
+  #dxtmp = [x[ip1(i)] - x[i] for i = 1:N]
+  #dytmp = [y[ip1(i)] - y[i] for i = 1:N]
+
+  return dxtmp, dytmp
+
+end
+
+function _diff_ccw(x::Vector{Float64},y::Vector{Float64},::Type{ClosedBody})
+  N = length(x)
+  @assert N == length(y)
+
+  dxtmp = x .- circshift(x,1)
+  dytmp = y .- circshift(y,1)
+  #ip1(i) = 1+mod(i,N)
+  #dxtmp = [x[ip1(i)] - x[i] for i = 1:N]
+  #dytmp = [y[ip1(i)] - y[i] for i = 1:N]
 
   return dxtmp, dytmp
 
@@ -81,9 +97,24 @@ function _midpoints(x::Vector{Float64},y::Vector{Float64},::Type{ClosedBody})
   N = length(x)
   @assert N == length(y)
 
-  ip1(i) = 1+mod(i,N)
-  xc = 0.5*[x[ip1(i)] + x[i] for i = 1:N]
-  yc = 0.5*[y[ip1(i)] + y[i] for i = 1:N]
+  #ip1(i) = 1+mod(i,N)
+  #xc = 0.5*[x[ip1(i)] + x[i] for i = 1:N]
+  #yc = 0.5*[y[ip1(i)] + y[i] for i = 1:N]
+
+  xc = 0.5*(x .+ circshift(x,-1))
+  yc = 0.5*(y .+ circshift(y,-1))
+
+  return xc, yc
+
+end
+
+function _midpoints_ccw(x::Vector{Float64},y::Vector{Float64},::Type{ClosedBody})
+
+  N = length(x)
+  @assert N == length(y)
+
+  xc = 0.5*(x .+ circshift(x,1))
+  yc = 0.5*(y .+ circshift(y,1))
 
   return xc, yc
 

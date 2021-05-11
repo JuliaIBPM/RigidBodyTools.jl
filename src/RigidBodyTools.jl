@@ -11,6 +11,10 @@ abstract type BodyClosureType end
 abstract type OpenBody <: BodyClosureType end
 abstract type ClosedBody <: BodyClosureType end
 
+abstract type PointShiftType end
+abstract type Unshifted <: PointShiftType end
+abstract type Shifted <: PointShiftType end
+
 abstract type Body{N,C<:BodyClosureType} end
 
 numpts(::Body{N}) where {N} = N
