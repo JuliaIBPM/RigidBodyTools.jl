@@ -110,6 +110,11 @@ end
 Construct a rectangular body with x̃ side half-length `a` and ỹ side half-length `b`,
 with `na` points distributed on the x̃ side (including both corners). The centroid
 of the rectangle is placed at the origin (so that the lower left corner is at (-a,-b)).
+
+By default, points are placed at the corners, and the normal vectors are bisectors
+between the normals on the adjacent two sides. If the `shifted=true` flag is added,
+then the points are shifted counterclockwise by half a segment, so no points
+are placed on the corners, and all normals are perpendicular to the sides.
 """
 mutable struct Rectangle{N,PS} <: Body{N,ClosedBody}
   a :: Float64
@@ -190,9 +195,9 @@ end
 Construct a square body with side half-length `a`
 and with `na` points distributed on each side (including both corners).
 """
-Square(a::Real,na::Int) = Rectangle(a,a,na)
+Square(a::Real,na::Int;kwargs...) = Rectangle(a,a,na;kwargs...)
 
-Square(a::Real,targetsize::Float64) = Rectangle(a,a,targetsize)
+Square(a::Real,targetsize::Float64;kwargs...) = Rectangle(a,a,targetsize;kwargs...)
 
 function Base.show(io::IO, body::Rectangle{N}) where {N}
     if body.a == body.b
