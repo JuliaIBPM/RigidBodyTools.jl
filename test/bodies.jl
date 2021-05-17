@@ -29,10 +29,10 @@ const MYEPS = 20*eps()
   Δsb = 2b/(nb-1)
   @test Δsb ≈ 0.02
   #y4 = -b .+ Δsb*(nb-1:-1:1)
-  y4 = Δsb*(nb-1:-1:1)
-  @test y4[1] ≈ 4.0
-  @test y4[2] ≈ 3.98
-  @test y4[end] ≈ 0.02
+  y4 = nb-1:-1:1
+  @test y4[1] == 200
+  @test y4[2] == 199
+  @test y4[end] == 1
   @test c.y[402] ≈ 1.98
   @test c.y[501] ≈ 0.0
   @test c.y[end] ≈ -1.98
