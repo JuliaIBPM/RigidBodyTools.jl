@@ -7,7 +7,7 @@ at positions described by coordinates inertial coordinates in body in `body` at 
 based on supplied motions in the RigidBodyMotion `motion` for the body.
 """
 assign_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
-                 b::Body,m::RigidBodyMotion,t::Real) =
+                 b::Body,m::Union{RigidBodyMotion,DirectlySpecifiedMotion},t::Real) =
                  assign_velocity!(u,v,b.x,b.y,b.cent...,b.α,m,t)
 
 assign_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
