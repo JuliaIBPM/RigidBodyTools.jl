@@ -30,7 +30,8 @@ const MYEPS = 20*eps()
   @test Δsb ≈ 0.02
   #y4 = -b .+ Δsb*(nb-1:-1:1)
   y4 = Δsb*(nb-1:-1:1)
-  @test y4[1] ≈ 4.02
+  @test y4[1] ≈ 4.0
+  @test y4[2] ≈ 3.98
   @test y4[end] ≈ 0.02
   @test c.y[402] ≈ 1.98
   @test c.y[501] ≈ 0.0
