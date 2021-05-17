@@ -20,8 +20,7 @@ const MYEPS = 20*eps()
 
   c = Rectangle(1,2,101)
   dx, dy = diff(c)
-  Δsa = 2a/(na-1)
-  @test Δsa ≈ 0.02
+  Δsa = 2/100
   nb = ceil(Int,4/Δsa)+1
   @test nb == 201
   Δsb = 2b/(nb-1)
