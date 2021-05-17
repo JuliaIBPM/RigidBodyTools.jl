@@ -20,6 +20,14 @@ const MYEPS = 20*eps()
 
   c = Rectangle(1,2,101)
   dx, dy = diff(c)
+  Δsa = 2a/(na-1)
+  @test Δsa ≈ 0.02
+  nb = ceil(Int,4/Δsa)+1
+  @test nb == 201
+  Δsb = 2b/(nb-1)
+  @test Δsb ≈ 0.02
+  y4 = -b + Δsb*(nb-1:-1:1)
+  @test y4[end] ≈ -1.98
   @test c.y[402] ≈ 1.98
   @test c.y[501] ≈ 0.0
   @test c.y[end] ≈ -1.98
