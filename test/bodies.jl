@@ -18,7 +18,10 @@ const MYEPS = 20*eps()
   @test sum(dlength(p)) ≈ sum(dlengthmid(p))
 
 
-  c = Rectangle(1,2,101)
+  a = 1
+  b = 2
+  na = 101
+  c = Rectangle(a,b,na)
   dx, dy = diff(c)
   Δsa = 2/100
   nb = ceil(Int,4/Δsa)+1
