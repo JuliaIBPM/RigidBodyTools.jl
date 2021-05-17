@@ -20,7 +20,9 @@ const MYEPS = 20*eps()
 
   c = Rectangle(1,2,101)
   dx, dy = diff(c)
+  @test dx[1] ≈ 0.02 && dx[end] ≈ 0.0 && dy[1] ≈ 0.0 && dy[end] ≈ -0.02
   @test length(dx) == 600
+  @test all(dlength(c) .≈ 0.02)
   @test sum(dlength(c)) ≈ 12.0
 
   c = Square(1,0.01)
