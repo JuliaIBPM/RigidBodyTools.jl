@@ -140,7 +140,7 @@ _length_and_mod(x::Vector{T}) where T <: Real = (n = length(x); return n ÷ CHUN
 Return the velocity components (as a vector) of a `RigidMotionList`
 at the given time `t`.
 """
-function rigidbodyvelocity(ml::RigidMotionList,t::Real)
+function rigidbodyvelocity(ml::Union{RigidMotionList,DirectlySpecifiedMotionList},t::Real)
     u = Float64[]
     for m in ml
       ui = rigidbodyvelocity(m,t)
