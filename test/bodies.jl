@@ -20,7 +20,8 @@ const MYEPS = 20*eps()
 
   c = Rectangle(1,2,101)
   dx, dy = diff(c)
-  @test c.y[1] ≈ -2.0
+  @test c.y[402] ≈ 1.98
+  @test c.y[501] ≈ 0.0
   @test c.y[end] ≈ -1.98
   @test dx[1] ≈ 0.02
   @test dx[end] ≈ 0.0
