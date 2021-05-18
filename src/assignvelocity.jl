@@ -10,6 +10,10 @@ assign_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
                  b::Body,m::Union{RigidBodyMotion,DirectlySpecifiedMotion},t::Real) =
                  assign_velocity!(u,v,b.x,b.y,b.cent...,b.α,m,t)
 
+assign_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
+                 b::Body,m::DirectlySpecifiedMotion,t::Real) =
+                 assign_velocity!(u,v,b.x,b.y,b.cent...,b.α,m,t)
+
 
 """
     assign_velocity(body::Body,motion::RigidBodyMotion,t::Real)
