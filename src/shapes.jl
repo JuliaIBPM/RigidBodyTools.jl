@@ -1,6 +1,9 @@
 using Dierckx
 using Statistics: mean
 
+using Elliptic
+using Roots
+
 export BasicBody,Ellipse,Circle,Rectangle,Square,Plate,SplinedBody,NACA4
 
 """
@@ -60,6 +63,7 @@ mutable struct Ellipse{N} <: Body{N,ClosedBody}
 
 end
 
+#=
 function Ellipse(a::Real,b::Real,N::Int)
     x̃ = zeros(N)
     ỹ = zeros(N)
@@ -67,8 +71,40 @@ function Ellipse(a::Real,b::Real,N::Int)
     @. x̃ = a*cos(θ[1:N])
     @. ỹ = b*sin(θ[1:N])
 
-
     Ellipse{N}(a,b,(0.0,0.0),0.0,x̃,ỹ,x̃,ỹ)
+end
+=#
+
+function Ellipse(a::Real,b::Real,N::Int)
+    Nqrtr = div(N,4) + 1
+    maj, min = a > b ? (a, b) : (b, a)
+    m = 1 - min^2/maj^2
+    smax = maj*Elliptic.E(m)
+    Δs = smax/(Nqrtr-1)
+    ϴ, _ = _get_ellipse_thetas(Δs,smax,maj,m)
+    _x, _y = min*cos.(ϴ), maj*sin.(ϴ)
+    x, y = a > b ? (reverse(_y),reverse(_x)) : (_x,_y)
+    xfull = vcat(x,-reverse(x[1:end-1]),-x[2:end], reverse(x[2:end-1]))
+    yfull = vcat(y, reverse(y[1:end-1]),-y[2:end],-reverse(y[2:end-1]))
+    Ellipse{length(xfull)}(a,b,(0.0,0.0),0.0,xfull,yfull,xfull,yfull)
+end
+
+function _get_ellipse_thetas(Δs,smax,maj,m)
+
+    slast = 0.0
+    θlast = 0.0
+    s = maj*Elliptic.E(θlast,m)
+    θ = [θlast]
+    ds = []
+    while s < smax
+        θi = find_zero(x -> maj*Elliptic.E(x,m) - slast - Δs,θlast,atol=1e-12)
+        s = maj*Elliptic.E(θi,m)
+        push!(ds,s-slast)
+        push!(θ,θi)
+        θlast = θi
+        slast = s
+    end
+    θ, ds
 end
 
 

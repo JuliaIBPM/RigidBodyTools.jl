@@ -134,8 +134,8 @@ end
     ċ = rand(ComplexF64)
     m = RigidBodyMotion(ċ,1.0)
     u,v = assign_velocity(b,m,0.0)
-    @test u[26] == -1.0+real(ċ)
-    @test v[51] == -1.0+imag(ċ)
+    @test u[26] ≈ -1.0+real(ċ) atol = 1e-14
+    @test v[51] ≈ -1.0+imag(ċ) atol = 1e-14
 
     u2, v2 = m(0.0,b)
     @test u == u2 && v == v2
@@ -149,17 +149,17 @@ end
     bl = BodyList([b,b2])
     ml = RigidMotionList([m,m2])
     u, v = assign_velocity(bl,ml,0.0)
-    @test u[26] == -1.0+real(ċ)
-    @test u[126] == -1.0+real(ċ2)
-    @test v[151] == -1.0+imag(ċ2)
+    @test u[26] ≈ -1.0+real(ċ) atol = 1e-14
+    @test u[126] ≈ -1.0+real(ċ2) atol = 1e-14
+    @test v[151] ≈ -1.0+imag(ċ2) atol = 1e-14
 
     u2, v2 = ml(0.0,bl)
     @test u2 == u && v2 == v
 
     vel = rigidbodyvelocity(ml,0.0)
     @test vel[3] == 1.0
-    @test vel[1]+im*vel[2] == ċ
-    @test vel[4]+im*vel[5] == ċ2
+    @test vel[1]+im*vel[2] ≈ ċ atol = 1e-14
+    @test vel[4]+im*vel[5] ≈ ċ2 atol = 1e-14
     @test vel[6] == 1.0
 
     x = rand(15)
