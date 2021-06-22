@@ -149,9 +149,9 @@ end
     bl = BodyList([b,b2])
     ml = RigidMotionList([m,m2])
     u, v = assign_velocity(bl,ml,0.0)
-    @test u[26] == -1.0+real(ċ)
-    @test u[126] == -1.0+real(ċ2)
-    @test v[151] == -1.0+imag(ċ2)
+    @test u[26] ≈ -1.0+real(ċ) atol = 1e-14
+    @test u[126] ≈ -1.0+real(ċ2) atol = 1e-14
+    @test v[151] ≈ -1.0+imag(ċ2) atol = 1e-14
 
     u2, v2 = ml(0.0,bl)
     @test u2 == u && v2 == v
