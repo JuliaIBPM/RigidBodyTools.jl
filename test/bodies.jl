@@ -89,9 +89,9 @@ end
   m1 = RigidBodyMotion(complex(0.0),0.0)
   m2 = RigidBodyMotion(RigidBodyTools.PitchHeave(1.0, 11.0, 0.2, 0.0, 0.0, 0.5, 1.0, 0.0))
 
-  ml = RigidMotionList([m1,m2])
+  ml = MotionList([m1,m2])
   @test length(ml) == 2
-  @test eltype(ml) == RigidBodyMotion
+  @test eltype(ml) == RigidBodyTools.AbstractMotion
 
   t1 = RigidTransform((0.0,0.0),0.0)
   t2 = RigidTransform((1.0,0.0),π/2)
@@ -147,7 +147,7 @@ end
     m2 = RigidBodyMotion(ċ2,1.0)
 
     bl = BodyList([b,b2])
-    ml = RigidMotionList([m,m2])
+    ml = MotionList([m,m2])
     u, v = assign_velocity(bl,ml,0.0)
     @test u[26] ≈ -1.0+real(ċ) atol = 1e-14
     @test u[126] ≈ -1.0+real(ċ2) atol = 1e-14
@@ -156,7 +156,7 @@ end
     u2, v2 = ml(0.0,bl)
     @test u2 == u && v2 == v
 
-    vel = rigidbodyvelocity(ml,0.0)
+    vel = motion_velocity(ml,0.0)
     @test vel[3] == 1.0
     @test vel[1]+im*vel[2] ≈ ċ atol = 1e-14
     @test vel[4]+im*vel[5] ≈ ċ2 atol = 1e-14

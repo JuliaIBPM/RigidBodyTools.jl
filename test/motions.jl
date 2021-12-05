@@ -95,9 +95,10 @@ end
 
 @testset "Direct motions" begin
 
-  m = RigidBodyTools.BasicDirectMotion()
+  u, v = rand(5), rand(5)
+  m = RigidBodyTools.BasicDirectMotion(u,v)
 
-  ml = RigidBodyTools.DirectlySpecifiedMotionList([m])
+  ml = RigidBodyTools.MotionList([m])
 
   push!(ml,m)
 

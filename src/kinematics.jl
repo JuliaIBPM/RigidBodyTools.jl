@@ -1,9 +1,17 @@
 #=
 Kinematics
 =#
+using DocStringExtensions
+import ForwardDiff
+import Base: +, *, -, >>, <<, show
 
 using SpaceTimeFields
 import SpaceTimeFields: Abstract1DProfile, >>, ConstantProfile, d_dt
+
+"""
+An abstract type for types that takes in time and returns `(c, ċ, c̈, α, α̇, α̈)`.
+"""
+abstract type Kinematics end
 
 struct Constant{C <: Complex, A <: Real} <: Kinematics
     ċ::C

@@ -1,15 +1,14 @@
 import Base: @propagate_inbounds,getindex, setindex!,iterate,size,length,push!,
               collect,view
 
-export BodyList, RigidMotionList, RigidTransformList, DirectlySpecifiedMotionList,
+export BodyList, MotionList, RigidTransformList,
           getrange, numpts
 
 abstract type SetOfBodies end
 
 const LISTS = [:BodyList, :Body],
-              [:RigidMotionList, :RigidBodyMotion],
-              [:RigidTransformList, :RigidTransform],
-              [:DirectlySpecifiedMotionList,:DirectlySpecifiedMotion]
+              [:MotionList, :AbstractMotion],
+              [:RigidTransformList, :RigidTransform]
 
 
 
@@ -135,15 +134,15 @@ end
 _length_and_mod(x::Vector{T}) where T <: Real = (n = length(x); return n ÷ CHUNK, n % CHUNK)
 
 """
-    rigidbodyvelocity(ml::RigidMotionList,t::Real) -> Vector
+    motion_velocity(ml::MotionList,t::Real) -> Vector
 
-Return the velocity components (as a vector) of a `RigidMotionList`
+Return the aggregated velocity components (as a vector) of a `MotionList`
 at the given time `t`.
 """
-function rigidbodyvelocity(ml::Union{RigidMotionList,DirectlySpecifiedMotionList},t::Real)
+function motion_velocity(ml::MotionList,t::Real)
     u = Float64[]
     for m in ml
-      ui = rigidbodyvelocity(m,t)
+      ui = motion_velocity(m,t)
       append!(u,ui)
     end
     return u
