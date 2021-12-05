@@ -133,7 +133,7 @@ end
 
     ċ = rand(ComplexF64)
     m = RigidBodyMotion(ċ,1.0)
-    u,v = assign_velocity(b,m,0.0)
+    u,v = surface_velocity(b,m,0.0)
     @test u[26] ≈ -1.0+real(ċ) atol = 1e-14
     @test v[51] ≈ -1.0+imag(ċ) atol = 1e-14
 
@@ -148,7 +148,7 @@ end
 
     bl = BodyList([b,b2])
     ml = MotionList([m,m2])
-    u, v = assign_velocity(bl,ml,0.0)
+    u, v = surface_velocity(bl,ml,0.0)
     @test u[26] ≈ -1.0+real(ċ) atol = 1e-14
     @test u[126] ≈ -1.0+real(ċ2) atol = 1e-14
     @test v[151] ≈ -1.0+imag(ċ2) atol = 1e-14

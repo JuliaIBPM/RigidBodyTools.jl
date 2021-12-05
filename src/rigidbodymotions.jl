@@ -1,6 +1,6 @@
-
-
-
+#=
+Rigid body motions
+=#
 
 
 """
@@ -59,16 +59,16 @@ function motion_velocity(motion::RigidBodyMotion,t::Real)
 end
 
 """
-    assign_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
+    surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
                      x::AbstractVector{Float64},y::AbstractVector{Float64},
                      xc::Real,yc::Real,α::Real,
                      motion::RigidBodyMotion,t::Real)
 
 Assign the components of rigid body velocity `u` and `v` (in inertial coordinate system)
-at positions described by coordinates `x`, `y` (also in inertial coordinate system) at time `t`,
+at surface positions described by coordinates `x`, `y` (also in inertial coordinate system) at time `t`,
 based on supplied motion `motion` for the body.
 """
-function assign_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
+function surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
                           x::AbstractVector{Float64},y::AbstractVector{Float64},
                           xc::Real,yc::Real,α::Real,m::RigidBodyMotion,t::Real)
 
@@ -90,16 +90,16 @@ function assign_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
 end
 
 """
-    assign_velocity(x::AbstractVector{Float64},y::AbstractVector{Float64},
+    surface_velocity(x::AbstractVector{Float64},y::AbstractVector{Float64},
                     xc::Real,yc::Real,α::Real,motion::RigidBodyMotion,t::Real)
 
-Return the components of rigid body velocities (in inertial components) at positions
+Return the components of rigid body velocities (in inertial components) at surface positions
 described by coordinates `x`, `y` (also in inertial coordinate system) at time `t`,
 based on supplied motion `motion` for the body.
 """
-assign_velocity(x::AbstractVector{Float64},y::AbstractVector{Float64},
+surface_velocity(x::AbstractVector{Float64},y::AbstractVector{Float64},
                 xc::Real,yc::Real,α::Real,m::RigidBodyMotion,t::Real) =
-                assign_velocity!(similar(x),similar(y),x,y,xc,yc,α,m,t)
+                surface_velocity!(similar(x),similar(y),x,y,xc,yc,α,m,t)
 
 
 function show(io::IO, m::RigidBodyMotion)

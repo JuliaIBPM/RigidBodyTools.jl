@@ -2,7 +2,7 @@ module RigidBodyTools
 
 
 export Body
-export RigidBodyMotion, Kinematics, d_dt, motion_velocity, assign_velocity!, assign_velocity
+export RigidBodyMotion, Kinematics, d_dt, motion_velocity, surface_velocity!, surface_velocity
 export Oscillation, OscillationX, OscillationY, OscillationXY, RotationalOscillation,
         PitchHeave, Pitchup, EldredgeRamp, ColoniusRamp
 
@@ -21,8 +21,6 @@ abstract type Unshifted <: PointShiftType end
 abstract type Shifted <: PointShiftType end
 
 abstract type Body{N,C<:BodyClosureType} end
-
-
 
 abstract type AbstractMotion end
 
