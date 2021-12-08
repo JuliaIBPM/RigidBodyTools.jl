@@ -176,12 +176,12 @@ end
 Rectangle(a::Real,b::Real,na::Int;shifted=true) = _rectangle(a,b,na,Val(shifted))
 
 function _rectangle(a::Real,b::Real,na::Int,::Val{false})
-    x̃, ỹ, ibottom, iright, itop, ileft = _rectangle_points(a::Real,b::Real,na::Int)
+    x̃, ỹ = _rectangle_points(a::Real,b::Real,na::Int)
     Rectangle{length(x̃),Unshifted}(a,b,(0.0,0.0),0.0,x̃,ỹ,x̃,ỹ,nothing,nothing,nothing,nothing)
 end
 
 function _rectangle(a::Real,b::Real,na::Int,::Val{true})
-    x̃mid, ỹmid, ibottom_mid, iright_mid, itop_mid, ileft_mid = _rectangle_points(a::Real,b::Real,na::Int)
+    x̃mid, ỹmid = _rectangle_points(a::Real,b::Real,na::Int)
     x̃, ỹ = _midpoints(x̃mid,ỹmid,ClosedBody)
     Rectangle{length(x̃),Shifted}(a,b,(0.0,0.0),0.0,x̃,ỹ,x̃,ỹ,x̃mid,ỹmid,x̃mid,ỹmid)
 end
@@ -211,14 +211,15 @@ function _rectangle_points(a::Real,b::Real,na::Int)
   @. x[ileft] = -a
   @. y[ileft] =  -b + Δsb*(nb-1:-1:1)
 
-  return x, y, ibottom, iright, itop, ileft
+  return x, y
 
 end
 
 #Rectangle(a::Real,b::Real,targetsize::Float64;kwargs...) =
 #    Rectangle(a,b,_adjustnumber(targetsize,Rectangle,a,b);kwargs...)
 
-centraldiff(b::Rectangle{N,Shifted}) where {N} = _diff(b.xmid,b.ymid,ClosedBody)
+_centraldiff(b::Rectangle{N,Shifted},::Val{false}) where {N} = _diff(b.xmid,b.ymid,ClosedBody)
+_centraldiff(b::Rectangle{N,Shifted},::Val{true}) where {N} = _diff(b.x̃mid,b.ỹmid,ClosedBody)
 
 
 function (T::RigidTransform)(b::Rectangle{N,Shifted}) where {N}

@@ -12,28 +12,43 @@ Return the number of points on the body perimeter
 """
 length(::Body{N}) where {N} = N
 
+for f in [:diff,:midpoints,:centraldiff]
+    _f = Symbol("_"*string(f))
+    @eval $f(b::Body;ref=false) = $_f(b,Val(ref))
+
+    @eval $_f(b::Body{N,C},::Val{false}) where {N,C<:BodyClosureType} = $_f(b.x,b.y,C)
+    @eval $_f(b::Body{N,C},::Val{true}) where {N,C<:BodyClosureType}  = $_f(b.x̃,b.ỹ,C)
+
+    @eval function $f(bl::BodyList;kwargs...)
+        xl = Float64[]
+        yl = Float64[]
+        for b in bl
+            xb, yb = $f(b;kwargs...)
+            append!(xl,xb)
+            append!(yl,yb)
+        end
+        return xl, yl
+    end
+end
+
 """
-    diff(body::Body/BodyList) -> Tuple{Vector{Float64},Vector{Float64}}
+    diff(body::Body[,ref=false]) -> Tuple{Vector{Float64},Vector{Float64}}
 
 Compute the x and y differences of the faces on the perimeter of body `body`, whose ends
-are at the current `x` and `y` coordinates (in inertial space) of the body. Face 1
+are at the current `x` and `y` coordinates (in inertial space) of the body (if `ref=false`),
+or at the reference `x̃` and `ỹ` coordinates (body-fixed space) if `ref=true`. Face 1
 corresponds to the face between points 1 and 2, for example.
 
 If `body` is a `BodyList`, then it computes the differences separately on each
 constituent body.
-"""
-diff(b::Body{N,C}) where {N,C<:BodyClosureType} = _diff(b.x,b.y,C)
+""" diff(::Body)
 
-function diff(bl::BodyList)
-    dx = Float64[]
-    dy = Float64[]
-    for b in bl
-        dxb, dyb = diff(b)
-        append!(dx,dxb)
-        append!(dy,dyb)
-    end
-    return dx, dy
-end
+"""
+    diff(bl::BodyList[,ref=false]) -> Tuple{Vector{Float64},Vector{Float64}}
+
+Compute the `diff` on each constituent body in `bl`.
+""" diff(::BodyList)
+
 
 function _diff(x::Vector{Float64},y::Vector{Float64},::Type{ClosedBody})
   N = length(x)
@@ -41,9 +56,6 @@ function _diff(x::Vector{Float64},y::Vector{Float64},::Type{ClosedBody})
 
   dxtmp = circshift(x,-1) .- x
   dytmp = circshift(y,-1) .- y
-  #ip1(i) = 1+mod(i,N)
-  #dxtmp = [x[ip1(i)] - x[i] for i = 1:N]
-  #dytmp = [y[ip1(i)] - y[i] for i = 1:N]
 
   return dxtmp, dytmp
 
@@ -55,9 +67,6 @@ function _diff_ccw(x::Vector{Float64},y::Vector{Float64},::Type{ClosedBody})
 
   dxtmp = x .- circshift(x,1)
   dytmp = y .- circshift(y,1)
-  #ip1(i) = 1+mod(i,N)
-  #dxtmp = [x[ip1(i)] - x[i] for i = 1:N]
-  #dytmp = [y[ip1(i)] - y[i] for i = 1:N]
 
   return dxtmp, dytmp
 
@@ -70,36 +79,27 @@ function _diff(x::Vector{Float64},y::Vector{Float64},::Type{OpenBody})
 end
 
 """
-    midpoints(body::Body/BodyList) -> Tuple{Vector{Float64},Vector{Float64}}
+    midpoints(body::Body[,ref=false]) -> Tuple{Vector{Float64},Vector{Float64}}
 
 Compute the x and y midpoints of the faces on the perimeter of body `body`, whose ends
-are at the current `x` and `y` coordinates (in inertial space) of the body. Face 1
+are at the current `x` and `y` coordinates (in inertial space) of the body (if `ref=false`),
+or at the reference `x̃` and `ỹ` coordinates (body-fixed space) if `ref=true`. Face 1
 corresponds to the face between points 1 and 2, for example.
 
 If `body` is a `BodyList`, then it computes the differences separately on each
 constituent body.
-"""
-midpoints(b::Body{N,C}) where {N,C<:BodyClosureType} = _midpoints(b.x,b.y,C)
+""" midpoints(::Body)
 
-function midpoints(bl::BodyList)
-    xc = Float64[]
-    yc = Float64[]
-    for b in bl
-        xcb, ycb = midpoints(b)
-        append!(xc,xcb)
-        append!(yc,ycb)
-    end
-    return xc, yc
-end
+"""
+    midpoints(bl::BodyList[,ref=false]) -> Tuple{Vector{Float64},Vector{Float64}}
+
+Compute the `midpoints` on each constituent body in `bl`.
+""" midpoints(::BodyList)
 
 function _midpoints(x::Vector{Float64},y::Vector{Float64},::Type{ClosedBody})
 
   N = length(x)
   @assert N == length(y)
-
-  #ip1(i) = 1+mod(i,N)
-  #xc = 0.5*[x[ip1(i)] + x[i] for i = 1:N]
-  #yc = 0.5*[y[ip1(i)] + y[i] for i = 1:N]
 
   xc = 0.5*(x .+ circshift(x,-1))
   yc = 0.5*(y .+ circshift(y,-1))
@@ -132,23 +132,17 @@ function _midpoints(x::Vector{Float64},y::Vector{Float64},::Type{OpenBody})
 end
 
 """
-    centraldiff(body::Body/BodyList) -> Tuple{Vector{Float64},Vector{Float64}}
+    centraldiff(body::Body) -> Tuple{Vector{Float64},Vector{Float64}}
 
 Compute the circular central differences of coordinates on body `body` (or
 on each body in list `body`).
-"""
-centraldiff(b::Body{N,C}) where {N,C<:BodyClosureType} = _centraldiff(b.x,b.y,C)
+""" centraldiff(::Body)
 
-function centraldiff(bl::BodyList)
-    dx = Float64[]
-    dy = Float64[]
-    for b in bl
-        dxb, dyb = centraldiff(b)
-        append!(dx,dxb)
-        append!(dy,dyb)
-    end
-    return dx, dy
-end
+"""
+    centraldiff(bl::BodyList[,ref=false]) -> Tuple{Vector{Float64},Vector{Float64}}
+
+Compute the `centraldiff` on each constituent body in `bl`.
+""" centraldiff(::BodyList)
 
 function _centraldiff(x::Vector{Float64},y::Vector{Float64},::Type{ClosedBody})
 
@@ -201,27 +195,29 @@ end
 """
     normal(body::Body/BodyList) -> Tuple{Vector{Float64},Vector{Float64}}
 
-Compute the current normals (in inertial components) of the faces on the perimeter
+Compute the current normals in inertial components (if `ref=false`) or body-
+  fixed components (if `ref=true`) of the faces on the perimeter
 of body `body`, whose ends are at the current `x` and `y` coordinates (in inertial space)
 of the body. Face 1 corresponds to the face between points 1 and 2, for example. For an `OpenBody`,
 this provides a vector that is one element shorter than the number of points.
 """
-function normal(b::Union{Body,BodyList})
-  dx, dy = diff(b)
+function normal(b::Union{Body,BodyList};kwargs...)
+  dx, dy = diff(b;kwargs...)
   ds = dlength(b)
   return dy./ds, -dx./ds
 end
 
 """
-    normalmid(body::Body/BodyList) -> Tuple{Vector{Float64},Vector{Float64}}
+    normalmid(body::Body/BodyList[,ref=false]) -> Tuple{Vector{Float64},Vector{Float64}}
 
-Compute the current normals (in inertial components) of the faces formed between
+Compute the current normals in inertial components (if `ref=false`) or body-
+  fixed components (if `ref=true`) of the faces formed between
 midpoints on the perimeter of body `body` (or each body in list `body`). For an `OpenBody`,
 the normals for the first and last points are calculated for the face adjoining
 with the adjacent midpoints.
 """
-function normalmid(b::Union{Body,BodyList})
-  dx, dy = centraldiff(b)
+function normalmid(b::Union{Body,BodyList};kwargs...)
+  dx, dy = centraldiff(b;kwargs...)
   ds = dlengthmid(b)
   return dy./ds, -dx./ds
 end

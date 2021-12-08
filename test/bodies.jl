@@ -36,21 +36,28 @@ const MYEPS = 20*eps()
   @test abs(sum(ny)) < 1000.0*eps(1.0)
 
 
+  T = RigidTransform((1.0,-1.0),π/4)
+  T(c)
+  nx2, ny2 = normalmid(c,ref=true)
+  @test sum(abs.(nx .- nx2)) < 1000.0*eps(1.0)
+  @test sum(abs.(ny .- ny2)) < 1000.0*eps(1.0)
+
+
 end
 
 @testset "Shifted rectangle" begin
 
   b = Rectangle(0.5,1.0,11,shifted=true)
-  nx, ny = normalmid(b)
-  nx, ny = normalmid(b)
-  @test all(isapprox.(nx[1:10],0.0,atol=MYEPS)) &&
-        all(isapprox.(nx[11:30],1.0,atol=MYEPS)) &&
-        all(isapprox.(nx[31:40],0.0,atol=MYEPS)) &&
-        all(isapprox.(nx[41:60],-1.0,atol=MYEPS))
-  @test all(isapprox.(ny[1:10],-1.0,atol=MYEPS)) &&
-        all(isapprox.(ny[11:30],0.0,atol=MYEPS)) &&
-        all(isapprox.(ny[31:40],1.0,atol=MYEPS)) &&
-        all(isapprox.(ny[41:60],0.0,atol=MYEPS))
+  nx0, ny0 = normalmid(b)
+
+  @test all(isapprox.(nx0[1:10],0.0,atol=MYEPS)) &&
+        all(isapprox.(nx0[11:30],1.0,atol=MYEPS)) &&
+        all(isapprox.(nx0[31:40],0.0,atol=MYEPS)) &&
+        all(isapprox.(nx0[41:60],-1.0,atol=MYEPS))
+  @test all(isapprox.(ny0[1:10],-1.0,atol=MYEPS)) &&
+        all(isapprox.(ny0[11:30],0.0,atol=MYEPS)) &&
+        all(isapprox.(ny0[31:40],1.0,atol=MYEPS)) &&
+        all(isapprox.(ny0[41:60],0.0,atol=MYEPS))
 
   ds = dlengthmid(b)
   @test all(ds .≈ 0.1)
@@ -70,6 +77,12 @@ end
 
   ds = dlengthmid(b)
   @test all(ds .≈ 0.1)
+
+  T = RigidTransform((1.2,-1.5),π/4)
+  T(b)
+  nx2, ny2 = normalmid(b,ref=true)
+  @test sum(abs.(nx0 .- nx2)) < 1000.0*eps(1.0)
+  @test sum(abs.(ny0 .- ny2)) < 1000.0*eps(1.0)
 
 
 end
