@@ -147,10 +147,11 @@ Construct a rectangular body with x̃ side half-length `a` and ỹ side half-len
 with `na` points distributed on the x̃ side (including both corners). The centroid
 of the rectangle is placed at the origin (so that the lower left corner is at (-a,-b)).
 
-By default, points are placed at the corners, and the normal vectors are bisectors
-between the normals on the adjacent two sides. If the `shifted=true` flag is added,
-then the points are shifted counterclockwise by half a segment, so no points
-are placed on the corners, and all normals are perpendicular to the sides.
+By default, points are not placed at the corners, but rather, are shifted
+by half a segment. This ensures that all normals are perpendicular to the sides.
+If, instead, the `shifted=false` flag is added, then points are placed at the corners,
+shifted clockwise relative to the default by half a segment, and
+the normal vectors are bisectors between the normals on the adjacent two sides.
 """
 mutable struct Rectangle{N,PS} <: Body{N,ClosedBody}
   a :: Float64
@@ -172,15 +173,15 @@ mutable struct Rectangle{N,PS} <: Body{N,ClosedBody}
 
 end
 
-Rectangle(a::Real,b::Real,na::Int;shifted=false) = _rectangle(a,b,na,Val(shifted))
+Rectangle(a::Real,b::Real,na::Int;shifted=true) = _rectangle(a,b,na,Val(shifted))
 
 function _rectangle(a::Real,b::Real,na::Int,::Val{false})
-    x̃, ỹ = _rectangle_points(a::Real,b::Real,na::Int)
+    x̃, ỹ, ibottom, iright, itop, ileft = _rectangle_points(a::Real,b::Real,na::Int)
     Rectangle{length(x̃),Unshifted}(a,b,(0.0,0.0),0.0,x̃,ỹ,x̃,ỹ,nothing,nothing,nothing,nothing)
 end
 
 function _rectangle(a::Real,b::Real,na::Int,::Val{true})
-    x̃mid, ỹmid = _rectangle_points(a::Real,b::Real,na::Int)
+    x̃mid, ỹmid, ibottom_mid, iright_mid, itop_mid, ileft_mid = _rectangle_points(a::Real,b::Real,na::Int)
     x̃, ỹ = _midpoints(x̃mid,ỹmid,ClosedBody)
     Rectangle{length(x̃),Shifted}(a,b,(0.0,0.0),0.0,x̃,ỹ,x̃,ỹ,x̃mid,ỹmid,x̃mid,ỹmid)
 end
@@ -194,19 +195,23 @@ function _rectangle_points(a::Real,b::Real,na::Int)
   x = zeros(N)
   y = zeros(N)
 
-  @. x[1:na-1] = -a + Δsa*(0:na-2)
-  @. y[1:na-1] = -b
+  ibottom = 1:na-1
+  @. x[ibottom] = -a + Δsa*(0:na-2)
+  @. y[ibottom] = -b
 
-  @. x[na:na+nb-2] =  a
-  @. y[na:na+nb-2] = -b + Δsb*(0:nb-2)
+  iright = na:na+nb-2
+  @. x[iright] =  a
+  @. y[iright] = -b + Δsb*(0:nb-2)
 
-  @. x[(na+nb-1):(2na+nb-3)] = -a + Δsa*(na-1:-1:1)
-  @. y[(na+nb-1):(2na+nb-3)] = b
+  itop = (na+nb-1):(2na+nb-3)
+  @. x[itop] = -a + Δsa*(na-1:-1:1)
+  @. y[itop] = b
 
-  @. x[(2na+nb-2):(2na+2nb-4)] = -a
-  @. y[(2na+nb-2):(2na+2nb-4)] =  -b + Δsb*(nb-1:-1:1)
+  ileft = (2na+nb-2):(2na+2nb-4)
+  @. x[ileft] = -a
+  @. y[ileft] =  -b + Δsb*(nb-1:-1:1)
 
-  return x, y
+  return x, y, ibottom, iright, itop, ileft
 
 end
 

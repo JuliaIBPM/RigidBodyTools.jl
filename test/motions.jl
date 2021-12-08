@@ -105,7 +105,7 @@ end
 
 end
 
-@testset "Motion states" begin
+@testset "Motion velocities and states" begin
 
   b1 = Circle(1.0,100)
   b2 = Rectangle(2.0,0.5,400)
@@ -128,6 +128,10 @@ end
   @test x0[1:3] == vec(T1)[1:3]
   @test x0[4:end] == vcat(b2.x,b2.y)
 
+  t = rand()
+  u = motion_velocity(bl,ml,t)
+  @test u[1:3] == motion_velocity(b1,m1,t)
+  @test u[4:end] == motion_velocity(b2,m2,t)
 
 
 end

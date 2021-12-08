@@ -134,15 +134,15 @@ end
 _length_and_mod(x::Vector{T}) where T <: Real = (n = length(x); return n ÷ CHUNK, n % CHUNK)
 
 """
-    motion_velocity(ml::MotionList,t::Real) -> Vector
+    motion_velocity(bl::BodyList,ml::MotionList,t::Real) -> Vector
 
 Return the aggregated velocity components (as a vector) of a `MotionList`
 at the given time `t`.
 """
-function motion_velocity(ml::MotionList,t::Real)
+function motion_velocity(bl::BodyList,ml::MotionList,t::Real)
     u = Float64[]
-    for m in ml
-      ui = motion_velocity(m,t)
+    for (b,m) in zip(bl,ml)
+      ui = motion_velocity(b,m,t)
       append!(u,ui)
     end
     return u
@@ -164,3 +164,34 @@ function motion_state(bl::BodyList,ml::MotionList)
     end
     return x
 end
+
+"""
+    surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
+                     bl::BodyList,ml::MotionList,t::Real)
+
+Assign the components of velocity `u` and `v` (in inertial coordinate system)
+at surface positions described by coordinates inertial coordinates in each body in `bl` at time `t`,
+based on supplied motions in the MotionList `ml` for each body.
+"""
+function surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
+                 bl::BodyList,ml::MotionList,t::Real)
+
+   for i in 1:length(bl)
+      surface_velocity!(view(u,bl,i),view(v,bl,i),bl[i],ml[i],t)
+   end
+   return u, v
+end
+
+"""
+    surface_velocity(bl::BodyList,ml::MotionList,t::Real)
+
+Return the components of rigid body velocity (in inertial coordinate system)
+at surface positions described by coordinates inertial coordinates in each body in `bl` at time `t`,
+based on supplied motions in the MotionList `ml` for each body.
+
+As a shorthand, you an also apply this as `ml(t,bl)`.
+"""
+surface_velocity(bl::BodyList,ml::MotionList,t::Real) =
+    surface_velocity!(zeros(Float64,numpts(bl)),zeros(Float64,numpts(bl)),bl,ml,t)
+
+(ml::MotionList)(t::Real,bl::BodyList) = surface_velocity(bl,ml,t)

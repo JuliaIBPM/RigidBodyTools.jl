@@ -49,12 +49,12 @@ end
 
 
 """
-    motion_velocity(m::RigidBodyMotion,t::Real)
+    motion_velocity(b::Body,m::RigidBodyMotion,t::Real)
 
 Return the velocity components (as a vector) of a `RigidBodyMotion`
 at the given time `t`.
 """
-function motion_velocity(motion::RigidBodyMotion,t::Real)
+function motion_velocity(b::Body,motion::RigidBodyMotion,t::Real)
   _,ċ,_,_,α̇,_ = motion(t)
   return [real(ċ),imag(ċ),α̇]
 end
@@ -69,6 +69,18 @@ of the body centroid and the angle of the body.
 function motion_state(b::Body,m::RigidBodyMotion)
     return [b.cent...,b.α]
 end
+
+"""
+    surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
+                 body::Body,motion::AbstractMotion,t::Real)
+
+Assign the components of body velocity `u` and `v` (in inertial coordinate system)
+at surface positions described by coordinates inertial coordinates in body in `body` at time `t`,
+based on supplied motions in the `motion` for the body.
+"""
+surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
+                 b::Body,m::RigidBodyMotion,t::Real) =
+                 surface_velocity!(u,v,b.x,b.y,b.cent...,b.α,m,t)
 
 """
     surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},

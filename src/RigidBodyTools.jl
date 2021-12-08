@@ -5,7 +5,7 @@ import Base: vec
 
 export Body
 export RigidBodyMotion, Kinematics, d_dt, motion_velocity, motion_state,
-          surface_velocity!, surface_velocity
+          surface_velocity!, surface_velocity, DirectlySpecifiedMotion
 export Oscillation, OscillationX, OscillationY, OscillationXY, RotationalOscillation,
         PitchHeave, Pitchup, EldredgeRamp, ColoniusRamp
 

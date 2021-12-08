@@ -18,12 +18,12 @@ const MYEPS = 20*eps()
   @test sum(dlength(p)) ≈ sum(dlengthmid(p))
 
 
-  c = Rectangle(1,2,101)
+  c = Rectangle(1,2,101,shifted=false)
   dx, dy = diff(c)
   @test length(dx) == 600
   @test sum(dlength(c)) ≈ 12.0
 
-  c = Square(1,0.01)
+  c = Square(1,0.01,shifted=false)
   @test isapprox(mean(dlength(c)),0.01,atol=1e-4)
 
   c = Ellipse(1,2,0.01)
@@ -137,8 +137,8 @@ end
     @test u[26] ≈ -1.0+real(ċ) atol = 1e-14
     @test v[51] ≈ -1.0+imag(ċ) atol = 1e-14
 
-    u2, v2 = m(0.0,b)
-    @test u == u2 && v == v2
+    #u2, v2 = m(0.0,b)
+    #@test u == u2 && v == v2
 
     b2 = Circle(1.0,100)
     T2 = RigidTransform((rand(),rand()),0.0)
@@ -156,7 +156,7 @@ end
     u2, v2 = ml(0.0,bl)
     @test u2 == u && v2 == v
 
-    vel = motion_velocity(ml,0.0)
+    vel = motion_velocity(bl,ml,0.0)
     @test vel[3] == 1.0
     @test vel[1]+im*vel[2] ≈ ċ atol = 1e-14
     @test vel[4]+im*vel[5] ≈ ċ2 atol = 1e-14
