@@ -147,3 +147,20 @@ function motion_velocity(ml::MotionList,t::Real)
     end
     return u
 end
+
+"""
+    motion_state(bl::BodyList,ml::MotionList)
+
+Return the current state vector of body list `bl` associated with
+motion list `ml`. It returns the aggregated state vectors
+of each body.
+"""
+function motion_state(bl::BodyList,ml::MotionList)
+    x = Float64[]
+    length(bl) == length(ml) || error("body and motion lists are not the same length")
+    for (b,m) in zip(bl,ml)
+      xi = motion_state(b,m)
+      append!(x,xi)
+    end
+    return x
+end

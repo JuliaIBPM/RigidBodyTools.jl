@@ -47,6 +47,7 @@ function (m::RigidBodyMotion)(t,x̃::Tuple{Real,Real})
   return m.c + z, m.ċ + im*m.α̇*z, m.c̈ + (im*m.α̈-m.α̇^2)*z
 end
 
+
 """
     motion_velocity(m::RigidBodyMotion,t::Real)
 
@@ -56,6 +57,17 @@ at the given time `t`.
 function motion_velocity(motion::RigidBodyMotion,t::Real)
   _,ċ,_,_,α̇,_ = motion(t)
   return [real(ċ),imag(ċ),α̇]
+end
+
+"""
+    motion_state(b::Body,m::RigidBodyMotion)
+
+Return the current state vector of body `b` associated with
+rigid body motion `m`. It returns the current coordinates
+of the body centroid and the angle of the body.
+"""
+function motion_state(b::Body,m::RigidBodyMotion)
+    return [b.cent...,b.α]
 end
 
 """

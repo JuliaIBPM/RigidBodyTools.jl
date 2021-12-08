@@ -10,9 +10,7 @@ surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
                  b::Body,m::RigidBodyMotion,t::Real) =
                  surface_velocity!(u,v,b.x,b.y,b.cent...,b.α,m,t)
 
-surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
-                 b::Body,m::DirectlySpecifiedMotion,t::Real) =
-                 surface_velocity!(u,v,b.x,b.y,m,t)
+
 
 
 """

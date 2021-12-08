@@ -22,15 +22,15 @@ Constant(ċ, α̇) = Constant(complex(ċ), α̇)
 show(io::IO, c::Constant) = print(io, "Constant (ċ = $(c.ċ), α̇ = $(c.α̇))")
 
 """
-    Pitchup(U₀,a,K,α₀,t₀,Δα,ramp=EldredgeRamp) <: Kinematics
+    Pitchup(U₀,a,K,α₀,t₀,Δα,ramp=EldredgeRamp(11.0)) <: Kinematics
 
 Kinematics describing a pitch-ramp motion (horizontal translation with rotation)
 starting at time ``t_0`` about an axis at `a` (expressed relative to the centroid, in the ``\\tilde{x}``
   direction in the body-fixed coordinate system), with translational velocity `U₀`
 in the inertial ``x`` direction, initial angle ``\\alpha_0``, and angular
 change ``\\Delta\\alpha``. The optional ramp argument is assumed to be
-given by the smooth ramp `EldredgeRamp`, though this can be changed to
-`ColoniusRamp`.
+given by the smooth ramp `EldredgeRamp` with a smoothness factor of 11, but this
+can be replaced by another Eldredge ramp with a different value or a `ColoniusRamp`.
 """
 struct Pitchup <: Kinematics
     "Freestream velocity"
@@ -54,7 +54,7 @@ struct Pitchup <: Kinematics
     α̈::Abstract1DProfile
 end
 
-function Pitchup(U₀, a, K, α₀, t₀, Δα, ramp=EldredgeRamp)
+function Pitchup(U₀, a, K, α₀, t₀, Δα, ramp=EldredgeRamp(11.0))
     Δt = 0.5Δα/K
     p = ConstantProfile(α₀) + 2K*((ramp >> t₀) - (ramp >> (t₀ + Δt)))
     ṗ = d_dt(p)

@@ -104,3 +104,30 @@ end
 
 
 end
+
+@testset "Motion states" begin
+
+  b1 = Circle(1.0,100)
+  b2 = Rectangle(2.0,0.5,400)
+  bl = BodyList([b1,b2])
+
+  T1 = RigidTransform((rand(),rand()),rand())
+  T2 = RigidTransform((rand(),rand()),rand())
+  tl = RigidTransformList([T1,T2])
+
+  tl(bl)
+
+  kin = Pitchup(1.0,0.5,0.2,0.0,0.5,π/4,EldredgeRamp(20.0))
+  m1 = RigidBodyMotion(kin)
+  m2 = BasicDirectMotion(one.(b2.x),zero.(b2.y))
+
+  ml = MotionList([m1,m2])
+
+  x0 = motion_state(bl,ml)
+
+  @test x0[1:3] == vec(T1)[1:3]
+  @test x0[4:end] == vcat(b2.x,b2.y)
+
+
+
+end

@@ -1,8 +1,11 @@
 module RigidBodyTools
 
+import Base: vec
+
 
 export Body
-export RigidBodyMotion, Kinematics, d_dt, motion_velocity, surface_velocity!, surface_velocity
+export RigidBodyMotion, Kinematics, d_dt, motion_velocity, motion_state,
+          surface_velocity!, surface_velocity
 export Oscillation, OscillationX, OscillationY, OscillationXY, RotationalOscillation,
         PitchHeave, Pitchup, EldredgeRamp, ColoniusRamp
 
