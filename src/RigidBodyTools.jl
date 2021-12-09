@@ -1,10 +1,18 @@
 module RigidBodyTools
 
+import Base: vec
+
 
 export Body
+export RigidBodyMotion, Kinematics, d_dt, motion_velocity, motion_state,
+          surface_velocity!, surface_velocity, DirectlySpecifiedMotion
+export Oscillation, OscillationX, OscillationY, OscillationXY, RotationalOscillation,
+        PitchHeave, Pitchup, EldredgeRamp, ColoniusRamp
+
 
 const NDIM = 2
 const CHUNK = 3*(NDIM-1)
+
 
 
 abstract type BodyClosureType end
@@ -17,15 +25,18 @@ abstract type Shifted <: PointShiftType end
 
 abstract type Body{N,C<:BodyClosureType} end
 
+abstract type AbstractMotion end
+
+
 numpts(::Body{N}) where {N} = N
 numpts(::Nothing) = 0
 
+include("kinematics.jl")
 include("rigidbodymotions.jl")
 include("directmotions.jl")
-include("kinematics.jl")
 
 include("rigidtransform.jl")
-include("bodylist.jl")
+include("lists.jl")
 
 
 include("tools.jl")

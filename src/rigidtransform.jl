@@ -1,6 +1,5 @@
 # Rigid-body transformation routines
 
-import Base: vec
 export RigidTransform
 
 """

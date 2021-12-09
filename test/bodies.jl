@@ -18,12 +18,12 @@ const MYEPS = 20*eps()
   @test sum(dlength(p)) ≈ sum(dlengthmid(p))
 
 
-  c = Rectangle(1,2,101)
+  c = Rectangle(1,2,101,shifted=false)
   dx, dy = diff(c)
   @test length(dx) == 600
   @test sum(dlength(c)) ≈ 12.0
 
-  c = Square(1,0.01)
+  c = Square(1,0.01,shifted=false)
   @test isapprox(mean(dlength(c)),0.01,atol=1e-4)
 
   c = Ellipse(1,2,0.01)
@@ -36,21 +36,28 @@ const MYEPS = 20*eps()
   @test abs(sum(ny)) < 1000.0*eps(1.0)
 
 
+  T = RigidTransform((1.0,-1.0),π/4)
+  T(c)
+  nx2, ny2 = normalmid(c,ref=true)
+  @test sum(abs.(nx .- nx2)) < 1000.0*eps(1.0)
+  @test sum(abs.(ny .- ny2)) < 1000.0*eps(1.0)
+
+
 end
 
 @testset "Shifted rectangle" begin
 
   b = Rectangle(0.5,1.0,11,shifted=true)
-  nx, ny = normalmid(b)
-  nx, ny = normalmid(b)
-  @test all(isapprox.(nx[1:10],0.0,atol=MYEPS)) &&
-        all(isapprox.(nx[11:30],1.0,atol=MYEPS)) &&
-        all(isapprox.(nx[31:40],0.0,atol=MYEPS)) &&
-        all(isapprox.(nx[41:60],-1.0,atol=MYEPS))
-  @test all(isapprox.(ny[1:10],-1.0,atol=MYEPS)) &&
-        all(isapprox.(ny[11:30],0.0,atol=MYEPS)) &&
-        all(isapprox.(ny[31:40],1.0,atol=MYEPS)) &&
-        all(isapprox.(ny[41:60],0.0,atol=MYEPS))
+  nx0, ny0 = normalmid(b)
+
+  @test all(isapprox.(nx0[1:10],0.0,atol=MYEPS)) &&
+        all(isapprox.(nx0[11:30],1.0,atol=MYEPS)) &&
+        all(isapprox.(nx0[31:40],0.0,atol=MYEPS)) &&
+        all(isapprox.(nx0[41:60],-1.0,atol=MYEPS))
+  @test all(isapprox.(ny0[1:10],-1.0,atol=MYEPS)) &&
+        all(isapprox.(ny0[11:30],0.0,atol=MYEPS)) &&
+        all(isapprox.(ny0[31:40],1.0,atol=MYEPS)) &&
+        all(isapprox.(ny0[41:60],0.0,atol=MYEPS))
 
   ds = dlengthmid(b)
   @test all(ds .≈ 0.1)
@@ -71,6 +78,12 @@ end
   ds = dlengthmid(b)
   @test all(ds .≈ 0.1)
 
+  T = RigidTransform((1.2,-1.5),π/4)
+  T(b)
+  nx2, ny2 = normalmid(b,ref=true)
+  @test sum(abs.(nx0 .- nx2)) < 1000.0*eps(1.0)
+  @test sum(abs.(ny0 .- ny2)) < 1000.0*eps(1.0)
+
 
 end
 
@@ -89,9 +102,9 @@ end
   m1 = RigidBodyMotion(complex(0.0),0.0)
   m2 = RigidBodyMotion(RigidBodyTools.PitchHeave(1.0, 11.0, 0.2, 0.0, 0.0, 0.5, 1.0, 0.0))
 
-  ml = RigidMotionList([m1,m2])
+  ml = MotionList([m1,m2])
   @test length(ml) == 2
-  @test eltype(ml) == RigidBodyMotion
+  @test eltype(ml) == RigidBodyTools.AbstractMotion
 
   t1 = RigidTransform((0.0,0.0),0.0)
   t2 = RigidTransform((1.0,0.0),π/2)
@@ -133,12 +146,12 @@ end
 
     ċ = rand(ComplexF64)
     m = RigidBodyMotion(ċ,1.0)
-    u,v = assign_velocity(b,m,0.0)
+    u,v = surface_velocity(b,m,0.0)
     @test u[26] ≈ -1.0+real(ċ) atol = 1e-14
     @test v[51] ≈ -1.0+imag(ċ) atol = 1e-14
 
-    u2, v2 = m(0.0,b)
-    @test u == u2 && v == v2
+    #u2, v2 = m(0.0,b)
+    #@test u == u2 && v == v2
 
     b2 = Circle(1.0,100)
     T2 = RigidTransform((rand(),rand()),0.0)
@@ -147,8 +160,8 @@ end
     m2 = RigidBodyMotion(ċ2,1.0)
 
     bl = BodyList([b,b2])
-    ml = RigidMotionList([m,m2])
-    u, v = assign_velocity(bl,ml,0.0)
+    ml = MotionList([m,m2])
+    u, v = surface_velocity(bl,ml,0.0)
     @test u[26] ≈ -1.0+real(ċ) atol = 1e-14
     @test u[126] ≈ -1.0+real(ċ2) atol = 1e-14
     @test v[151] ≈ -1.0+imag(ċ2) atol = 1e-14
@@ -156,7 +169,7 @@ end
     u2, v2 = ml(0.0,bl)
     @test u2 == u && v2 == v
 
-    vel = rigidbodyvelocity(ml,0.0)
+    vel = motion_velocity(bl,ml,0.0)
     @test vel[3] == 1.0
     @test vel[1]+im*vel[2] ≈ ċ atol = 1e-14
     @test vel[4]+im*vel[5] ≈ ċ2 atol = 1e-14

@@ -1,20 +1,10 @@
-
-export RigidBodyMotion, Kinematics, d_dt, rigidbodyvelocity, assign_velocity!, assign_velocity
-export Oscillation, OscillationX, OscillationY, OscillationXY, RotationalOscillation,
-        PitchHeave, Pitchup, EldredgeRamp, ColoniusRamp
-
-using DocStringExtensions
-import ForwardDiff
-import Base: +, *, -, >>, <<, show
-
-"""
-An abstract type for types that takes in time and returns `(c, ċ, c̈, α, α̇, α̈)`.
-"""
-abstract type Kinematics end
+#=
+Rigid body motions
+=#
 
 
 """
-    RigidBodyMotion
+    RigidBodyMotion <: AbstractMotion
 
 A type to store the body's current kinematics
 
@@ -31,7 +21,7 @@ A type to store the body's current kinematics
 The first six fields are meant as a cache of the current kinematics
 while the `kin` field can be used to find the plate kinematics at any time.
 """
-mutable struct RigidBodyMotion
+mutable struct RigidBodyMotion <: AbstractMotion
     c::ComplexF64
     ċ::ComplexF64
     c̈::ComplexF64
@@ -57,28 +47,52 @@ function (m::RigidBodyMotion)(t,x̃::Tuple{Real,Real})
   return m.c + z, m.ċ + im*m.α̇*z, m.c̈ + (im*m.α̈-m.α̇^2)*z
 end
 
+
 """
-    rigidbodyvelocity(m::RigidBodyMotion,t::Real)
+    motion_velocity(b::Body,m::RigidBodyMotion,t::Real)
 
 Return the velocity components (as a vector) of a `RigidBodyMotion`
 at the given time `t`.
 """
-function rigidbodyvelocity(motion::RigidBodyMotion,t::Real)
+function motion_velocity(b::Body,motion::RigidBodyMotion,t::Real)
   _,ċ,_,_,α̇,_ = motion(t)
   return [real(ċ),imag(ċ),α̇]
 end
 
 """
-    assign_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
+    motion_state(b::Body,m::RigidBodyMotion)
+
+Return the current state vector of body `b` associated with
+rigid body motion `m`. It returns the current coordinates
+of the body centroid and the angle of the body.
+"""
+function motion_state(b::Body,m::RigidBodyMotion)
+    return [b.cent...,b.α]
+end
+
+"""
+    surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
+                 body::Body,motion::AbstractMotion,t::Real)
+
+Assign the components of body velocity `u` and `v` (in inertial coordinate system)
+at surface positions described by coordinates inertial coordinates in body in `body` at time `t`,
+based on supplied motions in the `motion` for the body.
+"""
+surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
+                 b::Body,m::RigidBodyMotion,t::Real) =
+                 surface_velocity!(u,v,b.x,b.y,b.cent...,b.α,m,t)
+
+"""
+    surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
                      x::AbstractVector{Float64},y::AbstractVector{Float64},
                      xc::Real,yc::Real,α::Real,
-                     motion,t::Real)
+                     motion::RigidBodyMotion,t::Real)
 
 Assign the components of rigid body velocity `u` and `v` (in inertial coordinate system)
-at positions described by coordinates `x`, `y` (also in inertial coordinate system) at time `t`,
+at surface positions described by coordinates `x`, `y` (also in inertial coordinate system) at time `t`,
 based on supplied motion `motion` for the body.
 """
-function assign_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
+function surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
                           x::AbstractVector{Float64},y::AbstractVector{Float64},
                           xc::Real,yc::Real,α::Real,m::RigidBodyMotion,t::Real)
 
@@ -100,16 +114,16 @@ function assign_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
 end
 
 """
-    assign_velocity(x::AbstractVector{Float64},y::AbstractVector{Float64},
-                    xc::Real,yc::Real,α::Real,motion,t::Real)
+    surface_velocity(x::AbstractVector{Float64},y::AbstractVector{Float64},
+                    xc::Real,yc::Real,α::Real,motion::RigidBodyMotion,t::Real)
 
-Return the components of rigid body velocities (in inertial components) at positions
+Return the components of rigid body velocities (in inertial components) at surface positions
 described by coordinates `x`, `y` (also in inertial coordinate system) at time `t`,
 based on supplied motion `motion` for the body.
 """
-assign_velocity(x::AbstractVector{Float64},y::AbstractVector{Float64},
+surface_velocity(x::AbstractVector{Float64},y::AbstractVector{Float64},
                 xc::Real,yc::Real,α::Real,m::RigidBodyMotion,t::Real) =
-                assign_velocity!(similar(x),similar(y),x,y,xc,yc,α,m,t)
+                surface_velocity!(similar(x),similar(y),x,y,xc,yc,α,m,t)
 
 
 function show(io::IO, m::RigidBodyMotion)

@@ -1,15 +1,14 @@
 import Base: @propagate_inbounds,getindex, setindex!,iterate,size,length,push!,
               collect,view
 
-export BodyList, RigidMotionList, RigidTransformList, DirectlySpecifiedMotionList,
+export BodyList, MotionList, RigidTransformList,
           getrange, numpts
 
 abstract type SetOfBodies end
 
 const LISTS = [:BodyList, :Body],
-              [:RigidMotionList, :RigidBodyMotion],
-              [:RigidTransformList, :RigidTransform],
-              [:DirectlySpecifiedMotionList,:DirectlySpecifiedMotion]
+              [:MotionList, :AbstractMotion],
+              [:RigidTransformList, :RigidTransform]
 
 
 
@@ -135,16 +134,64 @@ end
 _length_and_mod(x::Vector{T}) where T <: Real = (n = length(x); return n ÷ CHUNK, n % CHUNK)
 
 """
-    rigidbodyvelocity(ml::RigidMotionList,t::Real) -> Vector
+    motion_velocity(bl::BodyList,ml::MotionList,t::Real) -> Vector
 
-Return the velocity components (as a vector) of a `RigidMotionList`
+Return the aggregated velocity components (as a vector) of a `MotionList`
 at the given time `t`.
 """
-function rigidbodyvelocity(ml::Union{RigidMotionList,DirectlySpecifiedMotionList},t::Real)
+function motion_velocity(bl::BodyList,ml::MotionList,t::Real)
     u = Float64[]
-    for m in ml
-      ui = rigidbodyvelocity(m,t)
+    for (b,m) in zip(bl,ml)
+      ui = motion_velocity(b,m,t)
       append!(u,ui)
     end
     return u
 end
+
+"""
+    motion_state(bl::BodyList,ml::MotionList)
+
+Return the current state vector of body list `bl` associated with
+motion list `ml`. It returns the aggregated state vectors
+of each body.
+"""
+function motion_state(bl::BodyList,ml::MotionList)
+    x = Float64[]
+    length(bl) == length(ml) || error("body and motion lists are not the same length")
+    for (b,m) in zip(bl,ml)
+      xi = motion_state(b,m)
+      append!(x,xi)
+    end
+    return x
+end
+
+"""
+    surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
+                     bl::BodyList,ml::MotionList,t::Real)
+
+Assign the components of velocity `u` and `v` (in inertial coordinate system)
+at surface positions described by coordinates inertial coordinates in each body in `bl` at time `t`,
+based on supplied motions in the MotionList `ml` for each body.
+"""
+function surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
+                 bl::BodyList,ml::MotionList,t::Real)
+
+   for i in 1:length(bl)
+      surface_velocity!(view(u,bl,i),view(v,bl,i),bl[i],ml[i],t)
+   end
+   return u, v
+end
+
+"""
+    surface_velocity(bl::BodyList,ml::MotionList,t::Real)
+
+Return the components of rigid body velocity (in inertial coordinate system)
+at surface positions described by coordinates inertial coordinates in each body in `bl` at time `t`,
+based on supplied motions in the MotionList `ml` for each body.
+
+As a shorthand, you an also apply this as `ml(t,bl)`.
+"""
+surface_velocity(bl::BodyList,ml::MotionList,t::Real) =
+    surface_velocity!(zeros(Float64,numpts(bl)),zeros(Float64,numpts(bl)),bl,ml,t)
+
+(ml::MotionList)(t::Real,bl::BodyList) = surface_velocity(bl,ml,t)
