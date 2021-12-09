@@ -92,6 +92,24 @@ function getrange(bl::BodyList,i::Int)
 end
 
 """
+    getrange(bl::BodyList,ml::MotionList,i::Int) -> Range
+
+Return the subrange of indices in the global vector of motion state data
+corresponding to body `i` in a BodyList `bl` with corresponding motion list `ml`.
+"""
+function getrange(bl::BodyList,ml::MotionList,i::Int)
+    i <= length(bl) || error("Unavailable body")
+    first = 1
+    j = 1
+    while j < i
+        first += length(motion_state(bl[j],ml[j]))
+        j += 1
+    end
+    last = first+length(motion_state(bl[i],ml[i]))-1
+    return first:last
+end
+
+"""
     view(f::AbstractVector,bl::BodyList,i::Int) -> SubArray
 
 Provide a view of the range of values in vector `f` corresponding to the Lagrange
