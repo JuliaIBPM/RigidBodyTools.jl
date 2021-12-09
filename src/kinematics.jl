@@ -27,9 +27,11 @@ show(io::IO, c::Constant) = print(io, "Constant (ċ = $(c.ċ), α̇ = $(c.α̇
 Kinematics describing a pitch-ramp motion (horizontal translation with rotation)
 starting at time ``t_0`` about an axis at `a` (expressed relative to the centroid, in the ``\\tilde{x}``
   direction in the body-fixed coordinate system), with translational velocity `U₀`
-in the inertial ``x`` direction, initial angle ``\\alpha_0``, and angular
+in the inertial ``x`` direction, initial angle ``\\alpha_0``, dimensionless angular
+velocity ``K = \\dot{\\alpha}_0c/2U_0``, and angular
 change ``\\Delta\\alpha``. The optional ramp argument is assumed to be
-given by the smooth ramp `EldredgeRamp` with a smoothness factor of 11, but this
+given by the smooth ramp `EldredgeRamp` with a smoothness factor of 11 (larger values
+lead to sharper transitions on/off the ramp), but this
 can be replaced by another Eldredge ramp with a different value or a `ColoniusRamp`.
 """
 struct Pitchup <: Kinematics

@@ -25,7 +25,7 @@ The translation can be provided as either a tuple `(x,y)` or as a complex number
 # Example
 
 ```jldoctest
-julia> body = Bodies.Ellipse(0.5,0.1,100)
+julia> body = RigidTransform.Ellipse(0.5,0.1,100)
 Elliptical body with 100 points and semi-axes (0.5,0.1)
    Current position: (0.0,0.0)
    Current angle (rad): 0.0
