@@ -9,6 +9,13 @@ surface values of the motion in-place in vectors `u` and `v`,
 which must be of the same length as `b.x` and `b.y`.
 =#
 
+"""
+    BasicDirectMotion(u::Vector{Float64},v::Vector{Float64})
+
+Create an instance of basic directly-specified (constant)
+velocity, to be associated with a body whose length
+is the same as `u` and `v`.
+"""
 struct BasicDirectMotion{VT} <: DirectlySpecifiedMotion
     u :: VT
     v :: VT

@@ -10,7 +10,23 @@ const LISTS = [:BodyList, :Body],
               [:MotionList, :AbstractMotion],
               [:RigidTransformList, :RigidTransform]
 
+"""
+    BodyList([b1,b2,...])
 
+Create a list of bodies
+""" BodyList
+
+"""
+    MotionList([m1,m2,...])
+
+Create a list of motions
+""" MotionList
+
+"""
+    RigidTransformList([t1,t2,...])
+
+Create a list of rigid transforms
+""" RigidTransformList
 
 for (listtype,listelement) in LISTS
 
