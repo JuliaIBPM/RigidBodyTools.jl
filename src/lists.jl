@@ -188,10 +188,6 @@ end
 Return the components of rigid body velocity (in inertial coordinate system)
 at surface positions described by coordinates inertial coordinates in each body in `bl` at time `t`,
 based on supplied motions in the MotionList `ml` for each body.
-
-As a shorthand, you an also apply this as `ml(t,bl)`.
 """
 surface_velocity(bl::BodyList,ml::MotionList,t::Real) =
     surface_velocity!(zeros(Float64,numpts(bl)),zeros(Float64,numpts(bl)),bl,ml,t)
-
-(ml::MotionList)(t::Real,bl::BodyList) = surface_velocity(bl,ml,t)
