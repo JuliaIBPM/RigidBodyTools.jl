@@ -98,20 +98,32 @@ part of the velocity, and in the body's own coordinate system.
 =#
 
 """
-    RigidAndDirectMotion(kin::Kinematics,ũ::Vector{Float64},ṽ::Vector{Float64})
+    RigidAndDirectMotion(rig::RigidBodyMotion,def::AbstractDirectlySpecifiedMotion)
 
-Create an instance of basic superposition of a rigid-body motion and
-directly-specified (constant) deformation velocity in body coordinates, to be associated with a body whose length
-is the same as `ũ` and `ṽ`.
+Create an instance of basic superposition of a rigid-body motion
+and directly-specified deformation velocity in body coordinates.
 """
 struct RigidAndDirectMotion{RT,DT} <: AbstractMotion
     rigidmotion :: RT
     defmotion :: DT
 end
 
+"""
+    RigidAndDirectMotion(kin::Kinematics,def::AbstractDirectlySpecifiedMotion)
+
+Create an instance of basic superposition of a rigid-body motion with kinematics `kin`,
+and directly-specified deformation velocity in body coordinates.
+"""
 RigidAndDirectMotion(kin::Kinematics,def::AbstractDirectlySpecifiedMotion) =
                             RigidAndDirectMotion(RigidBodyMotion(kin),def)
 
+"""
+    RigidAndDirectMotion(kin::Kinematics,ũ::Vector{Float64},ṽ::Vector{Float64})
+
+Create an instance of basic superposition of a rigid-body motion and
+directly-specified (constant) deformation velocity in body coordinates, to be associated with a body whose length
+is the same as `ũ` and `ṽ`.
+"""
 RigidAndDirectMotion(kin::Kinematics, ũ, ṽ) = RigidAndDirectMotion(RigidBodyMotion(kin),
                                                                   BasicDirectMotion(ũ,ṽ))
 """

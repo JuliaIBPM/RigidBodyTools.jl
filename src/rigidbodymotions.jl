@@ -32,8 +32,19 @@ mutable struct RigidBodyMotion <: AbstractMotion
     kin::Kinematics
 end
 
+"""
+    RigidBodyMotion(ċ::ComplexF64,α̇)
+
+Create an instance of constant rigid-body motion with velocity `ċ`
+and angular velocity `α̇`
+"""
 RigidBodyMotion(ċ, α̇) = RigidBodyMotion(0.0im, complex(ċ), 0.0im, 0.0, float(α̇),
                                           0.0, Constant(ċ, α̇))
+"""
+    RigidBodyMotion(kin::Kinematics)
+
+Create an instance of rigid-body motion with kinematics `kin`.
+"""
 RigidBodyMotion(kin::Kinematics) = RigidBodyMotion(kin(0)..., kin)
 (m::RigidBodyMotion)(t) = m.kin(t)
 
