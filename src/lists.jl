@@ -92,6 +92,24 @@ function getrange(bl::BodyList,i::Int)
 end
 
 """
+    getrange(bl::BodyList,ml::MotionList,i::Int) -> Range
+
+Return the subrange of indices in the global vector of motion state data
+corresponding to body `i` in a BodyList `bl` with corresponding motion list `ml`.
+"""
+function getrange(bl::BodyList,ml::MotionList,i::Int)
+    i <= length(bl) || error("Unavailable body")
+    first = 1
+    j = 1
+    while j < i
+        first += length(motion_state(bl[j],ml[j]))
+        j += 1
+    end
+    last = first+length(motion_state(bl[i],ml[i]))-1
+    return first:last
+end
+
+"""
     view(f::AbstractVector,bl::BodyList,i::Int) -> SubArray
 
 Provide a view of the range of values in vector `f` corresponding to the Lagrange
@@ -207,3 +225,18 @@ based on supplied motions in the MotionList `ml` for each body.
 """
 surface_velocity(bl::BodyList,ml::MotionList,t::Real) =
     surface_velocity!(zeros(Float64,numpts(bl)),zeros(Float64,numpts(bl)),bl,ml,t)
+
+
+"""
+    update_body!(bl::BodyList,x::AbstractVector,ml::MotionList)
+
+Update the bodies in list `bl` with the given motion state vector `x`.
+The argument `ml` simply provides the information needed to parse
+the vector into each body.
+"""
+function update_body!(bl::BodyList,x::AbstractVector,ml::MotionList)
+    for i in 1:length(bl)
+        update_body!(bl[i],x[getrange(bl,ml,i)],ml[i])
+    end
+    return bl
+end

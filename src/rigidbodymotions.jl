@@ -32,8 +32,19 @@ mutable struct RigidBodyMotion <: AbstractMotion
     kin::Kinematics
 end
 
+"""
+    RigidBodyMotion(ċ::ComplexF64,α̇)
+
+Create an instance of constant rigid-body motion with velocity `ċ`
+and angular velocity `α̇`
+"""
 RigidBodyMotion(ċ, α̇) = RigidBodyMotion(0.0im, complex(ċ), 0.0im, 0.0, float(α̇),
                                           0.0, Constant(ċ, α̇))
+"""
+    RigidBodyMotion(kin::Kinematics)
+
+Create an instance of rigid-body motion with kinematics `kin`.
+"""
 RigidBodyMotion(kin::Kinematics) = RigidBodyMotion(kin(0)..., kin)
 (m::RigidBodyMotion)(t) = m.kin(t)
 
@@ -69,6 +80,20 @@ of the body centroid and the angle of the body.
 function motion_state(b::Body,m::RigidBodyMotion)
     return [b.cent...,b.α]
 end
+
+"""
+    update_body!(b::Body,x::AbstractVector,m::RigidBodyMotion)
+
+Update body `b` with the rigid-body motion state vector `x`. The information
+in `m` is used for checking lengths only.
+"""
+function update_body!(b::Body,x::AbstractVector,m::RigidBodyMotion)
+    length(x) == length(motion_state(b,m)) || error("wrong length for motion state vector")
+    T = RigidTransform(x)
+    T(b)
+    return b
+end
+
 
 """
     surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
