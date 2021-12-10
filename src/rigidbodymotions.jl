@@ -71,6 +71,20 @@ function motion_state(b::Body,m::RigidBodyMotion)
 end
 
 """
+    update_body!(b::Body,x::AbstractVector,m::RigidBodyMotion)
+
+Update body `b` with the rigid-body motion state vector `x`. The information
+in `m` is used for checking lengths only.
+"""
+function update_body!(b::Body,x::AbstractVector,m::RigidBodyMotion)
+    length(x) == length(motion_state(b,m)) || error("wrong length for motion state vector")
+    T = RigidTransform(x)
+    T(b)
+    return b
+end
+
+
+"""
     surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
                  body::Body,motion::AbstractMotion,t::Real)
 

@@ -126,12 +126,33 @@ end
   x0 = motion_state(bl,ml)
 
   @test x0[1:3] == vec(T1)[1:3]
-  @test x0[4:end] == vcat(b2.x,b2.y)
+  @test x0[4:end] == vcat(b2.x̃,b2.ỹ)
 
   t = rand()
   u = motion_velocity(bl,ml,t)
   @test u[1:3] == motion_velocity(b1,m1,t)
   @test u[4:end] == motion_velocity(b2,m2,t)
+
+  bl2 = deepcopy(bl)
+  update_body!(bl2,x0,ml) # This should not change the bodies
+  for i in 1:length(bl)
+    @test bl2[i].cent == bl[i].cent && bl2[i].α == bl[i].α
+    @test bl2[i].x̃ == bl[i].x̃ && bl2[i].ỹ == bl[i].ỹ
+    @test bl2[i].x == bl[i].x && bl2[i].y == bl[i].y
+  end
+
+
+  m = RigidAndDirectMotion(m1,m2)
+  x0 = motion_state(b2,m)
+
+  @test x0[1:3] == vec(T2)[1:3]
+  @test x0[4:end] == vcat(b2.x̃,b2.ỹ)
+
+  t = rand()
+  u = motion_velocity(b2,m,t)
+  @test u[1:3] == motion_velocity(b2,m1,t)
+  @test u[4:end] == motion_velocity(b2,m2,t)
+
 
 
 end

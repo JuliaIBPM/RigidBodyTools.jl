@@ -225,3 +225,18 @@ based on supplied motions in the MotionList `ml` for each body.
 """
 surface_velocity(bl::BodyList,ml::MotionList,t::Real) =
     surface_velocity!(zeros(Float64,numpts(bl)),zeros(Float64,numpts(bl)),bl,ml,t)
+
+
+"""
+    update_body!(bl::BodyList,x::AbstractVector,ml::MotionList)
+
+Update the bodies in list `bl` with the given motion state vector `x`.
+The argument `ml` simply provides the information needed to parse
+the vector into each body.
+"""
+function update_body!(bl::BodyList,x::AbstractVector,ml::MotionList)
+    for i in 1:length(bl)
+        update_body!(bl[i],x[getrange(bl,ml,i)],ml[i])
+    end
+    return bl
+end

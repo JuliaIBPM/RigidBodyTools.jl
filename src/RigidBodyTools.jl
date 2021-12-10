@@ -5,7 +5,9 @@ import Base: vec
 
 export Body
 export RigidBodyMotion, Kinematics, d_dt, motion_velocity, motion_state,
-          surface_velocity!, surface_velocity, DirectlySpecifiedMotion
+          surface_velocity!, surface_velocity, update_body!,
+          AbstractDirectlySpecifiedMotion, BasicDirectMotion, RigidAndDirectMotion
+
 export Oscillation, OscillationX, OscillationY, OscillationXY, RotationalOscillation,
         PitchHeave, Pitchup, EldredgeRamp, ColoniusRamp, SwitchedKinematics
 
@@ -37,7 +39,6 @@ include("directmotions.jl")
 
 include("rigidtransform.jl")
 include("lists.jl")
-
 
 include("tools.jl")
 include("assignvelocity.jl")
