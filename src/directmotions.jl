@@ -203,7 +203,7 @@ function update_body!(b::Body,x::AbstractVector,m::RigidAndDirectMotion)
     lendefx = length(x) - lenrigx
 
     b.x̃ .= x[lenrigx+1:lenrigx+lendefx÷2]
-    b.ỹ .= x[lenrigx+lendefx÷2+1:lenx]
+    b.ỹ .= x[lenrigx+lendefx÷2+1:length(x)]
 
     update_body!(b,x[1:lenrigx],m.rigidmotion)
 
