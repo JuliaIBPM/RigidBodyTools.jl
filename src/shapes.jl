@@ -381,6 +381,17 @@ function SplinedBody(Xpts_raw::Array{Float64,2},Δx::Float64;closuretype::Type{<
     return BasicBody(x,y,closuretype=closuretype)
 end
 
+"""
+    SplinedBody(x,y,Δx[,closuretype=ClosedBody]) -> BasicBody
+
+Using control points in `x` and `y`, create a set of points
+that are uniformly spaced (with spacing `Δx`) on a curve that passes through the control points. A cubic
+parametric spline algorithm is used. If the optional parameter `closuretype` is set
+to `OpenBody`, then the end points are not joined together.
+"""
+SplinedBody(x::AbstractVector{Float64},y::AbstractVector{Float64},Δx::Float64;kwargs...) =
+      SplinedBody(hcat(x,y),Δx;kwargs...)
+
 #### NACA 4-digit airfoil ####
 
 """
