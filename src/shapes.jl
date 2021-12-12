@@ -390,8 +390,8 @@ function Base.show(io::IO, body::Polygon{N,NV,PS,CS}) where {N,NV,PS,CS}
     println(io, "   Current angle (rad): $(body.α)")
 end
 
-_centraldiff(b::Polygon{N,Shifted},::Val{false}) where {N} = _diff(b.xmid,b.ymid,ClosedBody)
-_centraldiff(b::Polygon{N,Shifted},::Val{true}) where {N} = _diff(b.x̃mid,b.ỹmid,ClosedBody)
+_centraldiff(b::Polygon{N,NV,Shifted},::Val{false}) where {N,NV} = _diff(b.xmid,b.ymid,ClosedBody)
+_centraldiff(b::Polygon{N,NV,Shifted},::Val{true}) where {N,NV} = _diff(b.x̃mid,b.ỹmid,ClosedBody)
 
 
 function _polygon(xv::AbstractVector{Float64},yv::AbstractVector{Float64},a,closuretype)

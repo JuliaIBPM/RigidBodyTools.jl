@@ -87,6 +87,25 @@ end
 
 end
 
+@testset "Polygons" begin
+
+  b = Polygon([1.0,1.0,0.0,0.0],[0.0,0.5,0.5,0.0],0.02)
+  nx0, ny0 = normalmid(b)
+
+  @test all(isapprox.(nx0[1:25],1.0,atol=MYEPS)) &&
+        all(isapprox.(nx0[26:75],0.0,atol=MYEPS)) &&
+        all(isapprox.(nx0[76:100],-1.0,atol=MYEPS)) &&
+        all(isapprox.(nx0[101:150],0.0,atol=MYEPS))
+  @test all(isapprox.(ny0[1:25],0.0,atol=MYEPS)) &&
+        all(isapprox.(ny0[26:75],1.0,atol=MYEPS)) &&
+        all(isapprox.(ny0[76:100],0.0,atol=MYEPS)) &&
+        all(isapprox.(ny0[101:150],-1.0,atol=MYEPS))
+
+  ds = dlengthmid(b)
+  @test all(ds .≈ 0.02)
+
+end
+
 @testset "Lists" begin
 
   n1 = 101
