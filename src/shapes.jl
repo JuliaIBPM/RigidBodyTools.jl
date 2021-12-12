@@ -352,7 +352,7 @@ end
 
 #### Polygons ####
 
-mutable struct Polygon{N,PS,C<:BodyClosureType} <: Body{N,C}
+mutable struct Polygon{N,NV,PS,C<:BodyClosureType} <: Body{N,C}
   cent :: Tuple{Float64,Float64}
   α :: Float64
 
@@ -379,8 +379,15 @@ This should be the case for every body.
 function Polygon(xv::AbstractVector{Float64},yv::AbstractVector{Float64},a;shifted=true,closuretype=ClosedBody)
 
   x, y, xmid, ymid = _polygon(xv,yv,a,closuretype)
-  shifted ? Polygon{length(x),Shifted,closuretype}((0.0,0.0),0.0,xmid,ymid,xmid,ymid,x,y,x,y) :
-            Polygon{length(x),Unshifted,closuretype}((0.0,0.0),0.0,x,y,x,yxmid,ymid,xmid,ymid)
+  shifted ? Polygon{length(x),length(xv),Shifted,closuretype}((0.0,0.0),0.0,xmid,ymid,xmid,ymid,x,y,x,y) :
+            Polygon{length(x),length(xv),Unshifted,closuretype}((0.0,0.0),0.0,x,y,x,yxmid,ymid,xmid,ymid)
+end
+
+function Base.show(io::IO, body::Polygon{N,NV,PS,CS}) where {N,NV,PS,CS}
+    cb = CS == ClosedBody ? "Closed " : "Open "
+    println(io, cb*"polygon with $NV vertices and $N points")
+    println(io, "   Current position: ($(body.cent[1]),$(body.cent[2]))")
+    println(io, "   Current angle (rad): $(body.α)")
 end
 
 _centraldiff(b::Polygon{N,Shifted},::Val{false}) where {N} = _diff(b.xmid,b.ymid,ClosedBody)

@@ -160,13 +160,24 @@ plot(b)
 #=
 However, this function does not insert any points along the sides between vertices.
 We have to do the work of specifying these points in the original call. For this reason,
-there are a few functions that are more directly useful. For example, we can interpret
+there are a few functions that are more directly useful. For example, we can
+create a polygon from these vertices, with a specified spacing between points
+distributed along the polygon sides
+=#
+b = Polygon(x,y,0.02)
+#-
+plot(b)
+scatter!(b,markersize=3,markercolor=:black)
+
+#=
+Alternatively, we can interpret
 those original points as control points for splines, with a spacing between points
 along the splines provided:
 =#
 b = SplinedBody(x,y,0.02)
 #-
 plot(b)
+scatter!(b,markersize=3,markercolor=:black)
 
 #md # ## Body functions
 
