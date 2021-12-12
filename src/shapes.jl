@@ -4,7 +4,7 @@ using Statistics: mean
 using Elliptic
 using Roots
 
-export BasicBody,Ellipse,Circle,Rectangle,Square,Plate,SplinedBody,NACA4
+export BasicBody,Ellipse,Circle,Rectangle,Square,Plate,SplinedBody,NACA4,Polygon
 
 """
     BasicBody(x,y[,closuretype=ClosedBody]) <: Body
@@ -350,6 +350,97 @@ function Base.show(io::IO, body::Plate{N}) where {N}
     println(io, "   Current angle (rad): $(body.α)")
 end
 
+#### Polygons ####
+
+mutable struct Polygon{N,PS,C<:BodyClosureType} <: Body{N,C}
+  cent :: Tuple{Float64,Float64}
+  α :: Float64
+
+  x̃ :: Vector{Float64}
+  ỹ :: Vector{Float64}
+
+  x :: Vector{Float64}
+  y :: Vector{Float64}
+
+  x̃mid :: Union{Vector{Float64},Nothing}
+  ỹmid :: Union{Vector{Float64},Nothing}
+
+  xmid :: Union{Vector{Float64},Nothing}
+  ymid :: Union{Vector{Float64},Nothing}
+
+end
+
+#=
+Need to fix this so that the endpoints of the panels are updated via
+transforms, and the x and y (and x̃ and ỹ) are obtained from the endpoints.
+This should be the case for every body.
+=#
+
+function Polygon(xv::AbstractVector{Float64},yv::AbstractVector{Float64},a;shifted=true,closuretype=ClosedBody)
+
+  x, y, xmid, ymid = _polygon(xv,yv,a,closuretype)
+  shifted ? Polygon{length(x),Shifted,closuretype}((0.0,0.0),0.0,xmid,ymid,xmid,ymid,x,y,x,y) :
+            Polygon{length(x),Unshifted,closuretype}((0.0,0.0),0.0,x,y,x,yxmid,ymid,xmid,ymid)
+end
+
+_centraldiff(b::Polygon{N,Shifted},::Val{false}) where {N} = _diff(b.xmid,b.ymid,ClosedBody)
+_centraldiff(b::Polygon{N,Shifted},::Val{true}) where {N} = _diff(b.x̃mid,b.ỹmid,ClosedBody)
+
+
+function _polygon(xv::AbstractVector{Float64},yv::AbstractVector{Float64},a,closuretype)
+    xvcirc = _extend_array(xv,closuretype)
+    yvcirc = _extend_array(yv,closuretype)
+    x, y = Float64[], Float64[]
+    xmid, ymid = Float64[], Float64[]
+    for i in 1:length(xvcirc)-2
+        xi, yi, xmidi, ymidi = _line_points(xvcirc[i],yvcirc[i],xvcirc[i+1],yvcirc[i+1],a)
+        append!(x,xi[1:end-1])
+        append!(y,yi[1:end-1])
+        append!(xmid,xmidi)
+        append!(ymid,ymidi)
+    end
+    xi, yi, xmidi, ymidi = _line_points(xvcirc[end-1],yvcirc[end-1],xvcirc[end],yvcirc[end],a)
+    append!(x,xi[1:end-_last_segment_decrement(closuretype)])
+    append!(y,yi[1:end-_last_segment_decrement(closuretype)])
+    append!(xmid,xmidi)
+    append!(ymid,ymidi)
+
+    return x, y, xmid, ymid
+end
+
+_extend_array(x,::Type{ClosedBody}) = [x;x[1]]
+_extend_array(x,::Type{OpenBody}) = x
+
+_last_segment_decrement(::Type{ClosedBody}) = 1
+_last_segment_decrement(::Type{OpenBody}) = 0
+
+function _line_points(x1,y1,x2,y2,n::Int)
+
+  dx, dy = x2-x1, y2-y1
+  len = sqrt(dx^2+dy^2)
+
+  Δs = len/(n-1)
+
+  x = zeros(n)
+  y = zeros(n)
+
+  @. x = x1 + dx*(0:n-1)/(n-1)
+  @. y = y1 + dy*(0:n-1)/(n-1)
+
+  xmid, ymid = _midpoints(x,y,OpenBody)
+
+  return x, y, xmid, ymid
+
+end
+
+function _line_points(x1,y1,x2,y2,ds::Float64)
+    dx, dy = x2-x1, y2-y1
+    len = sqrt(dx^2+dy^2)
+    return _line_points(x1,y1,x2,y2,round(Int,len/ds)+1)
+end
+
+
+
 #### Splined body ####
 
 
@@ -391,6 +482,7 @@ to `OpenBody`, then the end points are not joined together.
 """
 SplinedBody(x::AbstractVector{Float64},y::AbstractVector{Float64},Δx::Float64;kwargs...) =
       SplinedBody(hcat(x,y),Δx;kwargs...)
+
 
 #### NACA 4-digit airfoil ####
 
