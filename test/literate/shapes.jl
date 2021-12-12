@@ -156,6 +156,7 @@ y = [0.1, 0.5, 0.8, 1.2, 0.8, 0.6, 0.2, 0.3]
 b = BasicBody(x,y)
 #-
 plot(b)
+scatter!(b,markersize=3,markercolor=:black)
 
 #=
 However, this function does not insert any points along the sides between vertices.
