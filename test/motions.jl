@@ -126,7 +126,7 @@ end
   x0 = motion_state(bl,ml)
 
   @test x0[1:3] == vec(T1)[1:3]
-  @test x0[4:end] == vcat(b2.x̃,b2.ỹ)
+  @test x0[4:end] == vcat(b2.x̃end,b2.ỹend)
 
   t = rand()
   u = motion_velocity(bl,ml,t)
@@ -146,7 +146,7 @@ end
   x0 = motion_state(b2,m)
 
   @test x0[1:3] == vec(T2)[1:3]
-  @test x0[4:end] == vcat(b2.x̃,b2.ỹ)
+  @test x0[4:end] == vcat(b2.x̃end,b2.ỹend)
 
   t = rand()
   u = motion_velocity(b2,m,t)

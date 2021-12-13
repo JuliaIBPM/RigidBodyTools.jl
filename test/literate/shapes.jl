@@ -144,7 +144,7 @@ plot(b)
 #=
 and a flat plate with a 5 percent thickness (and rounded ends)
 =#
-b = Plate(1.0,0.05,0.01)
+b = ThickPlate(1.0,0.05,0.01)
 plot(b)
 
 #=

@@ -5,7 +5,7 @@ To create a subtype of AbstractDirectlySpecifiedMotion, one must
 extend `surface_velocity!(u,v,body,m,t)`, to supply the
 surface values of the motion in-place in vectors `u` and `v`.
 These are interpreted as an update of the body-fixed coordinates,
-`b.x̃` and `b.ỹ`.
+`b.x̃end` and `b.ỹend`.
 =#
 
 """
@@ -43,7 +43,7 @@ Return the velocity components (as a vector) of a `AbstractDirectlySpecifiedMoti
 at the given time `t`.
 """
 function motion_velocity(b::Body,m::AbstractDirectlySpecifiedMotion,t::Real)
-    u, v = zero(b.x), zero(b.y)
+    u, v = zero(b.x̃end), zero(b.ỹend)
     surface_velocity!(u,v,b,m,t)
     return vcat(u,v)
 end
@@ -57,7 +57,7 @@ direct motion `m`. It returns the concatenated coordinates
 of the body surface (in the body-fixed coordinate system).
 """
 function motion_state(b::Body,m::AbstractDirectlySpecifiedMotion)
-    return vcat(b.x̃,b.ỹ)
+    return vcat(b.x̃end,b.ỹend)
 end
 
 """
@@ -66,12 +66,14 @@ end
 Update body `b` with the motion state vector `x`, interpreted as coordinates in the body
 coordinate system. The information in `m` is used for parsing only.
 """
-function update_body!(b::Body,x::AbstractVector,m::AbstractDirectlySpecifiedMotion)
+function update_body!(b::Body{N,C},x::AbstractVector,m::AbstractDirectlySpecifiedMotion) where {N,C}
     length(x) == length(motion_state(b,m)) || error("wrong length for motion state vector")
 
     lenx = length(x)
-    b.x̃ .= x[1:lenx÷2]
-    b.ỹ .= x[lenx÷2+1:lenx]
+    b.x̃end .= x[1:lenx÷2]
+    b.ỹend .= x[lenx÷2+1:lenx]
+
+    b.x̃, b.ỹ = _midpoints(b.x̃end,b.ỹend,C)
 
     # use the existing rigid transform of the body to update the
     # inertial coordinates of the surface
@@ -186,7 +188,7 @@ rigid+direct motion `m`. It returns the concatenated coordinates
 of the rigid-body mode and the body surface (in the body coordinate system).
 """
 @inline motion_state(b::Body,m::RigidAndDirectMotion) =
-          vcat(motion_state(b,m.rigidmotion),vcat(b.x̃,b.ỹ))
+          vcat(motion_state(b,m.rigidmotion),motion_state(b,m.defmotion))
 
 
 """
@@ -196,14 +198,15 @@ Update body `b` with the motion state vector `x`. The part of the motion state
 associated with surface deformation is interpreted as expressed in body coordinates.
 The information in `m` is used for parsing only.
 """
-function update_body!(b::Body,x::AbstractVector,m::RigidAndDirectMotion)
+function update_body!(b::Body{N,C},x::AbstractVector,m::RigidAndDirectMotion) where {N,C}
     length(x) == length(motion_state(b,m)) || error("wrong length for motion state vector")
 
     lenrigx = length(motion_state(b,m.rigidmotion))
     lendefx = length(x) - lenrigx
 
-    b.x̃ .= x[lenrigx+1:lenrigx+lendefx÷2]
-    b.ỹ .= x[lenrigx+lendefx÷2+1:length(x)]
+    b.x̃end .= x[lenrigx+1:lenrigx+lendefx÷2]
+    b.ỹend .= x[lenrigx+lendefx÷2+1:length(x)]
+    b.x̃, b.ỹ = _midpoints(b.x̃end,b.ỹend,C)
 
     update_body!(b,x[1:lenrigx],m.rigidmotion)
 

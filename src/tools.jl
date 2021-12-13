@@ -16,8 +16,8 @@ for f in [:diff,:midpoints,:centraldiff]
     _f = Symbol("_"*string(f))
     @eval $f(b::Body;ref=false) = $_f(b,Val(ref))
 
-    @eval $_f(b::Body{N,C},::Val{false}) where {N,C<:BodyClosureType} = $_f(b.x,b.y,C)
-    @eval $_f(b::Body{N,C},::Val{true}) where {N,C<:BodyClosureType}  = $_f(b.x̃,b.ỹ,C)
+    @eval $_f(b::Body{N,C},::Val{false}) where {N,C<:BodyClosureType} = $_f(b.xend,b.yend,C)
+    @eval $_f(b::Body{N,C},::Val{true}) where {N,C<:BodyClosureType}  = $_f(b.x̃end,b.ỹend,C)
 
     @eval function $f(bl::BodyList;kwargs...)
         xl = Float64[]
@@ -144,22 +144,25 @@ on each body in list `body`).
 Compute the `centraldiff` on each constituent body in `bl`.
 """ centraldiff(::BodyList)
 
-function _centraldiff(x::Vector{Float64},y::Vector{Float64},::Type{ClosedBody})
+_centraldiff(x,y,C) = _diff(x,y,C)
+#=
+function _centraldiff(xend::Vector{Float64},yend::Vector{Float64},::Type{ClosedBody})
 
   xc, yc = _midpoints(x,y,ClosedBody)
   xc .= circshift(xc,1)
   yc .= circshift(yc,1)
 
-  return _diff(xc,yc,ClosedBody)
+  return _diff(xend,yend,ClosedBody)
 end
 
-function _centraldiff(x::Vector{Float64},y::Vector{Float64},::Type{OpenBody})
+function _centraldiff(xend::Vector{Float64},yend::Vector{Float64},::Type{OpenBody})
 
   xc, yc = _midpoints(x,y,OpenBody)
   dxc, dyc = _diff(xc,yc,OpenBody)
 
   return [xc[1]-x[1];dxc;x[end]-xc[end]], [yc[1]-y[1];dyc;y[end]-yc[end]]
 end
+=#
 
 """
     dlength(body::Body/BodyList) -> Vector{Float64}
@@ -187,17 +190,20 @@ For an `OpenBody`, the lengths for the first and last points are calculated
 to the adjoining midpoints, to
 ensure that `sum(dlength(body))` is equal to the arclength of the body.
 """
+dlengthmid(b::Union{Body,BodyList}) = dlength(b)
+#=
 function dlengthmid(b::Union{Body,BodyList})
   dx, dy = centraldiff(b)
   return sqrt.(dx.^2+dy.^2)
 end
+=#
 
 """
     normal(body::Body/BodyList) -> Tuple{Vector{Float64},Vector{Float64}}
 
 Compute the current normals in inertial components (if `ref=false`) or body-
   fixed components (if `ref=true`) of the faces on the perimeter
-of body `body`, whose ends are at the current `x` and `y` coordinates (in inertial space)
+of body `body`, whose ends are at the current `xend` and `yend` coordinates (in inertial space)
 of the body. Face 1 corresponds to the face between points 1 and 2, for example. For an `OpenBody`,
 this provides a vector that is one element shorter than the number of points.
 """
@@ -212,12 +218,14 @@ end
 
 Compute the current normals in inertial components (if `ref=false`) or body-
   fixed components (if `ref=true`) of the faces formed between
-midpoints on the perimeter of body `body` (or each body in list `body`). For an `OpenBody`,
-the normals for the first and last points are calculated for the face adjoining
-with the adjacent midpoints.
+endpoints on the perimeter of body `body` (or each body in list `body`).
 """
+normalmid(b::Union{Body,BodyList};kwargs...) = normal(b;kwargs...)
+
+#=
 function normalmid(b::Union{Body,BodyList};kwargs...)
   dx, dy = centraldiff(b;kwargs...)
   ds = dlengthmid(b)
   return dy./ds, -dx./ds
 end
+=#
