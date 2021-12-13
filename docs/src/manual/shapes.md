@@ -15,6 +15,13 @@ in a certain position and orientation. We do this in two steps: we create the
 basic shape, centered at the origin with a default orientation, and then
 we transform the shape to a desired location and orientation using a `RigidTransform`.
 
+It is useful to stress that each body stores two types of points internally:
+the *endpoints* of the segments that comprise the body surface, and the
+*midpoints* of these segments. The midpoints are intended for use in downstream
+calculations, e.g. as forcing points in the calculations on immersed layers.
+The midpoints are simply the geometric averages of the endpoints, so
+endpoints are the ones that are transformed first, and midpoints are updated next.
+
 ````@example shapes
 using RigidBodyTools
 using Plots
