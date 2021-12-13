@@ -133,6 +133,7 @@ end
   @test u[1:3] == motion_velocity(b1,m1,t)
   @test u[4:end] == motion_velocity(b2,m2,t)
 
+
   bl2 = deepcopy(bl)
   update_body!(bl2,x0,ml) # This should not change the bodies
   for i in 1:length(bl)
@@ -141,6 +142,9 @@ end
     @test bl2[i].x == bl[i].x && bl2[i].y == bl[i].y
   end
 
+  u, v = zero(b1.x),zero(b1.y)
+  surface_velocity!(u,v,b1,m1,0.0)
+  maxvelocity(b1,m1)
 
   m = RigidAndDeformingMotion(m1,m2)
   x0 = motion_state(b2,m)

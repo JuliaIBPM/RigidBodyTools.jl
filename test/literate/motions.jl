@@ -139,6 +139,13 @@ m = RigidAndDeformingMotion(mrig,mdef)
 @animate_motion b m π/100 4π (-2,2) (-2,2)
 
 #=
+Sometimes it is helpful to know the maximum velocity that a given
+motion will produce. For this, we can use the function `maxvelocity`.
+This also tells us where it will occur on the body, and at what time.
+=#
+umax, i, t = maxvelocity(b,m)
+
+#=
 ## Defining new motions
 It is straightforward to define new types of deformation motion that don't fit into the framework
 shown here. We need only do two things:
@@ -147,6 +154,33 @@ shown here. We need only do two things:
   new motion type, so that it returns a concatenated vector of
   the surface segment endpoint velocity components (in body coordinate system).
 =#
+
+#=
+Let's demonstrate this with an example in which we specify a motion in which only
+the top of a rectangle will deform. For this, we make use of the `side`
+field in the `Polygon` type: each entry in `side` describes the range of indices
+of segment endpoints on each side (including the first vertex).
+=#
+struct TopMotion{UT} <: AbstractDeformationMotion
+    vtop :: UT
+end
+
+function RigidBodyTools.motion_velocity(b::Polygon,m::TopMotion,t::Real)
+
+    u, v = zero(b.x̃end), zero(b.ỹend)
+    top = b.side[3]
+    v[top] .= m.vtop.(b.x̃end[top],b.ỹend[top],t)
+    return vcat(u,v)
+end
+
+#=
+Let's apply a deformation function and see it work:
+=#
+b = Rectangle(1.0,2.0,0.02)
+vfcn(x,y,t) = 0.2*(1-x^2)*cos(t)
+m = TopMotion(vfcn)
+
+@animate_motion b m π/100 4π (-1.5,1.5) (-2.5,2.5)
 
 
 #md # ## Motion types
@@ -169,6 +203,7 @@ shown here. We need only do two things:
 #md # motion_velocity
 #md # surface_velocity!
 #md # surface_velocity
+#md # maxvelocity
 #md # ```
 
 
