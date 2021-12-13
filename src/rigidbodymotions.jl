@@ -38,7 +38,7 @@ end
 Create an instance of constant rigid-body motion with velocity `ċ`
 and angular velocity `α̇`
 """
-RigidBodyMotion(ċ, α̇) = RigidBodyMotion(0.0im, complex(ċ), 0.0im, 0.0, float(α̇),
+RigidBodyMotion(ċ, α̇) = RigidBodyMotion(0.0im, complex(ċ...), 0.0im, 0.0, float(α̇),
                                           0.0, Constant(ċ, α̇))
 """
     RigidBodyMotion(kin::Kinematics)

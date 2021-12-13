@@ -300,6 +300,8 @@ mutable struct Polygon{N,NV,C<:BodyClosureType} <: Body{N,C}
   xend :: Vector{Float64}
   yend :: Vector{Float64}
 
+  side :: Vector{UnitRange{Int64}}
+
 end
 
 """
@@ -311,8 +313,8 @@ Create a polygon shape with vertices `x` and `y`, with approximate spacing `ds` 
 
 function Polygon(xv::AbstractVector{T},yv::AbstractVector{T},a::Float64;closuretype=ClosedBody) where {T<:Real}
 
-  xend, yend, x, y  = _polygon(xv,yv,a,closuretype)
-  Polygon{length(x),length(xv),closuretype}((0.0,0.0),0.0,x,y,x,y,xend,yend,xend,yend)
+  xend, yend, x, y, side  = _polygon(xv,yv,a,closuretype)
+  Polygon{length(x),length(xv),closuretype}((0.0,0.0),0.0,x,y,x,y,xend,yend,xend,yend,side)
 end
 
 @inline Polygon(xv,yv,n::Int;closuretype=ClosedBody) =
@@ -338,19 +340,25 @@ end
 function _polygon(xv::AbstractVector{T},yv::AbstractVector{T},ds::Float64,closuretype) where {T<:Real}
     xvcirc = _extend_array(xv,closuretype)
     yvcirc = _extend_array(yv,closuretype)
-    xend, yend = Float64[], Float64[]
+    xend, yend, side = Float64[], Float64[], UnitRange{Int64}[]
+    totlen = 0
     for i in 1:length(xvcirc)-2
         xi, yi = _line_points(xvcirc[i],yvcirc[i],xvcirc[i+1],yvcirc[i+1],ds)
-        append!(xend,xi[1:end-1])
-        append!(yend,yi[1:end-1])
+        len = length(xi)-1
+        append!(xend,xi[1:len])
+        append!(yend,yi[1:len])
+        push!(side,totlen+1:totlen+len)
+        totlen += len
     end
     xi, yi = _line_points(xvcirc[end-1],yvcirc[end-1],xvcirc[end],yvcirc[end],ds)
-    append!(xend,xi[1:end-_last_segment_decrement(closuretype)])
-    append!(yend,yi[1:end-_last_segment_decrement(closuretype)])
+    len = length(xi)-_last_segment_decrement(closuretype)
+    append!(xend,xi[1:len])
+    append!(yend,yi[1:len])
+    push!(side,totlen+1:totlen+len)
 
     x, y = _midpoints(xend,yend,closuretype)
 
-    return xend, yend, x, y
+    return xend, yend, x, y, side
 end
 
 _extend_array(x,::Type{ClosedBody}) = [x;x[1]]

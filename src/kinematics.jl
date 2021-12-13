@@ -17,7 +17,7 @@ struct Constant{C <: Complex, A <: Real} <: Kinematics
     ċ::C
     α̇::A
 end
-Constant(ċ, α̇) = Constant(complex(ċ), α̇)
+Constant(ċ, α̇) = Constant(complex(ċ...), α̇)
 (c::Constant{C})(t) where C = zero(C), c.ċ, zero(C), 0.0, c.α̇, 0.0
 show(io::IO, c::Constant) = print(io, "Constant (ċ = $(c.ċ), α̇ = $(c.α̇))")
 
