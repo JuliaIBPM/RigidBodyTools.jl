@@ -10,8 +10,7 @@ makedocs(
         "Home" => "index.md",
         "Manual" => ["manual/shapes.md",
                      "manual/motions.md",
-                     "manual/bodylists.md",
-                     "manual/utilities.md"
+                     "manual/bodylists.md"
                      ]
         #"Internals" => [ "internals/properties.md"]
     ],

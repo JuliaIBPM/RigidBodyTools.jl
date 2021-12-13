@@ -137,6 +137,14 @@ t = 1.0
 surface_velocity!(u,v,bl,ml,t)
 ````
 
+We can determine the maximum velocity across the whole set of bodies:
+
+````@example bodylists
+umax, i, tmax, bmax = maxlistvelocity(bl,ml)
+````
+
+In this case, the maximum velocity occurs at t = 0 on body 2, index 301.
+
 ## Body list functions
 ```@docs
 BodyList

@@ -252,6 +252,7 @@ function maxlistvelocity(bl::BodyList,ml::MotionList;kwargs...)
     i = 1
     umax = 0.0
     tmax = 0.0
+    bmax = 1
     for j in 1:length(bl)
         umax_j,i_j,t_j = maxvelocity(bl[j],ml[j],kwargs...)
         if umax_j > umax
