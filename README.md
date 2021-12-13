@@ -13,7 +13,7 @@ point-discretized surfaces. It includes methods for
 
 * a library of surface shape definitions and associated point discretizations
 * calculation of geometric properties
-* rigid-body motion and transformation of surface points
+* rigid-body and prescribing deformation motion and transformation of surface points
 * collections of multiple rigid bodies
 
 These tools support a variety of classes of problems, including those that involve bodies interacting with fluids, in which we would immerse these point-discretized representations into a computational grid.
