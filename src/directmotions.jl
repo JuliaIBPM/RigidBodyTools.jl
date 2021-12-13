@@ -252,12 +252,12 @@ Search through the given motion `m` applied to body `b` and return `(umax,i,t)`,
 the maximum velocity magnitude, the index of the body points where it
 occurs, and the time at which it occurs.
 """
-function maxvelocity(b::Body,m::AbstractMotion;tmax=100.0,dt=0.01)
+function maxvelocity(b::Body,m::AbstractMotion;tf=100.0,dt=0.01)
     u, v = zero(b.x), zero(b.y)
     i = 1
     umax = 0.0
     tmax = 0.0
-    for t in 0.0:dt:tmax
+    for t in 0.0:dt:tf
         surface_velocity!(u,v,b,m,t)
         umag = sqrt.(u.^2+v.^2)
         umax_t, i_t = findmax(umag)

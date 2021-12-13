@@ -200,7 +200,7 @@ RigidBodyMotion
 RigidBodyMotion(::Kinematics)
 RigidBodyMotion(::Any,::Any)
 RigidAndDeformingMotion
-RigidAndDeformingMotion(::Kinematics,::AbstractDirectlySpecifiedMotion)
+RigidAndDeformingMotion(::Kinematics,::AbstractDeformationMotion)
 RigidAndDeformingMotion(::Kinematics,::Any,::Any)
 RigidAndDeformingMotion(::Any,::Any,::Any,::Any)
 ```

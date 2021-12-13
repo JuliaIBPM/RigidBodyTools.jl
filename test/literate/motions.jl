@@ -191,7 +191,7 @@ m = TopMotion(vfcn)
 #md # RigidBodyMotion(::Kinematics)
 #md # RigidBodyMotion(::Any,::Any)
 #md # RigidAndDeformingMotion
-#md # RigidAndDeformingMotion(::Kinematics,::AbstractDirectlySpecifiedMotion)
+#md # RigidAndDeformingMotion(::Kinematics,::AbstractDeformationMotion)
 #md # RigidAndDeformingMotion(::Kinematics,::Any,::Any)
 #md # RigidAndDeformingMotion(::Any,::Any,::Any,::Any)
 #md # ```
