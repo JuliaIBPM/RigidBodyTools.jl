@@ -184,6 +184,7 @@ scatter!(b,markersize=3,markercolor=:black)
 
 #md # ```@docs
 #md # BasicBody
+#md # Polygon
 #md # Circle
 #md # Ellipse
 #md # NACA4

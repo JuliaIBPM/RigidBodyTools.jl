@@ -198,15 +198,17 @@ end
 
 Construct a circular body with radius `a`
 and with `n` points distributed on the body perimeter.
-"""
-Circle(a::Real,arg;kwargs...) = Ellipse(a,a,arg;kwargs...)
+""" Circle(::Real,::Int)
 
 """
     Circle(a,targetsize::Float64) <: Body
 
 Construct a circular body with radius `a` with spacing between points set
 approximately to `targetsize`.
-"""
+""" Circle(::Real,::Real)
+
+Circle(a::Real,arg;kwargs...) = Ellipse(a,a,arg;kwargs...)
+
 
 function Base.show(io::IO, body::Ellipse{N}) where {N}
     if body.a == body.b
@@ -232,6 +234,12 @@ by half a segment. This ensures that all normals are perpendicular to the sides.
 """
 Rectangle(a::Real,b::Real,arg;kwargs...) = Polygon([-a,a,a,-a],[-b,-b,b,b],arg;kwargs...)
 
+"""
+    Rectangle(a,b,ds) <: Body
+
+Construct a rectangular body with x̃ side half-length `a` and ỹ side half-length `b`,
+with approximate spacing `ds` between points.
+""" Rectangle(::Real,::Real,::Real)
 
 """
     Square(a,n) <: Body
@@ -241,31 +249,41 @@ and with approximately `n` points distributed along the perimeter.
 """
 Square(a::Real,arg;kwargs...) = Rectangle(a,a,arg;kwargs...)
 
+"""
+    Square(a,ds) <: Body
 
+Construct a square body with side half-length `a`,
+with approximate spacing `ds` between points.
+""" Square(::Real,::Real)
 
 
 #### Plates ####
 
+"""
+    Plate(a,n) <: Body
 
+Construct a flat plate of zero thickness with length `a`,
+divided into `n` equal segments.
+"""
 Plate(len::Real,arg) = Polygon([-0.5*len,0.5*len],[0.0,0.0],arg,closuretype=OpenBody)
 
+"""
+    Plate(a,ds) <: Body
 
+Construct a flat plate of zero thickness with length `a`,
+with approximate spacing `ds` between points.
+""" Plate(::Real,::Real)
 
-
-#Plate(a::Real,b::Real,targetsize::Float64;kwargs...) =
-#    Plate(a,b,_adjustnumber(targetsize,Plate,a,b);kwargs...)
-
-#=
-function Base.show(io::IO, body::Plate{N}) where {N}
-    println(io, "Plate with $N points and length $(body.len) and thickness $(body.thick)")
-    println(io, "   Current position: ($(body.cent[1]),$(body.cent[2]))")
-    println(io, "   Current angle (rad): $(body.α)")
-end
-=#
 
 
 #### Polygons ####
 
+"""
+    Polygon(x::Vector,y::Vector,n[,closuretype=ClosedBody])
+
+Create a polygon shape with vertices `x` and `y`, with approximately `n` points distributed along
+the perimeter.
+"""
 mutable struct Polygon{N,NV,C<:BodyClosureType} <: Body{N,C}
   cent :: Tuple{Float64,Float64}
   α :: Float64
@@ -284,11 +302,12 @@ mutable struct Polygon{N,NV,C<:BodyClosureType} <: Body{N,C}
 
 end
 
-#=
-Need to fix this so that the endpoints of the panels are updated via
-transforms, and the x and y (and x̃ and ỹ) are obtained from the endpoints.
-This should be the case for every body.
-=#
+"""
+    Polygon(x::Vector,y::Vector,ds::Float64[,closuretype=ClosedBody])
+
+Create a polygon shape with vertices `x` and `y`, with approximate spacing `ds` between points.
+""" Polygon(::AbstractVector,::AbstractVector,::Real)
+
 
 function Polygon(xv::AbstractVector{T},yv::AbstractVector{T},a::Float64;closuretype=ClosedBody) where {T<:Real}
 
