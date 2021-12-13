@@ -2,6 +2,7 @@ using RigidBodyTools
 using Literate
 using Test
 
+ENV["GKSwstype"] = "nul" # removes GKS warnings during plotting
 
 const GROUP = get(ENV, "GROUP", "All")
 

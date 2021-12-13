@@ -1,5 +1,7 @@
 using Documenter, RigidBodyTools
 
+ENV["GKSwstype"] = "nul" # removes GKS warnings during plotting
+
 makedocs(
     sitename = "RigidBodyTools.jl",
     doctest = true,
