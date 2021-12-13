@@ -234,6 +234,20 @@ RigidTransform
 Base.vec(::RigidTransform)
 ```
 
+## Shape utilities
+```@docs
+centraldiff
+Base.diff(::Body)
+Base.diff(::BodyList)
+dlength
+dlengthmid
+Base.length(::Body)
+midpoints(::Body)
+midpoints(::BodyList)
+normal
+normalmid
+```
+
 ---
 
 *This page was generated using [Literate.jl](https://github.com/fredrikekre/Literate.jl).*

@@ -17,7 +17,7 @@ the *endpoints* of the segments that comprise the body surface, and the
 *midpoints* of these segments. The midpoints are intended for use in downstream
 calculations, e.g. as forcing points in the calculations on immersed layers.
 The midpoints are simply the geometric averages of the endpoints, so
-endpoints are the ones that are transformed first, and midpoints are updated next. 
+endpoints are the ones that are transformed first, and midpoints are updated next.
 =#
 
 
@@ -205,4 +205,18 @@ scatter!(b,markersize=3,markercolor=:black)
 #md # ```@docs
 #md # RigidTransform
 #md # Base.vec(::RigidTransform)
+#md # ```
+
+#md # ## Shape utilities
+#md # ```@docs
+#md # centraldiff
+#md # Base.diff(::Body)
+#md # Base.diff(::BodyList)
+#md # dlength
+#md # dlengthmid
+#md # Base.length(::Body)
+#md # midpoints(::Body)
+#md # midpoints(::BodyList)
+#md # normal
+#md # normalmid
 #md # ```
