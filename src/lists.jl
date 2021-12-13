@@ -240,3 +240,24 @@ function update_body!(bl::BodyList,x::AbstractVector,ml::MotionList)
     end
     return bl
 end
+
+"""
+    maxlistvelocity(bl::BodyList,ml::List[,tmax=100,dt=0.01])
+
+Search through the given motions `ml` applied to bodies `bl` and return `(umax,i,t,bodyindex)`,
+the maximum velocity magnitude, the index of the body points where it
+occurs, the time at which it occurs, and the body index it occurs on.
+"""
+function maxlistvelocity(bl::BodyList,ml::MotionList;kwargs...)
+    i = 1
+    umax = 0.0
+    tmax = 0.0
+    bmax = 1
+    for j in 1:length(bl)
+        umax_j,i_j,t_j = maxvelocity(bl[j],ml[j],kwargs...)
+        if umax_j > umax
+            umax, i, tmax, bmax = umax_j, i_j, t_j, j
+        end
+    end
+    return umax, i, tmax, bmax
+end

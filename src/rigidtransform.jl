@@ -88,8 +88,10 @@ function (T::RigidTransform)(x̃::AbstractVector{Float64},ỹ::AbstractVector{Fl
     return x, y
 end
 
-function (T::RigidTransform)(b::Body{N}) where {N}
-  b.x, b.y = T(b.x̃,b.ỹ)
+function (T::RigidTransform)(b::Body{N,C}) where {N,C}
+  b.xend, b.yend = T(b.x̃end,b.ỹend)
+  b.x, b.y = _midpoints(b.xend,b.yend,C)
+
   b.α = T.α
   b.cent = T.trans
   return b

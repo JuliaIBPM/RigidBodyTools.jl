@@ -3,8 +3,19 @@ using Statistics: mean
 
 using Elliptic
 using Roots
+using LinearAlgebra
 
-export BasicBody,Ellipse,Circle,Rectangle,Square,Plate,SplinedBody,NACA4
+#=
+Approach:
+- every body shape must contain xend, yend, x̃end, ỹend, x, y, x̃, ỹ
+- end points of segments are moved (dx̃end/dt) transformed (x̃end -> xend).
+- For polygons, the endpoints coincide with vertices.
+- the Lagrange points (x, y) are the midpoints of segments, and are to be
+  computed from (xend, yend) using midpoint after every transform.
+- may not need the x̃, ỹ coordinates.
+=#
+
+export BasicBody,Ellipse,Circle,Rectangle,Square,Plate,ThickPlate,SplinedBody,NACA4,Polygon
 
 """
     BasicBody(x,y[,closuretype=ClosedBody]) <: Body
@@ -26,11 +37,18 @@ mutable struct BasicBody{N,C<:BodyClosureType} <: Body{N,C}
   x :: Vector{Float64}
   y :: Vector{Float64}
 
+  x̃end :: Vector{Float64}
+  ỹend :: Vector{Float64}
+
+  xend :: Vector{Float64}
+  yend :: Vector{Float64}
+
 end
 
-function BasicBody(x::Vector{T},y::Vector{T};closuretype::Type{<:BodyClosureType}=ClosedBody) where {T <: Real}
-    @assert length(x) == length(y)
-    BasicBody{length(x),closuretype}((0.0,0.0),0.0,x,y,x,y)
+function BasicBody(xend::Vector{T},yend::Vector{T};closuretype::Type{<:BodyClosureType}=ClosedBody) where {T <: Real}
+    @assert length(xend) == length(yend)
+    x, y = _midpoints(xend,yend,closuretype)
+    BasicBody{length(x),closuretype}((0.0,0.0),0.0,x,y,x,y,xend,yend,xend,yend)
 end
 
 function Base.show(io::IO, body::BasicBody{N,C}) where {N,C}
@@ -61,42 +79,58 @@ mutable struct Ellipse{N} <: Body{N,ClosedBody}
   x :: Vector{Float64}
   y :: Vector{Float64}
 
+  x̃end :: Vector{Float64}
+  ỹend :: Vector{Float64}
+
+  xend :: Vector{Float64}
+  yend :: Vector{Float64}
+
+
 end
 
 #=
-function Ellipse(a::Real,b::Real,N::Int)
-    x̃ = zeros(N)
-    ỹ = zeros(N)
-    θ = range(0,stop=2π,length=N+1)
-    @. x̃ = a*cos(θ[1:N])
-    @. ỹ = b*sin(θ[1:N])
-
-    Ellipse{N}(a,b,(0.0,0.0),0.0,x̃,ỹ,x̃,ỹ)
-end
+endpointson=false ensures that the midpoints lie on the surface
+of the ellipse (and the endpoints are outside)
 =#
+function Ellipse(a::Real,b::Real,N::Int;endpointson=false,shifted=false)
+    #N = 4*round(Int,N_given/4) # ensure that N is divisible by 4
 
-function Ellipse(a::Real,b::Real,N::Int)
+    shiftedtype = shifted ? Shifted : Unshifted
     Nqrtr = div(N,4) + 1
     maj, min = a > b ? (a, b) : (b, a)
     m = 1 - min^2/maj^2
     smax = maj*Elliptic.E(m)
     Δs = smax/(Nqrtr-1)
-    ϴ, _ = _get_ellipse_thetas(Δs,smax,maj,m)
+    ϴ, _ = _get_ellipse_thetas(Δs,smax,maj,m,shiftedtype)
     _x, _y = min*cos.(ϴ), maj*sin.(ϴ)
     x, y = a > b ? (reverse(_y),reverse(_x)) : (_x,_y)
-    xfull = vcat(x,-reverse(x[1:end-1]),-x[2:end], reverse(x[2:end-1]))
-    yfull = vcat(y, reverse(y[1:end-1]),-y[2:end],-reverse(y[2:end-1]))
-    Ellipse{length(xfull)}(a,b,(0.0,0.0),0.0,xfull,yfull,xfull,yfull)
+    adj = _last_segment_decrement(shiftedtype)
+    xt = vcat(x,-reverse(x[1:end-adj]),-x[1+adj:end], reverse(x[1+adj:end-adj]))
+    yt = vcat(y, reverse(y[1:end-adj]),-y[1+adj:end],-reverse(y[1+adj:end-adj]))
+
+    # if this is endpointson = false, then xt, yt are the desired midpoints
+    # otherwise, these are the endpoints
+    if endpointson
+      xend, yend = copy(xt), copy(yt)
+      x, y = _midpoints(xt,yt,ClosedBody)
+    else
+       x, y = copy(xt), copy(yt)
+       midinv = midpoint_inverse(length(x))
+       xend = midinv*x
+       yend = midinv*y
+    end
+
+    Ellipse{length(x)}(a,b,(0.0,0.0),0.0,x,y,x,y,xend,yend,xend,yend)
 end
 
-function _get_ellipse_thetas(Δs,smax,maj,m)
+function _get_ellipse_thetas(Δs,smax,maj,m,shiftedtype)
 
-    slast = 0.0
+    slast = _start_s(Δs,shiftedtype)
     θlast = 0.0
     s = maj*Elliptic.E(θlast,m)
-    θ = [θlast]
+    θ = _init_Θ(shiftedtype)
     ds = []
-    while s < smax
+    while s < _max_s(smax,Δs,shiftedtype)
         θi = find_zero(x -> maj*Elliptic.E(x,m) - slast - Δs,θlast,atol=1e-12)
         s = maj*Elliptic.E(θi,m)
         push!(ds,s-slast)
@@ -107,25 +141,74 @@ function _get_ellipse_thetas(Δs,smax,maj,m)
     θ, ds
 end
 
+_start_s(Δs,::Type{Shifted}) = -0.5*Δs
+_start_s(Δs,::Type{Unshifted}) = 0.0
 
-#Ellipse(a::Real,b::Real,targetsize::Float64;kwargs...) =
-#    Ellipse(a,b,_adjustnumber(targetsize,Ellipse,a,b);kwargs...)
+_init_Θ(::Type{Shifted}) = Float64[]
+_init_Θ(::Type{Unshifted}) = Float64[0.0]
+
+_max_s(smax,Δs,::Type{Shifted}) = smax-Δs
+_max_s(smax,Δs,::Type{Unshifted}) = smax
+
+_last_segment_decrement(::Type{Shifted}) = 0
+_last_segment_decrement(::Type{Unshifted}) = 1
+
+midpoint_inverse(N) = _midpoint_inverse(N,Val(mod(N,2)==0))
+
+function _midpoint_inverse(n::Int,::Val{true}) # even N
+  #mod(n,2) == 0 || error("midpoint inverse only verified for even n")
+  d = 1/n
+  u = Matrix(undef,1,n)
+  num = 1.0-d
+  sgn = 1.0
+  u[1] = u[n] = sgn*num
+  for i in 2:n÷2
+      num -= 2d
+      sgn *= -1.0
+      u[i] = u[n-i+1] = sgn*num
+  end
+  A = Matrix(undef,n,n)
+  A[1,:] = u
+  for i in 2:n
+    u .= circshift(u,(0,1))
+    A[i,:] = u
+  end
+  return A
+end
+
+function _midpoint_inverse(n::Int,::Val{false}) # odd N
+  #mod(n,2) == 0 || error("midpoint inverse only verified for even n")
+  u = Matrix(undef,1,n)
+  sgn = 1.0
+  u[1] = sgn
+  for i in 2:n
+      sgn *= -1.0
+      u[i] = sgn
+  end
+  A = copy(u)
+  for i in 2:n
+    u .= circshift(u,(0,1))
+    A = vcat(A,u)
+  end
+  return A
+end
 
 """
     Circle(a,n) <: Body
 
 Construct a circular body with radius `a`
 and with `n` points distributed on the body perimeter.
-"""
-Circle(a::Real,N::Int) = Ellipse(a,a,N)
+""" Circle(::Real,::Int)
 
 """
     Circle(a,targetsize::Float64) <: Body
 
 Construct a circular body with radius `a` with spacing between points set
 approximately to `targetsize`.
-"""
-Circle(a::Real,targetsize::Float64) = Ellipse(a,a,targetsize)
+""" Circle(::Real,::Real)
+
+Circle(a::Real,arg;kwargs...) = Ellipse(a,a,arg;kwargs...)
+
 
 function Base.show(io::IO, body::Ellipse{N}) where {N}
     if body.a == body.b
@@ -139,23 +222,69 @@ end
 
 #### Rectangles and squares ####
 
-
 """
-    Rectangle(a,b,na) <: Body
+    Rectangle(a,b,n) <: Body
 
 Construct a rectangular body with x̃ side half-length `a` and ỹ side half-length `b`,
-with `na` points distributed on the x̃ side (including both corners). The centroid
+with approximately `n` points distributed along the perimeter. The centroid
 of the rectangle is placed at the origin (so that the lower left corner is at (-a,-b)).
 
-By default, points are not placed at the corners, but rather, are shifted
+Points are not placed at the corners, but rather, are shifted
 by half a segment. This ensures that all normals are perpendicular to the sides.
-If, instead, the `shifted=false` flag is added, then points are placed at the corners,
-shifted clockwise relative to the default by half a segment, and
-the normal vectors are bisectors between the normals on the adjacent two sides.
 """
-mutable struct Rectangle{N,PS} <: Body{N,ClosedBody}
-  a :: Float64
-  b :: Float64
+Rectangle(a::Real,b::Real,arg;kwargs...) = Polygon([-a,a,a,-a],[-b,-b,b,b],arg;kwargs...)
+
+"""
+    Rectangle(a,b,ds) <: Body
+
+Construct a rectangular body with x̃ side half-length `a` and ỹ side half-length `b`,
+with approximate spacing `ds` between points.
+""" Rectangle(::Real,::Real,::Real)
+
+"""
+    Square(a,n) <: Body
+
+Construct a square body with side half-length `a`
+and with approximately `n` points distributed along the perimeter.
+"""
+Square(a::Real,arg;kwargs...) = Rectangle(a,a,arg;kwargs...)
+
+"""
+    Square(a,ds) <: Body
+
+Construct a square body with side half-length `a`,
+with approximate spacing `ds` between points.
+""" Square(::Real,::Real)
+
+
+#### Plates ####
+
+"""
+    Plate(a,n) <: Body
+
+Construct a flat plate of zero thickness with length `a`,
+divided into `n` equal segments.
+"""
+Plate(len::Real,arg) = Polygon([-0.5*len,0.5*len],[0.0,0.0],arg,closuretype=OpenBody)
+
+"""
+    Plate(a,ds) <: Body
+
+Construct a flat plate of zero thickness with length `a`,
+with approximate spacing `ds` between points.
+""" Plate(::Real,::Real)
+
+
+
+#### Polygons ####
+
+"""
+    Polygon(x::Vector,y::Vector,n[,closuretype=ClosedBody])
+
+Create a polygon shape with vertices `x` and `y`, with approximately `n` points distributed along
+the perimeter.
+"""
+mutable struct Polygon{N,NV,C<:BodyClosureType} <: Body{N,C}
   cent :: Tuple{Float64,Float64}
   α :: Float64
 
@@ -165,190 +294,105 @@ mutable struct Rectangle{N,PS} <: Body{N,ClosedBody}
   x :: Vector{Float64}
   y :: Vector{Float64}
 
-  x̃mid :: Union{Vector{Float64},Nothing}
-  ỹmid :: Union{Vector{Float64},Nothing}
+  x̃end :: Vector{Float64}
+  ỹend :: Vector{Float64}
 
-  xmid :: Union{Vector{Float64},Nothing}
-  ymid :: Union{Vector{Float64},Nothing}
+  xend :: Vector{Float64}
+  yend :: Vector{Float64}
+
+  side :: Vector{UnitRange{Int64}}
 
 end
 
-Rectangle(a::Real,b::Real,na::Int;shifted=true) = _rectangle(a,b,na,Val(shifted))
+"""
+    Polygon(x::Vector,y::Vector,ds::Float64[,closuretype=ClosedBody])
 
-function _rectangle(a::Real,b::Real,na::Int,::Val{false})
-    x̃, ỹ = _rectangle_points(a::Real,b::Real,na::Int)
-    Rectangle{length(x̃),Unshifted}(a,b,(0.0,0.0),0.0,x̃,ỹ,x̃,ỹ,nothing,nothing,nothing,nothing)
+Create a polygon shape with vertices `x` and `y`, with approximate spacing `ds` between points.
+""" Polygon(::AbstractVector,::AbstractVector,::Real)
+
+
+function Polygon(xv::AbstractVector{T},yv::AbstractVector{T},a::Float64;closuretype=ClosedBody) where {T<:Real}
+
+  xend, yend, x, y, side  = _polygon(xv,yv,a,closuretype)
+  Polygon{length(x),length(xv),closuretype}((0.0,0.0),0.0,x,y,x,y,xend,yend,xend,yend,side)
 end
 
-function _rectangle(a::Real,b::Real,na::Int,::Val{true})
-    x̃mid, ỹmid = _rectangle_points(a::Real,b::Real,na::Int)
-    x̃, ỹ = _midpoints(x̃mid,ỹmid,ClosedBody)
-    Rectangle{length(x̃),Shifted}(a,b,(0.0,0.0),0.0,x̃,ỹ,x̃,ỹ,x̃mid,ỹmid,x̃mid,ỹmid)
+@inline Polygon(xv,yv,n::Int;closuretype=ClosedBody) =
+            Polygon(xv,yv,polygon_perimeter(xv,yv,closuretype)/n,closuretype=closuretype)
+
+function polygon_perimeter(xv,yv,closuretype)
+  xvcirc = _extend_array(xv,closuretype)
+  yvcirc = _extend_array(yv,closuretype)
+  len = 0.0
+  for i in 1:length(xvcirc)-1
+     len += sqrt((xvcirc[i+1]-xvcirc[i])^2+(yvcirc[i+1]-yvcirc[i])^2)
+  end
+  return len
 end
 
-function _rectangle_points(a::Real,b::Real,na::Int)
-  Δsa = 2a/(na-1)
-  nb = ceil(Int,2b/Δsa)+1
-  Δsb = 2b/(nb-1)
+function Base.show(io::IO, body::Polygon{N,NV,CS}) where {N,NV,CS}
+    cb = CS == ClosedBody ? "Closed " : "Open "
+    println(io, cb*"polygon with $NV vertices and $N points")
+    println(io, "   Current position: ($(body.cent[1]),$(body.cent[2]))")
+    println(io, "   Current angle (rad): $(body.α)")
+end
 
-  N = 2(na-1)+2(nb-1)
-  x = zeros(N)
-  y = zeros(N)
+function _polygon(xv::AbstractVector{T},yv::AbstractVector{T},ds::Float64,closuretype) where {T<:Real}
+    xvcirc = _extend_array(xv,closuretype)
+    yvcirc = _extend_array(yv,closuretype)
+    xend, yend, side = Float64[], Float64[], UnitRange{Int64}[]
+    totlen = 0
+    for i in 1:length(xvcirc)-2
+        xi, yi = _line_points(xvcirc[i],yvcirc[i],xvcirc[i+1],yvcirc[i+1],ds)
+        len = length(xi)-1
+        append!(xend,xi[1:len])
+        append!(yend,yi[1:len])
+        push!(side,totlen+1:totlen+len)
+        totlen += len
+    end
+    xi, yi = _line_points(xvcirc[end-1],yvcirc[end-1],xvcirc[end],yvcirc[end],ds)
+    len = length(xi)-_last_segment_decrement(closuretype)
+    append!(xend,xi[1:len])
+    append!(yend,yi[1:len])
+    push!(side,totlen+1:totlen+len)
 
-  ibottom = 1:na-1
-  @. x[ibottom] = -a + Δsa*(0:na-2)
-  @. y[ibottom] = -b
+    x, y = _midpoints(xend,yend,closuretype)
 
-  iright = na:na+nb-2
-  @. x[iright] =  a
-  @. y[iright] = -b + Δsb*(0:nb-2)
+    return xend, yend, x, y, side
+end
 
-  itop = (na+nb-1):(2na+nb-3)
-  @. x[itop] = -a + Δsa*(na-1:-1:1)
-  @. y[itop] = b
+_extend_array(x,::Type{ClosedBody}) = [x;x[1]]
+_extend_array(x,::Type{OpenBody}) = x
 
-  ileft = (2na+nb-2):(2na+2nb-4)
-  @. x[ileft] = -a
-  @. y[ileft] =  -b + Δsb*(nb-1:-1:1)
+_last_segment_decrement(::Type{ClosedBody}) = 1
+_last_segment_decrement(::Type{OpenBody}) = 0
+
+function _line_points(x1,y1,x2,y2,n::Int)
+
+  dx, dy = x2-x1, y2-y1
+  len = sqrt(dx^2+dy^2)
+
+  Δs = len/(n-1)
+
+  x = zeros(n)
+  y = zeros(n)
+
+  range = (0:n-1)/(n-1)
+
+  @. x = x1 + dx*range
+  @. y = y1 + dy*range
 
   return x, y
 
 end
 
-#Rectangle(a::Real,b::Real,targetsize::Float64;kwargs...) =
-#    Rectangle(a,b,_adjustnumber(targetsize,Rectangle,a,b);kwargs...)
-
-_centraldiff(b::Rectangle{N,Shifted},::Val{false}) where {N} = _diff(b.xmid,b.ymid,ClosedBody)
-_centraldiff(b::Rectangle{N,Shifted},::Val{true}) where {N} = _diff(b.x̃mid,b.ỹmid,ClosedBody)
-
-
-function (T::RigidTransform)(b::Rectangle{N,Shifted}) where {N}
-  b.xmid, b.ymid = T(b.x̃mid,b.ỹmid)
-  b.x, b.y = T(b.x̃,b.ỹ)
-  b.α = T.α
-  b.cent = T.trans
-  return b
+function _line_points(x1,y1,x2,y2,ds::Float64)
+    dx, dy = x2-x1, y2-y1
+    len = sqrt(dx^2+dy^2)
+    return _line_points(x1,y1,x2,y2,round(Int,len/ds)+1)
 end
 
 
-"""
-    Square(a,na) <: Body
-
-Construct a square body with side half-length `a`
-and with `na` points distributed on each side (including both corners).
-"""
-Square(a::Real,na::Int;kwargs...) = Rectangle(a,a,na;kwargs...)
-
-Square(a::Real,targetsize::Float64;kwargs...) = Rectangle(a,a,targetsize;kwargs...)
-
-function Base.show(io::IO, body::Rectangle{N}) where {N}
-    if body.a == body.b
-      println(io, "Square body with $N points and side half-length $(body.a)")
-    else
-      println(io, "Rectangular body with $N points and half-lengths ($(body.a),$(body.b))")
-    end
-    println(io, "   Current position: ($(body.cent[1]),$(body.cent[2]))")
-    println(io, "   Current angle (rad): $(body.α)")
-end
-
-#### Plates ####
-
-"""
-    Plate(length,thick,n,[λ=1.0]) <: Body
-
-Construct a flat plate with length `length` and thickness `thick`,
-with `n` points distributed on the body perimeter.
-
-The optional parameter `λ` distributes the points differently. Values between `0.0`
-and `1.0` are accepted.
-
-The constructor `Plate(length,n,[λ=1.0])` creates a plate of zero thickness.
-
-Alternatively, either form can be specified with a target spacing in place of `n`.
-"""
-mutable struct Plate{N,C<:BodyClosureType} <: Body{N,C}
-  len :: Float64
-  thick :: Float64
-  cent :: Tuple{Float64,Float64}
-  α :: Float64
-
-  x̃ :: Vector{Float64}
-  ỹ :: Vector{Float64}
-
-  x :: Vector{Float64}
-  y :: Vector{Float64}
-
-end
-
-
-function Plate(len::Real,N::Int;λ::Float64=1.0)
-
-    # set up points on plate
-    #x = [[len*(-0.5 + 1.0*(i-1)/(N-1)),0.0] for i=1:N]
-
-    Δϕ = π/(N-1)
-    Jϕa = [sqrt(sin(ϕ)^2+λ^2*cos(ϕ)^2) for ϕ in range(π-Δϕ/2,stop=Δϕ/2,length=N-1)]
-    Jϕ = len*Jϕa/Δϕ/sum(Jϕa)
-    x̃ = -0.5*len .+ Δϕ*cumsum([0.0; Jϕ])
-    ỹ = zero(x̃)
-
-    Plate{N,OpenBody}(len,0.0,(0.0,0.0),0.0,x̃,ỹ,x̃,ỹ)
-
-end
-
-#Plate(a::Real,targetsize::Float64;kwargs...) =
-#    Plate(a,_adjustnumber(targetsize,Plate,a);kwargs...)
-
-
-function Plate(len::Real,thick::Real,N::Int;λ::Float64=1.0)
-    # input N is the number of panels on one side only
-
-    # set up points on flat sides
-    Δϕ = π/N
-    Jϕa = [sqrt(sin(ϕ)^2+λ^2*cos(ϕ)^2) for ϕ in range(π-Δϕ/2,stop=Δϕ/2,length=N)]
-    Jϕ = len*Jϕa/Δϕ/sum(Jϕa)
-    xtopface = -0.5*len .+ Δϕ*cumsum([0.0; Jϕ])
-    xtop = 0.5*(xtopface[1:N] + xtopface[2:N+1])
-
-
-    Δsₑ = Δϕ*Jϕ[1]
-    Nₑ = 2*floor(Int,0.25*π*thick/Δsₑ)
-    xedgeface = [0.5*len + 0.5*thick*cos(ϕ) for ϕ in range(π/2,stop=-π/2,length=Nₑ+1)]
-    yedgeface = [          0.5*thick*sin(ϕ) for ϕ in range(π/2,stop=-π/2,length=Nₑ+1)]
-    xedge = 0.5*(xedgeface[1:Nₑ]+xedgeface[2:Nₑ+1])
-    yedge = 0.5*(yedgeface[1:Nₑ]+yedgeface[2:Nₑ+1])
-
-    x̃ = Float64[]
-    ỹ = Float64[]
-    for xi in xtop
-      push!(x̃,xi)
-      push!(ỹ,0.5*thick)
-    end
-    for i = 1:Nₑ
-      push!(x̃,xedge[i])
-      push!(ỹ,yedge[i])
-    end
-    for xi in reverse(xtop,dims=1)
-      push!(x̃,xi)
-      push!(ỹ,-0.5*thick)
-    end
-    for i = Nₑ:-1:1
-      push!(x̃,-xedge[i])
-      push!(ỹ,yedge[i])
-    end
-
-    Plate{length(x̃),ClosedBody}(len,thick,(0.0,0.0),0.0,x̃,ỹ,x̃,ỹ)
-
-end
-
-#Plate(a::Real,b::Real,targetsize::Float64;kwargs...) =
-#    Plate(a,b,_adjustnumber(targetsize,Plate,a,b);kwargs...)
-
-function Base.show(io::IO, body::Plate{N}) where {N}
-    println(io, "Plate with $N points and length $(body.len) and thickness $(body.thick)")
-    println(io, "   Current position: ($(body.cent[1]),$(body.cent[2]))")
-    println(io, "   Current angle (rad): $(body.α)")
-end
 
 #### Splined body ####
 
@@ -381,6 +425,96 @@ function SplinedBody(Xpts_raw::Array{Float64,2},Δx::Float64;closuretype::Type{<
     return BasicBody(x,y,closuretype=closuretype)
 end
 
+"""
+    SplinedBody(x,y,Δx[,closuretype=ClosedBody]) -> BasicBody
+
+Using control points in `x` and `y`, create a set of points
+that are uniformly spaced (with spacing `Δx`) on a curve that passes through the control points. A cubic
+parametric spline algorithm is used. If the optional parameter `closuretype` is set
+to `OpenBody`, then the end points are not joined together.
+"""
+SplinedBody(x::AbstractVector{Float64},y::AbstractVector{Float64},Δx::Float64;kwargs...) =
+      SplinedBody(hcat(x,y),Δx;kwargs...)
+
+
+"""
+    ThickPlate(length,thick,n,[λ=1.0]) <: Body
+
+Construct a flat plate with length `length` and thickness `thick`,
+with `n` points distributed along one side.
+
+The optional parameter `λ` distributes the points differently. Values between `0.0`
+and `1.0` are accepted.
+
+Alternatively, the shape can be specified with a target point spacing in place of `n`.
+"""
+mutable struct ThickPlate{N} <: Body{N,ClosedBody}
+  len :: Float64
+  thick :: Float64
+  cent :: Tuple{Float64,Float64}
+  α :: Float64
+
+  x̃ :: Vector{Float64}
+  ỹ :: Vector{Float64}
+
+  x :: Vector{Float64}
+  y :: Vector{Float64}
+
+  x̃end :: Vector{Float64}
+  ỹend :: Vector{Float64}
+
+  xend :: Vector{Float64}
+  yend :: Vector{Float64}
+
+end
+
+function ThickPlate(len::Real,thick::Real,N::Int;λ::Float64=1.0)
+    # input N is the number of panels on one side only
+
+    # set up points on flat sides
+    Δϕ = π/N
+    Jϕa = [sqrt(sin(ϕ)^2+λ^2*cos(ϕ)^2) for ϕ in range(π-Δϕ/2,stop=Δϕ/2,length=N)]
+    Jϕ = len*Jϕa/Δϕ/sum(Jϕa)
+    xtopface = -0.5*len .+ Δϕ*cumsum([0.0; Jϕ])
+    xtop = 0.5*(xtopface[1:N] + xtopface[2:N+1])
+
+    Δsₑ = Δϕ*Jϕ[1]
+    Nₑ = 2*floor(Int,0.25*π*thick/Δsₑ)
+    xedgeface = [0.5*len + 0.5*thick*cos(ϕ) for ϕ in range(π/2,stop=-π/2,length=Nₑ+1)]
+    yedgeface = [          0.5*thick*sin(ϕ) for ϕ in range(π/2,stop=-π/2,length=Nₑ+1)]
+    xedge = 0.5*(xedgeface[1:Nₑ]+xedgeface[2:Nₑ+1])
+    yedge = 0.5*(yedgeface[1:Nₑ]+yedgeface[2:Nₑ+1])
+
+    x̃end = Float64[]
+    ỹend = Float64[]
+    for xi in xtop
+      push!(x̃end,xi)
+      push!(ỹend,0.5*thick)
+    end
+    for i = 1:Nₑ
+      push!(x̃end,xedge[i])
+      push!(ỹend,yedge[i])
+    end
+    for xi in reverse(xtop,dims=1)
+      push!(x̃end,xi)
+      push!(ỹend,-0.5*thick)
+    end
+    for i = Nₑ:-1:1
+      push!(x̃end,-xedge[i])
+      push!(ỹend,yedge[i])
+    end
+    x̃, ỹ = _midpoints(x̃end,ỹend,ClosedBody)
+
+    ThickPlate{length(x̃)}(len,thick,(0.0,0.0),0.0,x̃,ỹ,x̃,ỹ,x̃end,ỹend,x̃end,ỹend)
+
+end
+
+function Base.show(io::IO, body::ThickPlate{N}) where {N}
+    println(io, "Thick plate with $N points and length $(body.len) and thickness $(body.thick)")
+    println(io, "   Current position: ($(body.cent[1]),$(body.cent[2]))")
+    println(io, "   Current angle (rad): $(body.α)")
+end
+
 #### NACA 4-digit airfoil ####
 
 """
@@ -396,7 +530,7 @@ which defaults to 1.0.
 # Example
 
 ```jldoctest
-julia> w = Bodies.NACA4(0.0,0.0,0.12);
+julia> b = NACA4(0.0,0.0,0.12);
 ```
 """
 mutable struct NACA4{N} <: Body{N,ClosedBody}
@@ -413,6 +547,12 @@ mutable struct NACA4{N} <: Body{N,ClosedBody}
 
   x :: Vector{Float64}
   y :: Vector{Float64}
+
+  x̃end :: Vector{Float64}
+  ỹend :: Vector{Float64}
+
+  xend :: Vector{Float64}
+  yend :: Vector{Float64}
 
 end
 
@@ -501,16 +641,15 @@ end
 w = ComplexF64[1;reverse(xpan,dims=1)+im*reverse(ypan,dims=1)]*len
 w .-= mean(w)
 
-x̃ = real.(w)
-ỹ = imag.(w)
+x̃end = real.(w)
+ỹend = imag.(w)
+
+x̃, ỹ = _midpoints(x̃end,ỹend,ClosedBody)
 
 
-NACA4{length(x̃)}(len,cam,pos,t,(0.0,0.0),0.0,x̃,ỹ,x̃,ỹ)
+NACA4{length(x̃)}(len,cam,pos,t,(0.0,0.0),0.0,x̃,ỹ,x̃,ỹ,x̃end,ỹend,x̃end,ỹend)
 
 end
-
-#NACA4(a::Real,b::Real,c::Real,targetsize::Float64;kwargs...) =
-#    NACA4(a,b,c,_adjustnumber(targetsize,NACA4,a,b,c);kwargs...)
 
 
 function Base.show(io::IO, body::NACA4{N}) where {N}
@@ -522,12 +661,14 @@ end
 
 ####
 
+
 function _adjustnumber(targetsize::Real,shapefcn::Type{T},params...;kwargs...) where {T <: Body}
     ntrial = 501
     return floor(Int,ntrial*mean(dlength(shapefcn(params...,ntrial;kwargs...)))/targetsize)
 end
 
-for shape in (:Ellipse,:Rectangle,:Plate,:NACA4)
+
+for shape in (:Ellipse,:ThickPlate,:NACA4)
     @eval RigidBodyTools.$shape(params...;kwargs...) =
         $shape(Base.front(params)...,
           _adjustnumber(Base.last(params),$shape,Base.front(params)...;kwargs...);kwargs...)

@@ -96,7 +96,7 @@ end
 @testset "Direct motions" begin
 
   u, v = rand(5), rand(5)
-  m = RigidBodyTools.BasicDirectMotion(u,v)
+  m = RigidBodyTools.ConstantDeformationMotion(u,v)
 
   ml = RigidBodyTools.MotionList([m])
 
@@ -119,19 +119,20 @@ end
 
   kin = Pitchup(1.0,0.5,0.2,0.0,0.5,π/4,EldredgeRamp(20.0))
   m1 = RigidBodyMotion(kin)
-  m2 = BasicDirectMotion(one.(b2.x),zero.(b2.y))
+  m2 = ConstantDeformationMotion(one.(b2.x),zero.(b2.y))
 
   ml = MotionList([m1,m2])
 
   x0 = motion_state(bl,ml)
 
   @test x0[1:3] == vec(T1)[1:3]
-  @test x0[4:end] == vcat(b2.x̃,b2.ỹ)
+  @test x0[4:end] == vcat(b2.x̃end,b2.ỹend)
 
   t = rand()
   u = motion_velocity(bl,ml,t)
   @test u[1:3] == motion_velocity(b1,m1,t)
   @test u[4:end] == motion_velocity(b2,m2,t)
+
 
   bl2 = deepcopy(bl)
   update_body!(bl2,x0,ml) # This should not change the bodies
@@ -141,12 +142,15 @@ end
     @test bl2[i].x == bl[i].x && bl2[i].y == bl[i].y
   end
 
+  u, v = zero(b1.x),zero(b1.y)
+  surface_velocity!(u,v,b1,m1,0.0)
+  maxvelocity(b1,m1)
 
-  m = RigidAndDirectMotion(m1,m2)
+  m = RigidAndDeformingMotion(m1,m2)
   x0 = motion_state(b2,m)
 
   @test x0[1:3] == vec(T2)[1:3]
-  @test x0[4:end] == vcat(b2.x̃,b2.ỹ)
+  @test x0[4:end] == vcat(b2.x̃end,b2.ỹend)
 
   t = rand()
   u = motion_velocity(b2,m,t)

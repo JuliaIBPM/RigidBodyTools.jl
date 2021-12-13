@@ -1,77 +1,116 @@
-abstract type AbstractDirectlySpecifiedMotion <: AbstractMotion end
+abstract type AbstractDeformationMotion <: AbstractMotion end
 
 #=
-To create a subtype of AbstractDirectlySpecifiedMotion, one must
-extend `surface_velocity!(u,v,body,m,t)`, to supply the
+To create a subtype of AbstractDeformationMotion, one must
+extend `motion_velocity(body,m,t)`, to supply the
 surface values of the motion in-place in vectors `u` and `v`.
 These are interpreted as an update of the body-fixed coordinates,
-`b.x̃` and `b.ỹ`.
+`b.x̃end` and `b.ỹend`, in the body's coordinate system.
 =#
 
 """
-    BasicDirectMotion(u::Vector{Float64},v::Vector{Float64})
+    ConstantDeformationMotion(u::Vector{Float64},v::Vector{Float64})
 
 Create an instance of basic directly-specified (constant)
 velocity, to be associated with a body whose length
 is the same as `u` and `v`.
 """
-struct BasicDirectMotion{VT} <: AbstractDirectlySpecifiedMotion
+struct ConstantDeformationMotion{VT} <: AbstractDeformationMotion
     u :: VT
     v :: VT
 end
 
+
+"""
+    motion_velocity(b::Body,m::ConstantDeformationMotion,t::Real)
+
+Return the velocity components (as a vector) of a `BasicDirectMotion`
+at the given time `t`. These specify the velocities (in body cooordinates)
+of the surface segments endpoints.
+"""
+function motion_velocity(b::Body,m::ConstantDeformationMotion,t::Real)
+    return vcat(m.u,m.v)
+end
+
+
+struct DeformationMotion{UT,VT} <: AbstractDeformationMotion
+    ufcn :: UT
+    vfcn :: VT
+end
+
+"""
+    DeformationMotion(u::Function,v::Function)
+
+Create an instance of directly-specified velocity whose
+components are specified with functions. These functions
+`u` and `v` must each be of the form `f(x̃,ỹ,t)`, where `x̃`
+and `ỹ` are coordinates of a point in the body coordinate system
+and `t` is time, and they must return the corresponding velocity component
+in the body coordinate system.
+""" DeformationMotion(::Function,::Function)
+
+
+function motion_velocity(b::Body,m::DeformationMotion,t::Real)
+    return vcat(m.ufcn.(b.x̃end,b.ỹend,t), m.vfcn.(b.x̃end,b.ỹend,t))
+end
+
+
 """
     surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
-                     b::Body,motion::BasicDirectMotion,t::Real)
+                     b::Body,motion::AbstractDeformationMotion,t::Real)
 
 Assign the components of velocity `u` and `v` (in inertial coordinate system)
-at surface positions described by points in body `b` (also in inertial coordinate system) at time `t`,
-based on supplied motion `motion` for the body.
+at surface positions described by `x` and `y` points in body `b` (also in inertial coordinate system) at time `t`,
+based on supplied motion `motion` for the body. This function calls the
+function `motion_velocity` associated with the given motion type.
 """
 function surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
-                           b::Body,m::BasicDirectMotion,t::Real)
-     u .= m.u
-     v .= m.v
+                           b::Body{N,C},m::AbstractDeformationMotion,t::Real) where {N,C}
+
+
+     vel = motion_velocity(b,m,t)
+     lenx = length(vel)
+
+     # interpolate to the midpoints
+     umid, vmid = _midpoints(vel[1:lenx÷2],vel[lenx÷2+1:lenx],C)
+     u .= umid
+     v .= vmid
+
+     # Rotate to the inertial coordinate system
+     T = RigidTransform(b.cent,b.α)
+     for i in eachindex(u)
+         Utmp = T.rot*[u[i],v[i]]
+         u[i], v[i] = Utmp
+     end
+
      return u, v
 end
 
-
 """
-    motion_velocity(b::Body,m::AbstractDirectlySpecifiedMotion,t::Real)
-
-Return the velocity components (as a vector) of a `AbstractDirectlySpecifiedMotion`
-at the given time `t`.
-"""
-function motion_velocity(b::Body,m::AbstractDirectlySpecifiedMotion,t::Real)
-    u, v = zero(b.x), zero(b.y)
-    surface_velocity!(u,v,b,m,t)
-    return vcat(u,v)
-end
-
-
-"""
-    motion_state(b::Body,m::AbstractDirectlySpecifiedMotion)
+    motion_state(b::Body,m::AbstractDeformationMotion)
 
 Return the current state vector of body `b` associated with
 direct motion `m`. It returns the concatenated coordinates
 of the body surface (in the body-fixed coordinate system).
 """
-function motion_state(b::Body,m::AbstractDirectlySpecifiedMotion)
-    return vcat(b.x̃,b.ỹ)
+function motion_state(b::Body,m::AbstractDeformationMotion)
+    return vcat(b.x̃end,b.ỹend)
 end
 
 """
-    update_body!(b::Body,x::AbstractVector,m::RigidAndDirectMotion)
+    update_body!(b::Body,x::AbstractVector,m::AbstractDeformationMotion)
 
 Update body `b` with the motion state vector `x`, interpreted as coordinates in the body
 coordinate system. The information in `m` is used for parsing only.
 """
-function update_body!(b::Body,x::AbstractVector,m::AbstractDirectlySpecifiedMotion)
+function update_body!(b::Body{N,C},x::AbstractVector,m::AbstractDeformationMotion) where {N,C}
     length(x) == length(motion_state(b,m)) || error("wrong length for motion state vector")
 
     lenx = length(x)
-    b.x̃ .= x[1:lenx÷2]
-    b.ỹ .= x[lenx÷2+1:lenx]
+    b.x̃end .= x[1:lenx÷2]
+    b.ỹend .= x[lenx÷2+1:lenx]
+
+    b.x̃, b.ỹ = _midpoints(b.x̃end,b.ỹend,C)
 
     # use the existing rigid transform of the body to update the
     # inertial coordinates of the surface
@@ -83,62 +122,62 @@ function update_body!(b::Body,x::AbstractVector,m::AbstractDirectlySpecifiedMoti
 end
 
 #=
-AbstractRigidAndDirectMotion describes motions that superpose the rigid-body
+AbstractRigidAndDeformingMotion describes motions that superpose the rigid-body
 motion with surface deformation. For this type of motion, the velocity
 is described by the usual rigid-body components (reference point velocity,
-angular velocity), plus vectors ũ and ṽ, describing the surface velocity
-*in the body coordinate system* rather than the inertial reference frame.
+angular velocity), plus vectors ũ and ṽ, describing the surface endpoint velocity
+*in the body coordinate system*.
 
 The motion state consists of the centroid, the angle, and the positions
-x̃ and ỹ of the surface points in the body coordinate system.
+x̃end and ỹend of the surface endpoints in the body coordinate system.
 
 To create a motion of this type, we still need to supply an extension of
-surface_velocity!(ũ,ṽ,b,m,t). However, this needs to supply only the deforming
+motion_velocity(b,m,t). However, this needs to supply only the deforming
 part of the velocity, and in the body's own coordinate system.
 =#
 
 """
-    RigidAndDirectMotion(rig::RigidBodyMotion,def::AbstractDirectlySpecifiedMotion)
+    RigidAndDeformingMotion(rig::RigidBodyMotion,def::AbstractDeformationMotion)
 
 Create an instance of basic superposition of a rigid-body motion
 and directly-specified deformation velocity in body coordinates.
 """
-struct RigidAndDirectMotion{RT,DT} <: AbstractMotion
+struct RigidAndDeformingMotion{RT,DT} <: AbstractMotion
     rigidmotion :: RT
     defmotion :: DT
 end
 
 """
-    RigidAndDirectMotion(kin::Kinematics,def::AbstractDirectlySpecifiedMotion)
+    RigidAndDeformingMotion(kin::Kinematics,def::AbstractDeformationMotion)
 
 Create an instance of basic superposition of a rigid-body motion with kinematics `kin`,
 and directly-specified deformation velocity in body coordinates.
 """
-RigidAndDirectMotion(kin::Kinematics,def::AbstractDirectlySpecifiedMotion) =
-                            RigidAndDirectMotion(RigidBodyMotion(kin),def)
+RigidAndDeformingMotion(kin::Kinematics,def::AbstractDeformationMotion) =
+                            RigidAndDeformingMotion(RigidBodyMotion(kin),def)
 
 """
-    RigidAndDirectMotion(kin::Kinematics,ũ::Vector{Float64},ṽ::Vector{Float64})
+    RigidAndDeformingMotion(kin::Kinematics,ũ::Vector{Float64},ṽ::Vector{Float64})
 
 Create an instance of basic superposition of a rigid-body motion and
 directly-specified (constant) deformation velocity in body coordinates, to be associated with a body whose length
 is the same as `ũ` and `ṽ`.
 """
-RigidAndDirectMotion(kin::Kinematics, ũ, ṽ) = RigidAndDirectMotion(RigidBodyMotion(kin),
+RigidAndDeformingMotion(kin::Kinematics, ũ, ṽ) = RigidAndDeformingMotion(RigidBodyMotion(kin),
                                                                   BasicDirectMotion(ũ,ṽ))
 """
-    RigidAndDirectMotion(ċ,α̇,ũ::Vector{Float64},ṽ::Vector{Float64})
+    RigidAndDeformingMotion(ċ,α̇,ũ::Vector{Float64},ṽ::Vector{Float64})
 
 Specify constant translational `ċ` and angular `α̇` velocity and
 directly-specified (constant) deformation velocity in body coordinates, to be associated with a body whose length
 is the same as `ũ` and `ṽ`.
 """
-RigidAndDirectMotion(ċ, α̇, ũ, ṽ) = RigidAndDirectMotion(RigidBodyMotion(ċ, α̇),
+RigidAndDeformingMotion(ċ, α̇, ũ, ṽ) = RigidAndDeformingMotion(RigidBodyMotion(ċ, α̇),
                                                         BasicDirectMotion(ũ,ṽ))
 
 """
     surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
-                     b::Body,motion::RigidAndDirectMotion,t::Real)
+                     b::Body,motion::RigidAndDeformingMotion,t::Real)
 
 Assign the components of velocity `u` and `v` (in inertial coordinate system)
 at surface positions described by points in body `b` (also in inertial coordinate system) at time `t`,
@@ -146,16 +185,9 @@ based on supplied motion `motion` for the body. This function calls the supplied
 function for the deformation part in `motion.defmotion`.
 """
 function surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
-                           b::Body,m::RigidAndDirectMotion,t::Real)
+                           b::Body,m::RigidAndDeformingMotion,t::Real)
 
      surface_velocity!(u, v, b, m.defmotion, t)
-
-     # Rotate to the inertial coordinate system
-     T = RigidTransform(b.cent...,b.α)
-     for i in eachindex(u)
-         Utmp = rot*[u[i],v[i]]
-         u[i], v[i] = Utmp
-     end
 
      # Add the rigid part
      urig, vrig = similar(u), similar(v)
@@ -169,41 +201,42 @@ end
 
 
 """
-    motion_velocity(b::Body,m::RigidAndDirectMotion,t::Real)
+    motion_velocity(b::Body,m::RigidAndDeformingMotion,t::Real)
 
-Return the velocity components (as a vector) of a `RigidAndDirectMotion`
+Return the velocity components (as a vector) of a `RigidAndDeformingMotion`
 at the given time `t`.
 """
-@inline motion_velocity(b::Body,m::RigidAndDirectMotion,t::Real) =
+@inline motion_velocity(b::Body,m::RigidAndDeformingMotion,t::Real) =
           vcat(motion_velocity(b,m.rigidmotion,t),motion_velocity(b,m.defmotion,t))
 
 
 """
-    motion_state(b::Body,m::RigidAndDirectMotion)
+    motion_state(b::Body,m::RigidAndDeformingMotion)
 
 Return the current state vector of body `b` associated with
 rigid+direct motion `m`. It returns the concatenated coordinates
 of the rigid-body mode and the body surface (in the body coordinate system).
 """
-@inline motion_state(b::Body,m::RigidAndDirectMotion) =
-          vcat(motion_state(b,m.rigidmotion),vcat(b.x̃,b.ỹ))
+@inline motion_state(b::Body,m::RigidAndDeformingMotion) =
+          vcat(motion_state(b,m.rigidmotion),motion_state(b,m.defmotion))
 
 
 """
-    update_body!(b::Body,x::AbstractVector,m::RigidAndDirectMotion)
+    update_body!(b::Body,x::AbstractVector,m::RigidAndDeformingMotion)
 
 Update body `b` with the motion state vector `x`. The part of the motion state
 associated with surface deformation is interpreted as expressed in body coordinates.
 The information in `m` is used for parsing only.
 """
-function update_body!(b::Body,x::AbstractVector,m::RigidAndDirectMotion)
+function update_body!(b::Body{N,C},x::AbstractVector,m::RigidAndDeformingMotion) where {N,C}
     length(x) == length(motion_state(b,m)) || error("wrong length for motion state vector")
 
     lenrigx = length(motion_state(b,m.rigidmotion))
     lendefx = length(x) - lenrigx
 
-    b.x̃ .= x[lenrigx+1:lenrigx+lendefx÷2]
-    b.ỹ .= x[lenrigx+lendefx÷2+1:length(x)]
+    b.x̃end .= x[lenrigx+1:lenrigx+lendefx÷2]
+    b.ỹend .= x[lenrigx+lendefx÷2+1:length(x)]
+    b.x̃, b.ỹ = _midpoints(b.x̃end,b.ỹend,C)
 
     update_body!(b,x[1:lenrigx],m.rigidmotion)
 
@@ -212,15 +245,38 @@ function update_body!(b::Body,x::AbstractVector,m::RigidAndDirectMotion)
 end
 
 
+"""
+    maxvelocity(b::Body,m::AbstractMotion[,tmax=100,dt=0.01])
+
+Search through the given motion `m` applied to body `b` and return `(umax,i,t)`,
+the maximum velocity magnitude, the index of the body points where it
+occurs, and the time at which it occurs.
+"""
+function maxvelocity(b::Body,m::AbstractMotion;tf=100.0,dt=0.01)
+    u, v = zero(b.x), zero(b.y)
+    i = 1
+    umax = 0.0
+    tmax = 0.0
+    for t in 0.0:dt:tf
+        surface_velocity!(u,v,b,m,t)
+        umag = sqrt.(u.^2+v.^2)
+        umax_t, i_t = findmax(umag)
+        if umax_t > umax
+            umax, i, tmax = umax_t, i_t, t
+        end
+    end
+    return umax, i, tmax
+end
+
 #=
 """
-    surface_velocity(b::Body,motion::AbstractDirectlySpecifiedMotion,t::Real)
+    surface_velocity(b::Body,motion::AbstractDeformationMotion,t::Real)
 
 Return the components of velocities (in inertial components) at surface positions
 described by points in body `b` (also in inertial coordinate system) at time `t`,
 based on supplied motion `motion` for the body.
 """
-surface_velocity(b::Body,m::AbstractDirectlySpecifiedMotion,t::Real) =
+surface_velocity(b::Body,m::AbstractDeformationMotion,t::Real) =
                 surface_velocity!(similar(b.x),similar(b.y),b,m,t)
 
 =#

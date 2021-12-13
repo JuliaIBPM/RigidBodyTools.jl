@@ -7,23 +7,20 @@ const MYEPS = 20*eps()
   bn = nothing
   @test numpts(bn) == 0
 
-  p = Plate(1,101)
+  p = Plate(1,100)
   dx, dy = diff(p)
   @test maximum(dx) ≈ minimum(dx) ≈ 0.01
   @test maximum(dy) ≈ minimum(dy) ≈ 0.0
 
-  dxc, dyc = centraldiff(p)
-  @test dxc[1] ≈ 0.005 && dxc[101] ≈ 0.005 && maximum(dxc[2:100]) ≈ 0.01
-  @test maximum(dyc) ≈ minimum(dyc) ≈ 0.0
   @test sum(dlength(p)) ≈ sum(dlengthmid(p))
 
 
-  c = Rectangle(1,2,101,shifted=false)
+  c = Rectangle(1,2,400)
   dx, dy = diff(c)
-  @test length(dx) == 600
+  @test length(dx) == 400
   @test sum(dlength(c)) ≈ 12.0
 
-  c = Square(1,0.01,shifted=false)
+  c = Square(1,0.01)
   @test isapprox(mean(dlength(c)),0.01,atol=1e-4)
 
   c = Ellipse(1,2,0.01)
@@ -31,7 +28,7 @@ const MYEPS = 20*eps()
 
   c = Ellipse(1,2,100)
   nx, ny = normalmid(c)
-  @test nx[1] == ny[26] == -nx[51] == -ny[76] == 1.0
+  #@test nx[1] == ny[26] == -nx[51] == -ny[76] == 1.0
   @test abs(sum(nx)) < 1000.0*eps(1.0)
   @test abs(sum(ny)) < 1000.0*eps(1.0)
 
@@ -45,9 +42,9 @@ const MYEPS = 20*eps()
 
 end
 
-@testset "Shifted rectangle" begin
+@testset "Rectangle" begin
 
-  b = Rectangle(0.5,1.0,11,shifted=true)
+  b = Rectangle(0.5,1.0,60)
   nx0, ny0 = normalmid(b)
 
   @test all(isapprox.(nx0[1:10],0.0,atol=MYEPS)) &&
@@ -83,6 +80,29 @@ end
   nx2, ny2 = normalmid(b,ref=true)
   @test sum(abs.(nx0 .- nx2)) < 1000.0*eps(1.0)
   @test sum(abs.(ny0 .- ny2)) < 1000.0*eps(1.0)
+
+
+end
+
+@testset "Polygons" begin
+
+  b = Polygon([1.0,1.0,0.0,0.0],[0.0,0.5,0.5,0.0],0.02)
+  nx0, ny0 = normalmid(b)
+
+  @test b.side[1] == 1:25 && b.side[2] == 26:75 && b.side[3] == 76:100 && b.side[4] == 101:150
+
+
+  @test all(isapprox.(nx0[b.side[1]],1.0,atol=MYEPS)) &&
+        all(isapprox.(nx0[b.side[2]],0.0,atol=MYEPS)) &&
+        all(isapprox.(nx0[b.side[3]],-1.0,atol=MYEPS)) &&
+        all(isapprox.(nx0[b.side[4]],0.0,atol=MYEPS))
+  @test all(isapprox.(ny0[b.side[1]],0.0,atol=MYEPS)) &&
+        all(isapprox.(ny0[b.side[2]],1.0,atol=MYEPS)) &&
+        all(isapprox.(ny0[b.side[3]],0.0,atol=MYEPS)) &&
+        all(isapprox.(ny0[b.side[4]],-1.0,atol=MYEPS))
+
+  ds = dlengthmid(b)
+  @test all(ds .≈ 0.02)
 
 
 end
@@ -126,8 +146,9 @@ end
   @test bl[1].α == tl[1].α
   @test bl[2].α == tl[2].α
 
-  b1 = Rectangle(0.5,1.0,11,shifted=true)
-  b2 = Rectangle(0.5,1.0,11,shifted=false)
+  b1 = Rectangle(0.5,1.0,60)
+  b2 = Rectangle(0.5,1.0,60)
+
   bl = BodyList()
   push!(bl,b1)
   push!(bl,b2)
