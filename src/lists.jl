@@ -57,12 +57,21 @@ end
 numpts(bl::BodyList) = mapreduce(numpts,+,bl)
 
 """
-    collect(bl::bodylist) -> Vector{Float64}, Vector{Float64}
+    collect(bl::bodylist[,endpoints=false][,ref=false]) -> Vector{Float64}, Vector{Float64}
 
 Collect the inertial-space coordinates of all of the Lagrange points comprising
 the bodies in body list `bl` and return each assembled set of coordinates as a vector.
+By default, `endpoints=false` and `ref=false`, which means this collects
+the midpoints of segments in the inertial coordinates. If `endpoints=true`
+it collects segment endpoints instead. If `ref=true` it collects
+the coordinates in the body coordinate system.
 """
-function collect(bl::BodyList)
+collect(bl::BodyList;endpoints=false,ref=false) = _collect(bl,Val(endpoints),Val(ref))
+
+collect(body::Body;kwargs...) = collect(BodyList([body]);kwargs...)
+
+
+function _collect(bl,::Val{false},::Val{false})
     xtmp = Float64[]
     ytmp = Float64[]
     for b in bl
@@ -71,7 +80,38 @@ function collect(bl::BodyList)
     end
     return xtmp,ytmp
 end
-collect(body::Body) = collect(BodyList([body]))
+
+function _collect(bl::BodyList,::Val{true},::Val{false})
+    xtmp = Float64[]
+    ytmp = Float64[]
+    for b in bl
+        append!(xtmp,b.xend)
+        append!(ytmp,b.yend)
+    end
+    return xtmp,ytmp
+end
+
+function _collect(bl,::Val{false},::Val{true})
+    xtmp = Float64[]
+    ytmp = Float64[]
+    for b in bl
+        append!(xtmp,b.x̃)
+        append!(ytmp,b.ỹ)
+    end
+    return xtmp,ytmp
+end
+
+function _collect(bl::BodyList,::Val{true},::Val{true})
+    xtmp = Float64[]
+    ytmp = Float64[]
+    for b in bl
+        append!(xtmp,b.x̃end)
+        append!(ytmp,b.ỹend)
+    end
+    return xtmp,ytmp
+end
+
+
 
 """
     getrange(bl::BodyList,i::Int) -> Range
