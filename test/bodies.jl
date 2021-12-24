@@ -109,6 +109,9 @@ end
 
 @testset "Lists" begin
 
+  bl = BodyList()
+  @test numpts(bl) == 0
+
   n1 = 101
   n2 = 201
   p = Plate(1,n1)

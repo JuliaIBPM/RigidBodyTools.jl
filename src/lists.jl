@@ -54,7 +54,7 @@ for (listtype,listelement) in LISTS
 end
 
 
-numpts(bl::BodyList) = mapreduce(numpts,+,bl)
+numpts(bl::BodyList) = mapreduce(numpts,+,bl;init=0)
 
 """
     collect(bl::bodylist[,endpoints=false][,ref=false]) -> Vector{Float64}, Vector{Float64}
