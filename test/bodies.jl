@@ -20,6 +20,13 @@ const MYEPS = 20*eps()
   @test length(dx) == 400
   @test sum(dlength(c)) ≈ 12.0
 
+  s = arccoord(c)
+  @test s[end] ≈ 12.0
+  @test s[end] == arclength(c)
+  smid = arccoordmid(c)
+  @test smid[1] > 0.0 && smid[end] < s[end]
+
+
   c = Square(1,0.01)
   @test isapprox(mean(dlength(c)),0.01,atol=1e-4)
 
@@ -122,6 +129,11 @@ end
 
   @test eltype(bl) == Body
 
+  sl = arccoord(bl)
+  @test sl[1:numpts(p)] == arccoord(p)
+  @test sl[numpts(p)+1:numpts(bl)] == arccoord(c)
+
+
   m1 = RigidBodyMotion(complex(0.0),0.0)
   m2 = RigidBodyMotion(RigidBodyTools.PitchHeave(1.0, 11.0, 0.2, 0.0, 0.0, 0.5, 1.0, 0.0))
 
@@ -138,9 +150,9 @@ end
   @test eltype(tl) == RigidTransform
 
   v = rand(numpts(bl))
-  @test numpts(bl) == length(p)+length(c)
-  @test v[1:length(p)] == view(v,bl,1)
-  @test v[(length(p)+1):(length(p)+length(c))] == view(v,bl,2)
+  @test numpts(bl) == numpts(p)+numpts(c)
+  @test v[1:numpts(p)] == view(v,bl,1)
+  @test v[(numpts(p)+1):(numpts(p)+numpts(c))] == view(v,bl,2)
 
   tl = RigidTransformList([t1,t2])
   tl(bl)

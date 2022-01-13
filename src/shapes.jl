@@ -8,6 +8,8 @@ using LinearAlgebra
 #=
 Approach:
 - every body shape must contain xend, yend, x̃end, ỹend, x, y, x̃, ỹ
+- x̃end, ỹend, x̃, ỹ,  are the untransformed coordinates and remain invariant in rigid transforms,
+ but are modified in deforming motions
 - end points of segments are moved (dx̃end/dt) transformed (x̃end -> xend).
 - For polygons, the endpoints coincide with vertices.
 - the Lagrange points (x, y) are the midpoints of segments, and are to be
@@ -62,10 +64,16 @@ end
 #### Ellipses and circles ####
 
 """
-    Ellipse(a,b,n) <: Body
+    Ellipse(a,b,n[,endpointson=false],[shifted=false]) <: Body
 
 Construct an elliptical body with semi-major axis `a` and semi-minor axis `b`,
-with `n` points distributed on the body perimeter.
+with `n` points distributed on the body perimeter. Can also call this
+with `Ellipse(a,b,ds)` where `ds` is the desired spacing between points.
+If `endpointson=true`, then
+the endpoints will be placed on the surface and the midpoints
+will lie inside the nominal ellipse. By default, the midpoints lie on
+the ellipse. If `shifted=true`, then the first endpoint lies on an axis
+of symmetry. By default the first midpoint lies on the axis symmetry.
 """
 mutable struct Ellipse{N} <: Body{N,ClosedBody}
   a :: Float64

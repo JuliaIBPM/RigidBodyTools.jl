@@ -246,6 +246,10 @@ midpoints(::Body)
 midpoints(::BodyList)
 normal
 normalmid
+arccoord
+arccoordmid
+arclength(::Body)
+arclength(::BodyList)
 ```
 
 ---

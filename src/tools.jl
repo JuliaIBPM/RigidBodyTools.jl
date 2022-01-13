@@ -1,7 +1,8 @@
 ### Tools ###
 
-import Base:diff,length
-export midpoints,dlength,normal,dlengthmid,centraldiff,normalmid
+import Base:diff, length
+export midpoints,dlength,normal,dlengthmid,centraldiff,normalmid,numpts,
+        arccoord,arccoordmid,arclength
 
 
 # Evaluate some geometric details of a body
@@ -11,6 +12,8 @@ export midpoints,dlength,normal,dlengthmid,centraldiff,normalmid
 Return the number of points on the body perimeter
 """
 length(::Body{N}) where {N} = N
+
+@deprecate length numpts
 
 for f in [:diff,:midpoints,:centraldiff]
     _f = Symbol("_"*string(f))
@@ -30,6 +33,9 @@ for f in [:diff,:midpoints,:centraldiff]
         return xl, yl
     end
 end
+
+
+
 
 """
     diff(body::Body[,ref=false]) -> Tuple{Vector{Float64},Vector{Float64}}
@@ -132,16 +138,18 @@ function _midpoints(x::Vector{Float64},y::Vector{Float64},::Type{OpenBody})
 end
 
 """
-    centraldiff(body::Body) -> Tuple{Vector{Float64},Vector{Float64}}
+    centraldiff(body::Body[,ref=false]) -> Tuple{Vector{Float64},Vector{Float64}}
 
 Compute the circular central differences of coordinates on body `body` (or
-on each body in list `body`).
+on each body in list `body`). If `ref=true`, uses the reference coordinates
+in body-fixed space.
 """ centraldiff(::Body)
 
 """
     centraldiff(bl::BodyList[,ref=false]) -> Tuple{Vector{Float64},Vector{Float64}}
 
-Compute the `centraldiff` on each constituent body in `bl`.
+Compute the `centraldiff` on each constituent body in `bl`.  If `ref=true`, uses the reference coordinates
+in body-fixed space.
 """ centraldiff(::BodyList)
 
 _centraldiff(x,y,C) = _diff(x,y,C)
@@ -165,32 +173,25 @@ end
 =#
 
 """
-    dlength(body::Body/BodyList) -> Vector{Float64}
+    dlength(body::Body/BodyList[,ref=false]) -> Vector{Float64}
 
 Compute the lengths of the faces on the perimeter of body `body`, whose ends
-are at the current `x` and `y` coordinates (in inertial space) of the body. Face 1
-corresponds to the face between points 1 and 2, for example. For an `OpenBody`,
-this provides a vector that is one element shorter than the number of points, to
-ensure that `sum(dlength(body))` is equal to the arclength of the body.
+are at the current `xend` and `yend` coordinates (in inertial space) of the body. Face 1
+corresponds to the face between endpoints 1 and 2, for example. If `ref=true`,
+uses the reference coordinates in body-fixed space.
 """
-function dlength(b::Union{Body,BodyList})
-  dx, dy = diff(b)
+function dlength(b::Union{Body,BodyList};kwargs...)
+  dx, dy = diff(b;kwargs...)
   return sqrt.(dx.^2+dy.^2)
 end
 
 
 """
-    dlengthmid(body::Body/BodyList) -> Vector{Float64}
+    dlengthmid(body::Body/BodyList[,ref=false]) -> Vector{Float64}
 
-Compute the lengths of the faces formed between the face midpoints on the
-perimeter of body `body`. The indexing of these midpoint faces is consistent
-with that of the regular vertex points adjacent to both midpoints.
-Midpoint face 2 corresponds to the face between midpoints 1 and 2, for example.
-For an `OpenBody`, the lengths for the first and last points are calculated
-to the adjoining midpoints, to
-ensure that `sum(dlength(body))` is equal to the arclength of the body.
+Same as [`dlength`](@ref).
 """
-dlengthmid(b::Union{Body,BodyList}) = dlength(b)
+dlengthmid(b::Union{Body,BodyList};kwargs...) = dlength(b;kwargs...)
 #=
 function dlengthmid(b::Union{Body,BodyList})
   dx, dy = centraldiff(b)
@@ -199,7 +200,7 @@ end
 =#
 
 """
-    normal(body::Body/BodyList) -> Tuple{Vector{Float64},Vector{Float64}}
+    normal(body::Body/BodyList[,ref=false]) -> Tuple{Vector{Float64},Vector{Float64}}
 
 Compute the current normals in inertial components (if `ref=false`) or body-
   fixed components (if `ref=true`) of the faces on the perimeter
@@ -229,3 +230,71 @@ function normalmid(b::Union{Body,BodyList};kwargs...)
   return dy./ds, -dx./ds
 end
 =#
+
+"""
+    arccoordmid(body::Body/BodyList[,ref=false]) -> Vector{Float64}
+
+Returns a vector containing the arclength coordinate along the surface of `body`, evaluated at the
+midpoints between the ends of faces. So, e.g., the first coordinate would be half
+of the length of face 1, the second would be half of face 2 plus all of face 1,
+etc. Use inertial components (if `ref=false`) or body-
+  fixed components (if `ref=true`). If this is a body list, restart
+  the origin of the coordinates on each body in the list.
+"""
+function arccoordmid(b::Body;kwargs...)
+    ds = dlength(b;kwargs...)
+    s = 0.5*ds
+    pop!(pushfirst!(ds,0.0))
+    s .+= accumulate(+,ds)
+    return s
+end
+
+"""
+    arccoord(body::Body/BodyList[,ref=false]) -> Vector{Float64}
+
+Returns a vector containing the arclength coordinate along the surface of `body`, evaluated at the
+second endpoint of each face. So, e.g., the first coordinate would be the length
+of face 1, the second the length of face 2, and the last would
+be total length of all of the faces. Use inertial components (if `ref=false`) or body-fixed components (if `ref=true`).
+If this is a body list, restart
+the origin of the coordinates on each body in the list.
+"""
+function arccoord(b::Body;kwargs...)
+    ds = dlength(b;kwargs...)
+    s = accumulate(+,ds)
+    return s
+end
+
+for f in [:arccoord,:arccoordmid]
+    @eval function $f(bl::BodyList;kwargs...)
+        sl = Float64[]
+        for b in bl
+            sb = $f(b;kwargs...)
+            append!(sl,sb)
+        end
+        return sl
+    end
+end
+
+"""
+    arclength(body::Body[,ref=false])
+
+Compute the total arclength of `body`, from the sum of the lengths of the
+faces. If `ref=true`, use the body-fixed coordinates.
+"""
+arclength(b::Body;kwargs...) = sum(dlength(b;kwargs...))
+
+"""
+    arclength(bl::BodyList[,ref=false]) -> Vector{Float64}
+
+Compute the total arclength of each body in `bl` and assemble the
+results into a vector. If `ref=true`, use the body-fixed coordinates.
+"""
+function arclength(bl::BodyList;kwargs...)
+  l = Float64[]
+  for b in bl
+      lb = arclength(b;kwargs...)
+      push!(l,lb)
+  end
+  return l
+end

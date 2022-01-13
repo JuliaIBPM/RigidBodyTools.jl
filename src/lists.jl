@@ -1,8 +1,7 @@
 import Base: @propagate_inbounds,getindex, setindex!,iterate,size,length,push!,
               collect,view
 
-export BodyList, MotionList, RigidTransformList,
-          getrange, numpts
+export BodyList, MotionList, RigidTransformList, getrange
 
 abstract type SetOfBodies end
 
@@ -124,10 +123,10 @@ function getrange(bl::BodyList,i::Int)
     first = 1
     j = 1
     while j < i
-        first += length(bl[j])
+        first += numpts(bl[j])
         j += 1
     end
-    last = first+length(bl[i])-1
+    last = first+numpts(bl[i])-1
     return first:last
 end
 
