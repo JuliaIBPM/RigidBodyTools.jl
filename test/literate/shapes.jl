@@ -219,4 +219,8 @@ scatter!(b,markersize=3,markercolor=:black)
 #md # midpoints(::BodyList)
 #md # normal
 #md # normalmid
+#md # arccoord
+#md # arccoordmid
+#md # arclength(::Body)
+#md # arclength(::BodyList)
 #md # ```
