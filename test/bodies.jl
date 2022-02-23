@@ -69,6 +69,10 @@ end
   T = RigidTransform((1.0,-1.0),π/2)
   T(b)
 
+  T2 = RigidTransform((1,-1),π/2)
+  T2(b)
+
+
   nx, ny = normalmid(b)
   @test all(isapprox.(nx[1:10],1.0,atol=MYEPS)) &&
         all(isapprox.(nx[11:30],0.0,atol=MYEPS)) &&

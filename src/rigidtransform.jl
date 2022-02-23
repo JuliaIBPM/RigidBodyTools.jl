@@ -3,7 +3,7 @@
 export RigidTransform
 
 """
-    RigidTransform(x::Tuple{Float64,Float64},α::Float64)
+    RigidTransform(x::Tuple{Real,Real},α::Real)
 
 Construct a rigid-body transform operator, with rotation by angle `α` and
 translation specified by `x`. The translation coordinates are specified in the
@@ -18,8 +18,8 @@ The translation can be provided as either a tuple `(x,y)` or as a complex number
 # Constructors
 
 - `RigidTransform((x,y),α)`
-- `RigidTransform(u::Vector{Float64})`
-- `RigidTransform(u::NTuple{3,Float64})`
+- `RigidTransform(u::Vector{Real})`
+- `RigidTransform(u::NTuple{3,Real})`
 - `RigidTransform.(u)` where `u` is a collection of vectors or tuples.
 
 # Example
@@ -47,7 +47,7 @@ struct RigidTransform
    trans  :: Tuple{Float64,Float64}
 end
 
-function RigidTransform(x::Tuple{Float64,Float64},α::Float64)
+function RigidTransform(x::Tuple{Real,Real},α::Real)
     rot = [cos(α) -sin(α)
            sin(α) cos(α)]
     RigidTransform(α,rot,x)
@@ -55,7 +55,7 @@ end
 
 RigidTransform(x::Union{AbstractVector{T},NTuple{3,T}}) where {T<:Real} = RigidTransform((x[1],x[2]),x[3])
 
-RigidTransform(c::ComplexF64,α::Float64) = RigidTransform((real(c),imag(c)),α)
+RigidTransform(c::Complex{T},α::Real) where T<:Real = RigidTransform((real(c),imag(c)),α)
 
 
 function Base.show(io::IO, T::RigidTransform)
@@ -75,11 +75,11 @@ vec(T::RigidTransform) = [T.trans[1],T.trans[2],T.α]
 
 
 
-function (T::RigidTransform)(x̃::Float64,ỹ::Float64)
+function (T::RigidTransform)(x̃::Real,ỹ::Real)
     Xr = T.rot*[x̃,ỹ]
     return T.trans .+ (Xr[1],Xr[2])
 end
-function (T::RigidTransform)(x̃::AbstractVector{Float64},ỹ::AbstractVector{Float64})
+function (T::RigidTransform)(x̃::AbstractVector{S},ỹ::AbstractVector{S}) where {S<:Real}
     x = deepcopy(x̃)
     y = deepcopy(ỹ)
     for i = 1:length(x̃)
