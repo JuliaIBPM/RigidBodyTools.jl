@@ -291,10 +291,5 @@ Compute the total arclength of each body in `bl` and assemble the
 results into a vector. If `ref=true`, use the body-fixed coordinates.
 """
 function arclength(bl::BodyList;kwargs...)
-  l = Float64[]
-  for b in bl
-      lb = arclength(b;kwargs...)
-      push!(l,lb)
-  end
-  return l
+    [arclength(b;kwargs...) for b in bl]
 end
