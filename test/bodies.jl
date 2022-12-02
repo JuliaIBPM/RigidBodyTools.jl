@@ -21,8 +21,7 @@ const MYEPS = 20*eps()
   @test sum(dlength(c)) ≈ 12.0
 
   s = arccoord(c)
-  @test s[end] ≈ 12.0
-  @test s[end] == arclength(c)
+  @test s[end] ≈ 12.0 ≈ arclength(c)
   smid = arccoordmid(c)
   @test smid[1] > 0.0 && smid[end] < s[end]
 
