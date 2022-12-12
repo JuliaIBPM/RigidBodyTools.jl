@@ -511,6 +511,9 @@ function ThickPlate(len::Real,thick::Real,N::Int;λ::Float64=1.0)
       push!(x̃end,-xedge[i])
       push!(ỹend,yedge[i])
     end
+    x̃end .= reverse(x̃end)
+    ỹend .= reverse(ỹend)
+
     x̃, ỹ = _midpoints(x̃end,ỹend,ClosedBody)
 
     ThickPlate{length(x̃)}(len,thick,(0.0,0.0),0.0,x̃,ỹ,x̃,ỹ,x̃end,ỹend,x̃end,ỹend)
