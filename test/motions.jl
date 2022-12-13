@@ -18,25 +18,47 @@ Ay = rand()
   oscil = RigidBodyTools.Oscillation(Ux,Uy,α̇₀,ax,ay,Ω,Ax,Ay,ϕx,ϕy,α₀,Δα,ϕα)
 
   t = rand()
-  c, ċ, c̈, α,α̇,α̈ = oscil(t)
+  #c, ċ, c̈, α,α̇,α̈ = oscil(t)
+  k = oscil(t)
 
-  @test α ≈ α₀ + α̇₀*t + Δα*sin(Ω*t-ϕα)
-  @test α̇ ≈ α̇₀ + Δα*Ω*cos(Ω*t-ϕα)
-  @test α̈ ≈ -Δα*Ω^2*sin(Ω*t-ϕα)
+
+  @test angular_position(k) ≈ α₀ + α̇₀*t + Δα*sin(Ω*t-ϕα)
+  @test angular_velocity(k) ≈ α̇₀ + Δα*Ω*cos(Ω*t-ϕα)
+  @test angular_acceleration(k) ≈ -Δα*Ω^2*sin(Ω*t-ϕα)
 
   a = complex(ax,ay)
+  α = angular_position(k)
+  α̇ = angular_velocity(k)
+  α̈ = angular_acceleration(k)
+  c = complex_translational_position(k)
+  ċ = complex_translational_velocity(k)
+  c̈ = complex_translational_acceleration(k)
   @test real(c) ≈ Ux*t + Ax*sin(Ω*t-ϕx) - ax*cos(α) + ay*sin(α)
   @test imag(c) ≈ Uy*t + Ay*sin(Ω*t-ϕy) - ay*cos(α) - ax*sin(α)
   @test real(ċ) ≈ Ux + Ax*Ω*cos(Ω*t-ϕx) + α̇*(ax*sin(α) + ay*cos(α))
   @test imag(ċ) ≈ Uy + Ay*Ω*cos(Ω*t-ϕy) + α̇*(ay*sin(α) - ax*cos(α))
   @test real(c̈) ≈ -Ax*Ω^2*sin(Ω*t-ϕx) + α̈*(ax*sin(α) + ay*cos(α)) + α̇^2*(ax*cos(α) - ay*sin(α))
   @test imag(c̈) ≈ -Ay*Ω^2*sin(Ω*t-ϕy) + α̈*(ay*sin(α) - ax*cos(α)) + α̇^2*(ay*cos(α) + ax*sin(α))
+  @test isa(translational_position(k),Tuple)
+  @test isa(translational_velocity(k),Tuple)
+  @test isa(translational_acceleration(k),Tuple)
+  @test translational_position(k) == reim(c)
+  @test translational_velocity(k) == reim(ċ)
+  @test translational_acceleration(k) == reim(c̈)
 
 
   ph = RigidBodyTools.PitchHeave(Ux,ax,Ω,α₀,Δα,ϕα,Ay,ϕy)
 
   t = rand()
-  c, ċ, c̈, α,α̇,α̈ = ph(t)
+  #c, ċ, c̈, α,α̇,α̈ = ph(t)
+  k = ph(t)
+
+  α = angular_position(k)
+  α̇ = angular_velocity(k)
+  α̈ = angular_acceleration(k)
+  c = complex_translational_position(k)
+  ċ = complex_translational_velocity(k)
+  c̈ = complex_translational_acceleration(k)
 
   @test α ≈ α₀ + Δα*sin(Ω*t-ϕα)
   @test α̇ ≈ Δα*Ω*cos(Ω*t-ϕα)
@@ -52,44 +74,67 @@ Ay = rand()
   ox = RigidBodyTools.OscillationX(Ux,Ω,Ax,ϕx)
 
   t = rand()
-  c, ċ, c̈, α,α̇,α̈ = ox(t)
-  @test α ≈ 0.0
-  @test α̇ ≈ 0.0
-  @test α̈ ≈ 0.0
-  @test real(c) ≈ Ux*t + Ax*sin(Ω*t-ϕx)
-  @test imag(c) ≈ 0.0
-  @test real(ċ) ≈ Ux + Ax*Ω*cos(Ω*t-ϕx)
-  @test imag(ċ) ≈ 0.0
-  @test real(c̈) ≈ -Ax*Ω^2*sin(Ω*t-ϕx)
-  @test imag(c̈) ≈ 0.0
+  #c, ċ, c̈, α,α̇,α̈ = ox(t)
+  k = ox(t)
+
+  @test angular_position(k) ≈ 0.0
+  @test angular_velocity(k) ≈ 0.0
+  @test angular_acceleration(k) ≈ 0.0
+  xc, yc = translational_position(k)
+  uc, vc = translational_velocity(k)
+  axc, ayc = translational_acceleration(k)
+  @test xc ≈ Ux*t + Ax*sin(Ω*t-ϕx)
+  @test yc ≈ 0.0
+  @test uc ≈ Ux + Ax*Ω*cos(Ω*t-ϕx)
+  @test vc ≈ 0.0
+  @test axc ≈ -Ax*Ω^2*sin(Ω*t-ϕx)
+  @test ayc ≈ 0.0
 
   oy = RigidBodyTools.OscillationY(Uy,Ω,Ay,ϕy)
 
   t = rand()
-  c, ċ, c̈, α,α̇,α̈ = oy(t)
-  @test α ≈ 0.0
-  @test α̇ ≈ 0.0
-  @test α̈ ≈ 0.0
-  @test real(c) ≈ 0.0
-  @test imag(c) ≈ Uy*t + Ay*sin(Ω*t-ϕy)
-  @test real(ċ) ≈ 0.0
-  @test imag(ċ) ≈ Uy + Ay*Ω*cos(Ω*t-ϕy)
-  @test real(c̈) ≈ 0.0
-  @test imag(c̈) ≈ -Ay*Ω^2*sin(Ω*t-ϕy)
+  #c, ċ, c̈, α,α̇,α̈ = oy(t)
+  k = oy(t)
+
+  @test angular_position(k) ≈ 0.0
+  @test angular_velocity(k) ≈ 0.0
+  @test angular_acceleration(k) ≈ 0.0
+  xc, yc = translational_position(k)
+  uc, vc = translational_velocity(k)
+  axc, ayc = translational_acceleration(k)
+  @test xc ≈ 0.0
+  @test yc ≈ Uy*t + Ay*sin(Ω*t-ϕy)
+  @test uc ≈ 0.0
+  @test vc ≈ Uy + Ay*Ω*cos(Ω*t-ϕy)
+  @test axc ≈ 0.0
+  @test ayc ≈ -Ay*Ω^2*sin(Ω*t-ϕy)
 
   ro = RigidBodyTools.RotationalOscillation(Ω,Δα,ϕα)
 
   t = rand()
-  c, ċ, c̈, α,α̇,α̈ = ro(t)
+  #c, ċ, c̈, α,α̇,α̈ = ro(t)
+  k = ro(t)
 
-  @test α ≈ Δα*sin(Ω*t-ϕα)
-  @test α̇ ≈ Δα*Ω*cos(Ω*t-ϕα)
-  @test α̈ ≈ -Δα*Ω^2*sin(Ω*t-ϕα)
-  @test c ≈ 0.0
-  @test ċ ≈ 0.0
-  @test c̈ ≈ 0.0
+  @test angular_position(k) ≈ Δα*sin(Ω*t-ϕα)
+  @test angular_velocity(k) ≈ Δα*Ω*cos(Ω*t-ϕα)
+  @test angular_acceleration(k) ≈ -Δα*Ω^2*sin(Ω*t-ϕα)
+  @test complex_translational_position(k) ≈ 0.0
+  @test complex_translational_velocity(k) ≈ 0.0
+  @test complex_translational_acceleration(k) ≈ 0.0
 
+  U₀ = 0.0
+  a = 0.5
+  K = 0.2
+  t₀ = 0.5
+  pu = Pitchup(U₀,a,K,α₀,t₀,Δα,EldredgeRamp(20.0))
+  t = rand()
+  k = pu(t)
+  α̇ = angular_velocity(k)
+  α̈ = angular_acceleration(k)
 
+  @test complex_translational_position(k,inertial=false) ≈ -a
+  @test complex_translational_velocity(k,inertial=false) ≈ -a*im*α̇
+  @test complex_translational_acceleration(k,inertial=false) ≈ a*(α̇^2 - im*α̈)
 
 end
 

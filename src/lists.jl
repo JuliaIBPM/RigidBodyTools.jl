@@ -184,7 +184,7 @@ end
 Returns a concatenation of length-3 vectors of the form [x,y,α] corresponding to the translation
 and rotation specified by the given by the list of transforms `tl`.
 """
-vec(tl::RigidTransformList) where {N} = mapreduce(vec,vcat,tl)
+vec(tl::RigidTransformList) = mapreduce(vec,vcat,tl)
 
 """
     RigidTransformList(x::Vector)
@@ -240,30 +240,42 @@ end
 
 """
     surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
-                     bl::BodyList,ml::MotionList,t::Real)
+                     bl::BodyList,ml::Union{AbstractMotion,MotionList},t::Real[;inertial=true])
 
 Assign the components of velocity `u` and `v` (in inertial coordinate system)
 at surface positions described by coordinates inertial coordinates in each body in `bl` at time `t`,
-based on supplied motions in the MotionList `ml` for each body.
+based on supplied motions in the MotionList `ml` for each body. If only one motion is specified in `ml`, then it is assumed that
+  this is to be applied to all bodies.
 """
 function surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
-                 bl::BodyList,ml::MotionList,t::Real)
+                 bl::BodyList,ml::MotionList,t::Real;kwargs...)
 
    for i in 1:length(bl)
-      surface_velocity!(view(u,bl,i),view(v,bl,i),bl[i],ml[i],t)
+      surface_velocity!(view(u,bl,i),view(v,bl,i),bl[i],ml[i],t;kwargs...)
    end
    return u, v
 end
 
+function surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
+                 bl::BodyList,motion::AbstractMotion,t::Real;kwargs...)
+
+   for i in 1:length(bl)
+      surface_velocity!(view(u,bl,i),view(v,bl,i),bl[i],motion,t;kwargs...)
+   end
+   return u, v
+end
+
+
 """
-    surface_velocity(bl::BodyList,ml::MotionList,t::Real)
+    surface_velocity(bl::BodyList,ml::Union{AbstractMotion,MotionList},t::Real[;inertial=true])
 
 Return the components of rigid body velocity (in inertial coordinate system)
 at surface positions described by coordinates inertial coordinates in each body in `bl` at time `t`,
-based on supplied motions in the MotionList `ml` for each body.
+based on supplied motions in the MotionList `ml` for each body. If only one motion is specified in `ml`, then it is assumed that
+  this is to be applied to all bodies.
 """
-surface_velocity(bl::BodyList,ml::MotionList,t::Real) =
-    surface_velocity!(zeros(Float64,numpts(bl)),zeros(Float64,numpts(bl)),bl,ml,t)
+surface_velocity(bl::BodyList,ml::Union{AbstractMotion,MotionList},t::Real;kwargs...) =
+    surface_velocity!(zeros(Float64,numpts(bl)),zeros(Float64,numpts(bl)),bl,ml,t;kwargs...)
 
 
 """
