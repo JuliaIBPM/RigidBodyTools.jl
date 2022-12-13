@@ -153,9 +153,5 @@ surface_velocity(x::AbstractVector{Float64},y::AbstractVector{Float64},
 
 function show(io::IO, m::RigidBodyMotion)
     println(io, "Rigid Body Motion:")
-    println(io, "  ċ = $(round(m.ċ, digits=2))")
-    println(io, "  c̈ = $(round(m.c̈, digits=2))")
-    println(io, "  α̇ = $(round(m.α̇, digits=2))")
-    println(io, "  α̈ = $(round(m.α̈, digits=2))")
     print(io, "  $(m.kin)")
 end
