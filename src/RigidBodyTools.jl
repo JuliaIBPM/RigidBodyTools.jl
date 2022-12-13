@@ -10,7 +10,12 @@ export RigidBodyMotion, Kinematics, d_dt, motion_velocity, motion_state,
           RigidAndDeformingMotion,maxvelocity, maxlistvelocity
 
 export Oscillation, OscillationX, OscillationY, OscillationXY, RotationalOscillation,
-        PitchHeave, Pitchup, EldredgeRamp, ColoniusRamp, SwitchedKinematics
+        PitchHeave, Pitchup, EldredgeRamp, ColoniusRamp, SwitchedKinematics,
+        complex_translational_position, complex_translational_velocity, complex_translational_acceleration,
+        angular_position, angular_velocity, angular_acceleration,
+        translational_position, translational_velocity, translational_acceleration,
+        KinematicData
+
 
 
 const NDIM = 2

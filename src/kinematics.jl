@@ -1,5 +1,11 @@
 #=
 Kinematics
+
+Any set of kinematics added here must be accompanied by a function
+(kin::Kinematics)(t) that returns kinematic data of type `KinematicData`
+holding t, c, ċ, c̈, α, α̇, α̈: the evaluation time, the reference
+point position, velocity, acceleration (all complex), and angle,
+angular velocity, and angular acceleration
 =#
 using DocStringExtensions
 import ForwardDiff
@@ -9,16 +15,96 @@ using SpaceTimeFields
 import SpaceTimeFields: Abstract1DProfile, >>, ConstantProfile, d_dt
 
 """
-An abstract type for types that takes in time and returns `(c, ċ, c̈, α, α̇, α̈)`.
+An abstract type for types that takes in time and returns `KinematicData(t,c, ċ, c̈, α, α̇, α̈)`.
 """
 abstract type Kinematics end
+
+struct KinematicData
+  t :: Float64
+  c :: ComplexF64
+  ċ :: ComplexF64
+  c̈ :: ComplexF64
+  α :: Float64
+  α̇ :: Float64
+  α̈ :: Float64
+end
+
+# APIs
+"""
+    complex_translational_position(k::KinematicData) -> ComplexF64
+
+Return the complex translational position of kinematic data `k`
+"""
+complex_translational_position(k::KinematicData) = k.c
+
+"""
+    complex_translational_velocity(k::KinematicData) -> ComplexF64
+
+Return the complex translational velocity of kinematic data `k`
+"""
+complex_translational_velocity(k::KinematicData) = k.ċ
+
+"""
+    complex_translational_acceleration(k::KinematicData) -> ComplexF64
+
+Return the complex translational acceleration of kinematic data `k`
+"""
+complex_translational_acceleration(k::KinematicData) = k.c̈
+
+"""
+    angular_position(k::KinematicData) -> Float64
+
+Return the angular orientation of kinematic data `k`
+"""
+angular_position(k::KinematicData) = k.α
+
+"""
+    angular_velocity(k::KinematicData) -> Float64
+
+Return the angular velocity of kinematic data `k`
+"""
+angular_velocity(k::KinematicData) = k.α̇
+
+"""
+    angular_acceleration(k::KinematicData) -> Float64
+
+Return the angular acceleration of kinematic data `k`
+"""
+angular_acceleration(k::KinematicData) = k.α̈
+
+"""
+    translational_position(k::KinematicData) -> Tuple
+
+Return the translational position of kinematic data `kin`
+as a Tuple.
+"""
+translational_position(k::KinematicData) = reim(complex_translational_position(k))
+
+"""
+    translational_velocity(k::KinematicData) -> Tuple
+
+Return the translational velocity of kinematic data `kin`
+as a Tuple.
+"""
+translational_velocity(k::KinematicData) = reim(complex_translational_velocity(k))
+
+"""
+    translational_acceleration(k::KinematicData) -> Tuple
+
+Return the translational acceleration of kinematic data `kin`
+as a Tuple.
+"""
+translational_acceleration(k::KinematicData) = reim(complex_translational_acceleration(k))
+
+
+####
 
 struct Constant{C <: Complex, A <: Real} <: Kinematics
     ċ::C
     α̇::A
 end
 Constant(ċ, α̇) = Constant(complex(ċ...), α̇)
-(c::Constant{C})(t) where C = zero(C), c.ċ, zero(C), 0.0, c.α̇, 0.0
+(c::Constant{C})(t) where C = KinematicData(t,zero(C), c.ċ, zero(C), 0.0, c.α̇, 0.0)
 show(io::IO, c::Constant) = print(io, "Constant (ċ = $(c.ċ), α̇ = $(c.α̇))")
 
 """
@@ -78,7 +164,7 @@ function (p::Pitchup)(t)
         c̈ = p.a*exp(im*α)*(α̇^2 - im*α̈)
     end
 
-    return c, ċ, c̈, α, α̇, α̈
+    return KinematicData(t, c, ċ, c̈, α, α̇, α̈)
 end
 
 function show(io::IO, p::Pitchup)
@@ -177,7 +263,7 @@ function (p::Oscillation)(t)
     ċ = U + p.ṗx(t) + im*p.ṗy(t) - im*α̇*aeiα
     c̈ = p.p̈x(t) + im*p.p̈y(t) + aeiα*(α̇^2 - im*α̈)
 
-    return c, ċ, c̈, α, α̇, α̈
+    return KinematicData(t, c, ċ, c̈, α, α̇, α̈)
 end
 
 function show(io::IO, p::Oscillation)
