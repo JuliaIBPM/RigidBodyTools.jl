@@ -94,61 +94,63 @@ end
 
 """
     surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
-                 body::Body,motion::AbstractMotion,t::Real)
+                 body::Body,motion::AbstractMotion,t::Real[;inertial=true])
 
 Assign the components of body velocity `u` and `v` (in inertial coordinate system)
-at surface positions described by coordinates inertial coordinates in body in `body` at time `t`,
-based on supplied motions in the `motion` for the body.
+at surface positions described by inertial coordinates in body `body` at time `t`,
+based on supplied motions in the `motion` for the body. If, instead,
+`inertial=false`, then it is assumed that `u`, `v` and the surface positions in `body` are all
+expressed in comoving coordinates (but velocities are relative to inertial
+  frame).
 """
 surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
-                 b::Body,m::RigidBodyMotion,t::Real) =
-                 surface_velocity!(u,v,b.x,b.y,b.cent...,b.α,m,t)
+                 b::Body,m::RigidBodyMotion,t::Real;kwargs...) =
+                 surface_velocity!(u,v,b.x,b.y,b.cent...,b.α,m,t;kwargs...)
 
 """
     surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
                      x::AbstractVector{Float64},y::AbstractVector{Float64},
                      xc::Real,yc::Real,α::Real,
-                     motion::RigidBodyMotion,t::Real)
+                     motion::RigidBodyMotion,t::Real[;inertial=true])
 
 Assign the components of rigid body velocity `u` and `v` (in inertial coordinate system)
 at surface positions described by coordinates `x`, `y` (also in inertial coordinate system) at time `t`,
-based on supplied motion `motion` for the body.
+based on supplied motion `motion` for the body. The current position and orientation
+of the rigid-body coordinate system are supplied as `xc`, `yc`, and `α`. If, instead,
+`inertial=false`, then it is assumed that `u`, `v`, `x`, `y`, `xc`, `yc` are all
+expressed in comoving coordinates (but velocities are relative to inertial
+  frame).
 """
 function surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
                           x::AbstractVector{Float64},y::AbstractVector{Float64},
-                          xc::Real,yc::Real,α::Real,m::RigidBodyMotion,t::Real)
+                          xc::Real,yc::Real,α::Real,m::RigidBodyMotion,t::Real;inertial=true)
 
   length(u) == length(v) == length(x) == length(y) || error("Inconsistent lengths of vectors")
 
-  #_,ċ,_,_,α̇,_ = m(t)
   k = m(t)
-  ċ = complex_translational_velocity(k)
+  ċ = complex_translational_velocity(k;inertial=inertial)
   α̇ = angular_velocity(k)
   uc = ċ .+ im*α̇*((x .- xc) .+ im*(y .- yc))
   u .= real.(uc)
   v .= imag.(uc)
-  #=
-  for i = 1:length(x)
-      Δz = (x[i]-xc)+im*(y[i]-yc)
-      ċi = ċ + im*α̇*Δz
-      u[i] = real(ċi)
-      v[i] = imag(ċi)
-  end
-  =#
+
   return u, v
 end
 
 """
     surface_velocity(x::AbstractVector{Float64},y::AbstractVector{Float64},
-                    xc::Real,yc::Real,α::Real,motion::RigidBodyMotion,t::Real)
+                    xc::Real,yc::Real,α::Real,motion::RigidBodyMotion,t::Real[;inertial=true])
 
 Return the components of rigid body velocities (in inertial components) at surface positions
 described by coordinates `x`, `y` (also in inertial coordinate system) at time `t`,
-based on supplied motion `motion` for the body.
+based on supplied motion `motion` for the body. If, instead,
+`inertial=false`, then it is assumed that `u`, `v`, `x`, `y`, `xc`, `yc` are all
+expressed in comoving coordinates (but velocities are relative to inertial
+  frame).
 """
 surface_velocity(x::AbstractVector{Float64},y::AbstractVector{Float64},
-                xc::Real,yc::Real,α::Real,m::RigidBodyMotion,t::Real) =
-                surface_velocity!(similar(x),similar(y),x,y,xc,yc,α,m,t)
+                xc::Real,yc::Real,α::Real,m::RigidBodyMotion,t::Real;kwargs...) =
+                surface_velocity!(similar(x),similar(y),x,y,xc,yc,α,m,t;kwargs...)
 
 
 function show(io::IO, m::RigidBodyMotion)

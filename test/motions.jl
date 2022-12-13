@@ -122,6 +122,19 @@ Ay = rand()
   @test complex_translational_velocity(k) ≈ 0.0
   @test complex_translational_acceleration(k) ≈ 0.0
 
+  U₀ = 0.0
+  a = 0.5
+  K = 0.2
+  t₀ = 0.5
+  pu = Pitchup(U₀,a,K,α₀,t₀,Δα,EldredgeRamp(20.0))
+  t = rand()
+  k = pu(t)
+  α̇ = angular_velocity(k)
+  α̈ = angular_acceleration(k)
+
+  @test complex_translational_position(k,inertial=false) ≈ -a
+  @test complex_translational_velocity(k,inertial=false) ≈ -a*im*α̇
+  @test complex_translational_acceleration(k,inertial=false) ≈ a*(α̇^2 - im*α̈)
 
 end
 

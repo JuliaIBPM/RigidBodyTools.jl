@@ -31,70 +31,98 @@ end
 
 # APIs
 """
-    complex_translational_position(k::KinematicData) -> ComplexF64
+    complex_translational_position(k::KinematicData;[inertial=true]) -> ComplexF64
 
-Return the complex translational position of kinematic data `k`
+Return the complex translational position (relative to the initial
+  position) of kinematic data `k`, expressed in inertial coordinates (if `inertial=true`,
+    the default) or in comoving coordinates if `inertial=false`.
 """
-complex_translational_position(k::KinematicData) = k.c
+complex_translational_position(k::KinematicData;inertial::Bool=true) =
+        _complex_translation_position(k,Val(inertial))
+
+_complex_translation_position(k,::Val{true}) = k.c
+_complex_translation_position(k,::Val{false}) = k.c*exp(-im*k.α)
+
 
 """
-    complex_translational_velocity(k::KinematicData) -> ComplexF64
+    complex_translational_velocity(k::KinematicData;[inertial=true]) -> ComplexF64
 
-Return the complex translational velocity of kinematic data `k`
+Return the complex translational velocity of kinematic data `k`, relative
+to inertial reference frame, expressed in inertial coordinates (if `inertial=true`,
+  the default) or in comoving coordinates if `inertial=false`.
 """
-complex_translational_velocity(k::KinematicData) = k.ċ
+complex_translational_velocity(k::KinematicData;inertial::Bool=true) =
+        _complex_translation_velocity(k,Val(inertial))
+
+_complex_translation_velocity(k,::Val{true}) = k.ċ
+_complex_translation_velocity(k,::Val{false}) = k.ċ*exp(-im*k.α)
+
 
 """
-    complex_translational_acceleration(k::KinematicData) -> ComplexF64
+    complex_translational_acceleration(k::KinematicData;[inertial=true]) -> ComplexF64
 
-Return the complex translational acceleration of kinematic data `k`
+Return the complex translational acceleration of kinematic data `k`, relative
+to inertial reference frame, expressed in inertial coordinates (if `inertial=true`,
+  the default) or in comoving coordinates if `inertial=false`.
 """
-complex_translational_acceleration(k::KinematicData) = k.c̈
+complex_translational_acceleration(k::KinematicData;inertial::Bool=true) =
+        _complex_translation_acceleration(k,Val(inertial))
+
+_complex_translation_acceleration(k,::Val{true}) = k.c̈
+_complex_translation_acceleration(k,::Val{false}) = k.c̈*exp(-im*k.α)
 
 """
     angular_position(k::KinematicData) -> Float64
 
-Return the angular orientation of kinematic data `k`
+Return the angular orientation of kinematic data `k`, relative to
+inital value, in the inertial reference frame.
 """
 angular_position(k::KinematicData) = k.α
 
 """
     angular_velocity(k::KinematicData) -> Float64
 
-Return the angular velocity of kinematic data `k`
+Return the angular velocity of kinematic data `k`, relative to
+inertial reference frame.
 """
 angular_velocity(k::KinematicData) = k.α̇
 
 """
     angular_acceleration(k::KinematicData) -> Float64
 
-Return the angular acceleration of kinematic data `k`
+Return the angular acceleration of kinematic data `k`, relative to
+inertial reference frame.
 """
 angular_acceleration(k::KinematicData) = k.α̈
 
 """
-    translational_position(k::KinematicData) -> Tuple
+    translational_position(k::KinematicData;[inertial=true]) -> Tuple
 
-Return the translational position of kinematic data `kin`
-as a Tuple.
+Return the translational position of kinematic data `k` (relative to the initial
+  position), expressed as a Tuple in inertial coordinates (if `inertial=true`,
+    the default) or in comoving coordinates if `inertial=false`.
 """
-translational_position(k::KinematicData) = reim(complex_translational_position(k))
+translational_position(k::KinematicData;kwargs...) =
+          reim(complex_translational_position(k;kwargs...))
+"""
+    translational_velocity(k::KinematicData;[inertial=true]) -> Tuple
+
+Return the translational velocity of kinematic data `k`, relative
+to inertial reference frame, expressed as a Tuple in inertial coordinates (if `inertial=true`,
+  the default) or in comoving coordinates if `inertial=false`.
+"""
+translational_velocity(k::KinematicData;kwargs...) =
+          reim(complex_translational_velocity(k;kwargs...))
 
 """
-    translational_velocity(k::KinematicData) -> Tuple
+    translational_acceleration(k::KinematicData;[inertial=true]) -> Tuple
 
-Return the translational velocity of kinematic data `kin`
-as a Tuple.
+Return the translational acceleration of kinematic data `k`, relative
+to inertial reference frame, expressed as a Tuple in inertial coordinates (if `inertial=true`,
+  the default) or in comoving coordinates if `inertial=false`.
 """
-translational_velocity(k::KinematicData) = reim(complex_translational_velocity(k))
-
-"""
-    translational_acceleration(k::KinematicData) -> Tuple
-
-Return the translational acceleration of kinematic data `kin`
-as a Tuple.
-"""
-translational_acceleration(k::KinematicData) = reim(complex_translational_acceleration(k))
+translational_acceleration(k::KinematicData;kwargs...) =
+          reim(complex_translational_acceleration(k;kwargs...))
 
 
 ####

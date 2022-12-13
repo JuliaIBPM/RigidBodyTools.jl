@@ -184,7 +184,7 @@ end
 Returns a concatenation of length-3 vectors of the form [x,y,α] corresponding to the translation
 and rotation specified by the given by the list of transforms `tl`.
 """
-vec(tl::RigidTransformList) where {N} = mapreduce(vec,vcat,tl)
+vec(tl::RigidTransformList) = mapreduce(vec,vcat,tl)
 
 """
     RigidTransformList(x::Vector)
