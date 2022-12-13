@@ -240,14 +240,15 @@ end
 
 """
     surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
-                     bl::BodyList,ml::MotionList,t::Real[;inertial=true])
+                     bl::BodyList,ml::Union{AbstractMotion,MotionList},t::Real[;inertial=true])
 
 Assign the components of velocity `u` and `v` (in inertial coordinate system)
 at surface positions described by coordinates inertial coordinates in each body in `bl` at time `t`,
 based on supplied motions in the MotionList `ml` for each body.  If, instead,
 `inertial=false`, then it is assumed that `u`, `v`, and body coordinates are all
 expressed in comoving coordinates for each body (but velocities are relative to inertial
-  frame).
+  frame). If only one motion is specified in `ml`, then it is assumed that
+  this is to be applied to all bodies.
 """
 function surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
                  bl::BodyList,ml::MotionList,t::Real;inertial=true)
@@ -258,17 +259,28 @@ function surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64}
    return u, v
 end
 
+function surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
+                 bl::BodyList,motion::AbstractMotion,t::Real;inertial=true)
+
+   for i in 1:length(bl)
+      surface_velocity!(view(u,bl,i),view(v,bl,i),bl[i],motion,t;inertial=inertial)
+   end
+   return u, v
+end
+
+
 """
-    surface_velocity(bl::BodyList,ml::MotionList,t::Real[;inertial=true])
+    surface_velocity(bl::BodyList,ml::Union{AbstractMotion,MotionList},t::Real[;inertial=true])
 
 Return the components of rigid body velocity (in inertial coordinate system)
 at surface positions described by coordinates inertial coordinates in each body in `bl` at time `t`,
 based on supplied motions in the MotionList `ml` for each body.   If, instead,
 `inertial=false`, then it is assumed that velocities and body coordinates are all
 expressed in comoving coordinates for each body (but velocities are relative to inertial
-  frame).
+  frame).  If only one motion is specified in `ml`, then it is assumed that
+  this is to be applied to all bodies.
 """
-surface_velocity(bl::BodyList,ml::MotionList,t::Real;inertial=true) =
+surface_velocity(bl::BodyList,ml::Union{AbstractMotion,MotionList},t::Real;inertial=true) =
     surface_velocity!(zeros(Float64,numpts(bl)),zeros(Float64,numpts(bl)),bl,ml,t;inertial=inertial)
 
 
