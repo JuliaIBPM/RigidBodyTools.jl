@@ -228,6 +228,19 @@ RotationalOscillation
 SwitchedKinematics
 ```
 
+## Rigid body kinematics convenience functions
+```@docs
+complex_translational_position
+complex_translational_velocity
+complex_translational_acceleration
+translational_position
+translational_velocity
+translational_acceleration
+angular_position
+angular_velocity
+angular_acceleration
+```
+
 ---
 
 *This page was generated using [Literate.jl](https://github.com/fredrikekre/Literate.jl).*

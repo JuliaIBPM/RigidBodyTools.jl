@@ -1,13 +1,9 @@
 """
-    surface_velocity(body::Body,motion::AbstractMotion,t::Real)
+    surface_velocity(body::Body,motion::AbstractMotion,t::Real[;inertial=true])
 
 Return the components of rigid body velocity (in inertial coordinate system)
-at surface positions described by coordinates inertial coordinates in body in `body` at time `t`,
-based on supplied motions in `motion` for the body.
+at surface positions described by inertial coordinates in body `body` at time `t`,
+based on supplied motions in `motion` for the body. If `inertial=false`,
+then velocities are computed and body positions are assumed to be in comoving coordinates.
 """
-surface_velocity(b::Body,a...) = surface_velocity!(zero(b.x),zero(b.y),b,a...)
-
-
-#(m::RigidBodyMotion)(t::Real,b::Body) = surface_velocity(b,m,t)
-
-#(m::DirectlySpecifiedMotion)(t::Real,b::Body) = surface_velocity(b,m,t)
+surface_velocity(b::Body,a...;kwargs...) = surface_velocity!(zero(b.x),zero(b.y),b,a...;kwargs...)
