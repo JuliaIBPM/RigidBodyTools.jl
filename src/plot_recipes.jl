@@ -36,33 +36,56 @@ end
 @recipe function f(m::RigidBodyMotion;tmax=10)
 
     t = 0.0:0.01:tmax
-    ux = map(ti -> real(m(ti)[2]),t)
-    uy = map(ti -> imag(m(ti)[2]),t)
-    adot = map(ti -> m(ti)[5],t)
+    cx = map(ti -> translational_position(m(ti))[1],t)
+    cy = map(ti -> translational_position(m(ti))[2],t)
+    α = map(ti -> angular_position(m(ti)),t)
+    ux = map(ti -> translational_velocity(m(ti))[1],t)
+    uy = map(ti -> translational_velocity(m(ti))[2],t)
+    adot = map(ti -> angular_velocity(m(ti)),t)
     xlims --> (0,tmax)
-  layout := 3
+  layout := (2,3)
   grid --> :none
   linewidth --> 1
   legend --> :none
   framestyle --> :frame
   xguide --> L"t"
+  xlim = min(minimum(cx),minimum(cy)),max(maximum(cx),maximum(cy))
+  alim = extrema(α)
   ulim = min(minimum(ux),minimum(uy)),max(maximum(ux),maximum(uy))
-  alim = extrema(adot)
+  adlim = extrema(adot)
   @series begin
       subplot := 1
+      ylims --> xlim
+      yguide --> L"x"
+      t, cx
+    end
+  @series begin
+      subplot := 2
+      ylims --> xlim
+      yguide --> L"y"
+      t, cy
+    end
+  @series begin
+      subplot := 3
+      ylims --> alim
+      yguide --> L"\alpha"
+      t, α
+  end
+  @series begin
+      subplot := 4
       ylims --> ulim
       yguide --> L"u"
       t, ux
     end
   @series begin
-      subplot := 2
+      subplot := 5
       ylims --> ulim
       yguide --> L"v"
       t, uy
     end
    @series begin
-      subplot := 3
-      ylims --> alim
+      subplot := 6
+      ylims --> adlim
       yguide --> L"\dot{\alpha}"
       t, adot
     end
