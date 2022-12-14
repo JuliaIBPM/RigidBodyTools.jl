@@ -221,6 +221,15 @@ function motion_velocity(bl::BodyList,ml::MotionList,t::Real)
     return u
 end
 
+function motion_velocity(bl::BodyList,motion::AbstractMotion,t::Real)
+    u = Float64[]
+    for b in bl
+      ui = motion_velocity(b,motion,t)
+      append!(u,ui)
+    end
+    return u
+end
+
 """
     motion_state(bl::BodyList,ml::MotionList)
 
@@ -238,6 +247,15 @@ function motion_state(bl::BodyList,ml::MotionList)
     return x
 end
 
+function motion_state(bl::BodyList,motion::AbstractMotion)
+    x = Float64[]
+    for b in bl
+      xi = motion_state(b,motion)
+      append!(x,xi)
+    end
+    return x
+end
+
 """
     surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
                      bl::BodyList,ml::Union{AbstractMotion,MotionList},t::Real[;inertial=true])
@@ -248,23 +266,14 @@ based on supplied motions in the MotionList `ml` for each body. If only one moti
   this is to be applied to all bodies.
 """
 function surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
-                 bl::BodyList,ml::MotionList,t::Real;kwargs...)
+                 bl::BodyList,ml::Union{AbstractMotion,MotionList},t::Real;kwargs...)
 
    for i in 1:length(bl)
-      surface_velocity!(view(u,bl,i),view(v,bl,i),bl[i],ml[i],t;kwargs...)
+      mli = isa(ml,AbstractMotion) ? ml : ml[i]
+      surface_velocity!(view(u,bl,i),view(v,bl,i),bl[i],mli,t;kwargs...)
    end
    return u, v
 end
-
-function surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
-                 bl::BodyList,motion::AbstractMotion,t::Real;kwargs...)
-
-   for i in 1:length(bl)
-      surface_velocity!(view(u,bl,i),view(v,bl,i),bl[i],motion,t;kwargs...)
-   end
-   return u, v
-end
-
 
 """
     surface_velocity(bl::BodyList,ml::Union{AbstractMotion,MotionList},t::Real[;inertial=true])
@@ -293,19 +302,20 @@ function update_body!(bl::BodyList,x::AbstractVector,ml::MotionList)
 end
 
 """
-    maxlistvelocity(bl::BodyList,ml::List[,tmax=100,dt=0.01])
+    maxlistvelocity(bl::BodyList,ml::Union{AbstractMotion,List}[,tmax=100,dt=0.01])
 
 Search through the given motions `ml` applied to bodies `bl` and return `(umax,i,t,bodyindex)`,
 the maximum velocity magnitude, the index of the body points where it
 occurs, the time at which it occurs, and the body index it occurs on.
 """
-function maxlistvelocity(bl::BodyList,ml::MotionList;kwargs...)
+function maxlistvelocity(bl::BodyList,ml::Union{AbstractMotion,MotionList};kwargs...)
     i = 1
     umax = 0.0
     tmax = 0.0
     bmax = 1
     for j in 1:length(bl)
-        umax_j,i_j,t_j = maxvelocity(bl[j],ml[j],kwargs...)
+        mlj = isa(ml,AbstractMotion) ? ml : ml[j]
+        umax_j,i_j,t_j = maxvelocity(bl[j],mlj,kwargs...)
         if umax_j > umax
             umax, i, tmax, bmax = umax_j, i_j, t_j, j
         end

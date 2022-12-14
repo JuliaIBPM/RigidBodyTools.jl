@@ -132,7 +132,7 @@ struct Constant{C <: Complex, A <: Real} <: Kinematics
     α̇::A
 end
 Constant(ċ, α̇) = Constant(complex(ċ...), α̇)
-(c::Constant{C})(t) where C = KinematicData(t,zero(C), c.ċ, zero(C), 0.0, c.α̇, 0.0)
+(c::Constant{C})(t) where C = KinematicData(t,c.ċ*t, c.ċ, zero(C), c.α̇*t, c.α̇, 0.0)
 show(io::IO, c::Constant) = print(io, "Constant (ċ = $(c.ċ), α̇ = $(c.α̇))")
 
 """
