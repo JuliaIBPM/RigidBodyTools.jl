@@ -220,3 +220,16 @@ m = TopMotion(vfcn)
 #md # RotationalOscillation
 #md # SwitchedKinematics
 #md # ```
+
+#md # ## Rigid body kinematics convenience functions
+#md # ```@docs
+#md # complex_translational_position
+#md # complex_translational_velocity
+#md # complex_translational_acceleration
+#md # translational_position
+#md # translational_velocity
+#md # translational_acceleration
+#md # angular_position
+#md # angular_velocity
+#md # angular_acceleration
+#md # ```
