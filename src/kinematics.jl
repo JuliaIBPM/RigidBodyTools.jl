@@ -127,13 +127,36 @@ translational_acceleration(k::KinematicData;kwargs...) =
 
 ####
 
+"""
+    Constant(Up,Ω;[pivot = (0.0,0.0)])
+
+Set constant translational Up and angular velocity Ω with respect to a specified point P.
+This point is established by its initial position `pivot` (note that the initial angle
+is assumed to be zero). By default, this initial position is (0,0).
+`Up` and `pivot` can be specified by either Tuple or by complex value.
+"""
 struct Constant{C <: Complex, A <: Real} <: Kinematics
-    ċ::C
+    żp::C
     α̇::A
+    zp0::C
 end
-Constant(ċ, α̇) = Constant(complex(ċ...), α̇)
-(c::Constant{C})(t) where C = KinematicData(t,c.ċ*t, c.ċ, zero(C), c.α̇*t, c.α̇, 0.0)
-show(io::IO, c::Constant) = print(io, "Constant (ċ = $(c.ċ), α̇ = $(c.α̇))")
+Constant(żp, α̇;pivot=complex(0.0)) = Constant(complex(żp...), α̇, complex(pivot...))
+function (p::Constant{C})(t) where C
+  α = p.α̇*t
+  # z̃pc is position of pivot rel to centroid c, in comoving coordinates
+  # (initial c0 and α0 are both assumed to be zero)
+  z̃pc = p.zp0
+  zp = p.zp0 + p.żp*t
+  zpc = exp(im*α)*z̃pc
+  c = zp - zpc
+  ċ = p.żp - im*p.α̇*zpc
+  c̈ = p.α̇^2*zpc
+  KinematicData(t, c, ċ, c̈, α, p.α̇, 0.0)
+end
+function show(io::IO, p::Constant)
+  println(io, "Constant rotation (żp = $(p.żp), α̇ = $(p.α̇)) ")
+  print(io, "   about z̃p = $(p.zp0) (in comoving coordinates) ")
+end
 
 """
     Pitchup(U₀,a,K,α₀,t₀,Δα,ramp=EldredgeRamp(11.0)) <: Kinematics
