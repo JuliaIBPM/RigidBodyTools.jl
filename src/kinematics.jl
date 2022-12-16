@@ -16,6 +16,8 @@ import SpaceTimeFields: Abstract1DProfile, >>, ConstantProfile, d_dt
 
 """
 An abstract type for types that takes in time and returns `KinematicData(t,c, ċ, c̈, α, α̇, α̈)`.
+It is important to note that `c` and `α` only provide the values relative to
+their respective initial values at `t=0`.
 """
 abstract type Kinematics end
 
