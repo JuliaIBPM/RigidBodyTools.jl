@@ -14,11 +14,15 @@ Ay = rand()
 
 @testset "Motions" begin
 
+  t = rand()
+
+  cmot = RigidBodyTools.RigidBodyMotion((Ux,Uy),α̇₀,pivot=(ax,ay))
+  k = cmot(t,(ax,ay))
+  @test complex_translational_velocity(k) ≈ Ux+im*Uy
+
 
   oscil = RigidBodyTools.Oscillation(Ux,Uy,α̇₀,ax,ay,Ω,Ax,Ay,ϕx,ϕy,α₀,Δα,ϕα)
 
-  t = rand()
-  #c, ċ, c̈, α,α̇,α̈ = oscil(t)
   k = oscil(t)
 
 
@@ -135,6 +139,13 @@ Ay = rand()
   @test complex_translational_position(k,inertial=false) ≈ -a
   @test complex_translational_velocity(k,inertial=false) ≈ -a*im*α̇
   @test complex_translational_acceleration(k,inertial=false) ≈ a*(α̇^2 - im*α̈)
+
+  U₀ = rand()
+  pu = Pitchup(U₀,a,K,α₀,t₀,Δα,EldredgeRamp(20.0))
+
+  mot = RigidBodyMotion(pu)
+  k = mot(t,(a,0))
+  @test complex_translational_velocity(k) ≈ U₀
 
 end
 

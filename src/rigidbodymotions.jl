@@ -40,10 +40,10 @@ RigidBodyMotion(kin::Kinematics) = RigidBodyMotion(kin(0), kin)
 (m::RigidBodyMotion)(t) = m.kin(t)
 
 
-function (m::RigidBodyMotion)(t,x̃::Tuple{Real,Real})
-  # This expects coordinates in body's own coordinate system
-  #
-  z̃ = ComplexF64(x̃[1],x̃[2])
+function (m::RigidBodyMotion)(t,x̃::Union{Number,Tuple})
+  # This expects coordinates in a comoving coordinate system
+  # based at c.
+  z̃ = complex(x̃...)
   #m.c, m.ċ, m.c̈, m.α, m.α̇, m.α̈ = m.kin(t)
   k = m.kin(t)
   c = complex_translational_position(k)
@@ -53,7 +53,7 @@ function (m::RigidBodyMotion)(t,x̃::Tuple{Real,Real})
   α̇ = angular_velocity(k)
   α̈ = angular_acceleration(k)
   z = exp(im*α)*z̃
-  return c + z, ċ + im*α̇*z, c̈ + (im*α̈-α̇^2)*z
+  return KinematicData(t, c + z, ċ + im*α̇*z, c̈ + (im*α̈-α̇^2)*z, α, α̇, α̈)
 end
 
 
