@@ -22,12 +22,14 @@ mutable struct RigidBodyMotion <: AbstractMotion
 end
 
 """
-    RigidBodyMotion(ċ::ComplexF64,α̇)
+    RigidBodyMotion(Up::Union{ComplexF64,Tuple},Ω[;pivot::Union{ComplexF64,Tuple}=(0.0,0.0)])
 
-Create an instance of constant rigid-body motion with velocity `ċ`
-and angular velocity `α̇`
+Create an instance of constant rigid-body motion with translational velocity Up
+and angular velocity Ω with respect to a specified point P.
+This point is established by its initial position `pivot`. By default, this
+initial position is (0,0). `Up` and `pivot` can be specified by either Tuple or by complex value.
 """
-RigidBodyMotion(ċ::Union{Number,Tuple}, α̇::Number) = (kin = Constant(ċ, α̇); RigidBodyMotion(kin(0), kin))
+RigidBodyMotion(Up::Union{Number,Tuple}, Ω::Number;kwargs...) = (kin = Constant(Up, Ω; kwargs...); RigidBodyMotion(kin(0), kin))
 
 """
     RigidBodyMotion(kin::Kinematics)
@@ -38,10 +40,10 @@ RigidBodyMotion(kin::Kinematics) = RigidBodyMotion(kin(0), kin)
 (m::RigidBodyMotion)(t) = m.kin(t)
 
 
-function (m::RigidBodyMotion)(t,x̃::Tuple{Real,Real})
-  # This expects coordinates in body's own coordinate system
-  #
-  z̃ = ComplexF64(x̃[1],x̃[2])
+function (m::RigidBodyMotion)(t,x̃::Union{Number,Tuple})
+  # This expects coordinates in a comoving coordinate system
+  # based at c.
+  z̃ = complex(x̃...)
   #m.c, m.ċ, m.c̈, m.α, m.α̇, m.α̈ = m.kin(t)
   k = m.kin(t)
   c = complex_translational_position(k)
@@ -51,7 +53,7 @@ function (m::RigidBodyMotion)(t,x̃::Tuple{Real,Real})
   α̇ = angular_velocity(k)
   α̈ = angular_acceleration(k)
   z = exp(im*α)*z̃
-  return c + z, ċ + im*α̇*z, c̈ + (im*α̈-α̇^2)*z
+  return KinematicData(t, c + z, ċ + im*α̇*z, c̈ + (im*α̈-α̇^2)*z, α, α̇, α̈)
 end
 
 

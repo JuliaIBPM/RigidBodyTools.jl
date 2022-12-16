@@ -60,6 +60,14 @@ There is one more function that is useful for some downstream application:
 =#
 
 #=
+We can also set a different center of rotation with the `pivot` keyword argument.
+Here, we remove the translation and set a center of rotation at (0,-1).
+=#
+m = RigidBodyMotion((0.0,0.0),π/2;pivot = (0.0,-1.0))
+@animate_motion b m 0.01 4.0 (-3,3) (-4,2)
+
+
+#=
 Let's try something more interesting. We will use a pitch-up maneuver on a
 thick plate. This pitches up about the leading edge to 45 degrees, at a pitch
 rate of 0.2 (the ratio $\dot{\alpha}c/2U_0$), where $c$ is the length of the
