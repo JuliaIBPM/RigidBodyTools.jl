@@ -316,31 +316,31 @@ translational_acceleration(k::KinematicData;kwargs...) =
 ####
 
 """
-    Kinematics(xpk::AbstractDOFKinematics,ykp::AbstractDOFKinematics,apk::AbstractDOFKinematics[;pivot=(0.0,0.0)])
+    Kinematics(apk::AbstractDOFKinematics,xpk::AbstractDOFKinematics,ykp::AbstractDOFKinematics[;pivot=(0.0,0.0)])
 
-Set the full 2-d kinematics of a rigid body, specifying the kinematics of the ``x``
-and ``y`` coordinates of the pivot point with `xpk` and `ypk`, respectively, and
-the angle ``\\alpha`` (with `apk`). The pivot point is specified (in body-fixed coordinates)
+Set the full 2-d kinematics of a rigid body, specifying the kinematics of the
+the angle ``\\alpha`` (with `apk`) and ``x`` and ``y`` coordinates of the pivot point with `xpk` and `ypk`, respectively.
+The pivot point is specified (in body-fixed coordinates)
 with the optional argument `pivot`.
 """
-struct Kinematics{XK<:AbstractDOFKinematics,YK<:AbstractDOFKinematics,AK<:AbstractDOFKinematics} <: AbstractKinematics
+struct Kinematics{AK<:AbstractDOFKinematics,XK<:AbstractDOFKinematics,YK<:AbstractDOFKinematics} <: AbstractKinematics
    x̃p :: Float64
    ỹp :: Float64
+   apk :: AK
    xpk :: XK
    ypk :: YK
-   apk :: AK
-   Kinematics(x̃p::Real,ỹp::Real,xpk,ypk,apk) = new{typeof(xpk),typeof(ypk),typeof(apk)}(convert(Float64,x̃p),convert(Float64,ỹp),xpk,ypk,apk)
+   Kinematics(x̃p::Real,ỹp::Real,apk,xpk,ypk) = new{typeof(apk),typeof(xpk),typeof(ypk)}(convert(Float64,x̃p),convert(Float64,ỹp),apk,xpk,ypk)
 end
 
-Kinematics(xpk::AbstractDOFKinematics,ypk::AbstractDOFKinematics,apk::AbstractDOFKinematics;pivot=(0.0,0.0)) =
-                Kinematics(pivot...,xpk,ypk,apk)
+Kinematics(apk::AbstractDOFKinematics,xpk::AbstractDOFKinematics,ypk::AbstractDOFKinematics;pivot=(0.0,0.0)) =
+                Kinematics(pivot...,apk,xpk,ypk)
 
 
 function (kin::Kinematics)(t)
     z̃p = kin.x̃p + im*kin.ỹp
+    apkd = kin.apk(t)
     xpkd = kin.xpk(t)
     ypkd = kin.ypk(t)
-    apkd = kin.apk(t)
 
     zp = dof_state(xpkd) + im*dof_state(ypkd)
     żp = dof_velocity(xpkd) + im*dof_velocity(ypkd)
@@ -365,9 +365,9 @@ is assumed to be zero). By default, this initial position is (0,0).
 `Up` and `pivot` can be specified by either Tuple or by complex value.
 """
 Constant(żp::Complex, α̇;pivot=complex(0.0)) =
-      Kinematics(ConstantVelocityDOF(real(żp)),
-                 ConstantVelocityDOF(imag(żp)),
-                 ConstantVelocityDOF(α̇); pivot=reim(pivot))
+      Kinematics(ConstantVelocityDOF(α̇),
+                 ConstantVelocityDOF(real(żp)),
+                 ConstantVelocityDOF(imag(żp)); pivot=reim(pivot))
 
 Constant(żp::Tuple,α̇;pivot=(0.0,0.0)) = Constant(complex(żp...),α̇;pivot=complex(pivot...))
 
@@ -384,7 +384,7 @@ given by the smooth ramp `EldredgeRamp` with a smoothness factor of 11 (larger v
 lead to sharper transitions on/off the ramp), but this
 can be replaced by another Eldredge ramp with a different value or a `ColoniusRamp`.
 """
-Pitchup(U₀,a,K,α₀,t₀,Δα;ramp=EldredgeRamp(11.0)) = Kinematics(ConstantVelocityDOF(U₀),ConstantStateDOF(0.0),SmoothRampDOF(α₀,2K,Δα,t₀),pivot=(a,0.0))
+Pitchup(U₀,a,K,α₀,t₀,Δα;ramp=EldredgeRamp(11.0)) = Kinematics(SmoothRampDOF(α₀,2K,Δα,t₀;ramp=ramp),ConstantVelocityDOF(U₀),ConstantStateDOF(0.0);pivot=(a,0.0))
 
 
 
@@ -403,7 +403,7 @@ x(t) = U_x t + A_x\\sin(\\Omega t - \\phi_x), \\quad y(t) = U_y t + A_y\\sin(\\O
 
 """
 Oscillation(Ux,Uy,α̇₀,ax,ay,Ω,Ax,Ay,ϕx,ϕy,α₀,Δα,ϕα) =
-        Kinematics(OscillatoryDOF(Ax,Ω,ϕx,0.0,Ux),OscillatoryDOF(Ay,Ω,ϕy,0.0,Uy),OscillatoryDOF(Δα,Ω,ϕα,α₀,α̇₀),pivot=(ax,ay))
+        Kinematics(OscillatoryDOF(Δα,Ω,ϕα,α₀,α̇₀),OscillatoryDOF(Ax,Ω,ϕx,0.0,Ux),OscillatoryDOF(Ay,Ω,ϕy,0.0,Uy);pivot=(ax,ay))
 
 
 
