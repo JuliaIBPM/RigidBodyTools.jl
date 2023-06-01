@@ -130,7 +130,7 @@ Ay = rand()
   a = 0.5
   K = 0.2
   t₀ = 0.5
-  pu = Pitchup(U₀,a,K,α₀,t₀,Δα,EldredgeRamp(20.0))
+  pu = Pitchup(U₀,a,K,α₀,t₀,Δα;ramp=EldredgeRamp(20.0))
   t = rand()
   k = pu(t)
   α̇ = angular_velocity(k)
@@ -141,7 +141,7 @@ Ay = rand()
   @test complex_translational_acceleration(k,inertial=false) ≈ a*(α̇^2 - im*α̈)
 
   U₀ = rand()
-  pu = Pitchup(U₀,a,K,α₀,t₀,Δα,EldredgeRamp(20.0))
+  pu = Pitchup(U₀,a,K,α₀,t₀,Δα;ramp=EldredgeRamp(20.0))
 
   mot = RigidBodyMotion(pu)
   k = mot(t,(a,0))
@@ -173,7 +173,7 @@ end
 
   tl(bl)
 
-  kin = Pitchup(1.0,0.5,0.2,0.0,0.5,π/4,EldredgeRamp(20.0))
+  kin = Pitchup(1.0,0.5,0.2,0.0,0.5,π/4;ramp=EldredgeRamp(20.0))
   m1 = RigidBodyMotion(kin)
   m2 = ConstantDeformationMotion(one.(b2.x),zero.(b2.y))
 

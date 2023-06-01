@@ -329,6 +329,7 @@ struct Kinematics{XK<:AbstractDOFKinematics,YK<:AbstractDOFKinematics,AK<:Abstra
    xpk :: XK
    ypk :: YK
    apk :: AK
+   Kinematics(x̃p::Real,ỹp::Real,xpk,ypk,apk) = new{typeof(xpk),typeof(ypk),typeof(apk)}(convert(Float64,x̃p),convert(Float64,ỹp),xpk,ypk,apk)
 end
 
 Kinematics(xpk::AbstractDOFKinematics,ypk::AbstractDOFKinematics,apk::AbstractDOFKinematics;pivot=(0.0,0.0)) =
