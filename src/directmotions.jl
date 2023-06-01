@@ -148,22 +148,22 @@ struct RigidAndDeformingMotion{RT,DT} <: AbstractMotion
 end
 
 """
-    RigidAndDeformingMotion(kin::Kinematics,def::AbstractDeformationMotion)
+    RigidAndDeformingMotion(kin::AbstractKinematics,def::AbstractDeformationMotion)
 
 Create an instance of basic superposition of a rigid-body motion with kinematics `kin`,
 and directly-specified deformation velocity in body coordinates.
 """
-RigidAndDeformingMotion(kin::Kinematics,def::AbstractDeformationMotion) =
+RigidAndDeformingMotion(kin::AbstractKinematics,def::AbstractDeformationMotion) =
                             RigidAndDeformingMotion(RigidBodyMotion(kin),def)
 
 """
-    RigidAndDeformingMotion(kin::Kinematics,ũ::Vector{Float64},ṽ::Vector{Float64})
+    RigidAndDeformingMotion(kin::AbstractKinematics,ũ::Vector{Float64},ṽ::Vector{Float64})
 
 Create an instance of basic superposition of a rigid-body motion and
 directly-specified (constant) deformation velocity in body coordinates, to be associated with a body whose length
 is the same as `ũ` and `ṽ`.
 """
-RigidAndDeformingMotion(kin::Kinematics, ũ, ṽ) = RigidAndDeformingMotion(RigidBodyMotion(kin),
+RigidAndDeformingMotion(kin::AbstractKinematics, ũ, ṽ) = RigidAndDeformingMotion(RigidBodyMotion(kin),
                                                                   BasicDirectMotion(ũ,ṽ))
 """
     RigidAndDeformingMotion(ċ,α̇,ũ::Vector{Float64},ṽ::Vector{Float64})

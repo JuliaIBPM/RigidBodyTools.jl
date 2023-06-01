@@ -2,7 +2,7 @@
 Kinematics
 
 Any set of kinematics added here must be accompanied by a function
-(kin::Kinematics)(t) that returns kinematic data of type `KinematicData`
+(kin::AbstractKinematics)(t) that returns kinematic data of type `KinematicData`
 holding t, c, ċ, c̈, α, α̇, α̈: the evaluation time, the reference
 point position, velocity, acceleration (all complex), and angle,
 angular velocity, and angular acceleration
@@ -12,14 +12,200 @@ import ForwardDiff
 import Base: +, *, -, >>, <<, show
 
 using SpaceTimeFields
-import SpaceTimeFields: Abstract1DProfile, >>, ConstantProfile, d_dt
+import SpaceTimeFields: Abstract1DProfile, >>, ConstantProfile, d_dt, FunctionProfile
+
+## Individual DOF kinematics ##
+
+abstract type AbstractDOFKinematics end
+
+struct DOFKinematicData
+    t :: Float64
+    x :: Float64
+    ẋ :: Float64
+    ẍ :: Float64
+end
+
+(k::AbstractDOFKinematics)(t) = DOFKinematicData(t,k.x(t),k.ẋ(t),k.ẍ(t))
+dof_state(kd::DOFKinematicData) = kd.x
+dof_velocity(kd::DOFKinematicData) = kd.ẋ
+dof_acceleration(kd::DOFKinematicData) = kd.ẍ
+
+
+"""
+    ConstantStateDOF(x0::Float64) <: AbstractDOFKinematics
+
+Set kinematics with constant state `x0`.
+"""
+struct ConstantStateDOF <: AbstractDOFKinematics
+    x0 :: Float64
+
+    x :: Abstract1DProfile
+    ẋ :: Abstract1DProfile
+    ẍ :: Abstract1DProfile
+end
+function ConstantStateDOF(x0)
+    x = ConstantProfile(x0)
+    ẋ = d_dt(x)
+    ẍ = d_dt(ẋ)
+    ConstantStateDOF(x0,x,ẋ,ẍ)
+end
+function show(io::IO, p::ConstantStateDOF)
+  print(io, "Constant state kinematics (state = $(p.x0))")
+end
+
+"""
+    ConstantVelocityDOF(ẋ0::Float64) <: AbstractDOFKinematics
+
+Set kinematics with constant velocity `ẋ0`.
+"""
+struct ConstantVelocityDOF <: AbstractDOFKinematics
+    ẋ0 :: Float64
+
+    x :: Abstract1DProfile
+    ẋ :: Abstract1DProfile
+    ẍ :: Abstract1DProfile
+end
+function ConstantVelocityDOF(ẋ0)
+    f(t) = ẋ0*t
+    x = FunctionProfile(f)
+    ẋ = d_dt(x)
+    ẍ = d_dt(ẋ)
+    ConstantVelocityDOF(ẋ0,x,ẋ,ẍ)
+end
+
+function show(io::IO, p::ConstantVelocityDOF)
+  print(io, "Constant velocity kinematics (velocity = $(p.ẋ0))")
+end
+
+
+"""
+    SmoothRampDOF(x0,ẋ0,Δx,t0[;ramp=EldredgeRamp(11.0)]) <: AbstractDOFKinematics
+
+Kinematics describing a smooth ramp motion starting at time `t0` with nominal rate `ẋ0`.
+The initial value is `x0`, and the ramp proceeds up to new value `x0 + Δx`.
+The optional ramp argument is assumed to be
+given by the smooth ramp `EldredgeRamp` with a smoothness factor of 11 (larger values
+lead to sharper transitions on/off the ramp), but this
+can be replaced by another Eldredge ramp with a different value or a `ColoniusRamp`.
+"""
+struct SmoothRampDOF <: AbstractDOFKinematics
+    x0 :: Float64
+    ẋ0 :: Float64
+    Δx :: Float64
+    t0 :: Float64
+
+    x :: Abstract1DProfile
+    ẋ :: Abstract1DProfile
+    ẍ :: Abstract1DProfile
+end
+
+function SmoothRampDOF(x0,ẋ0,Δx,t0; ramp = EldredgeRamp(11.0))
+    Δt = Δx/ẋ0
+    x = ConstantProfile(x0) + ẋ0*((ramp >> t0) - (ramp >> (t0 + Δt)))
+    ẋ = d_dt(x)
+    ẍ = d_dt(ẋ)
+    SmoothRampDOF(x0,ẋ0,Δx,t0,x,ẋ,ẍ)
+end
+
+function show(io::IO, p::SmoothRampDOF)
+  print(io, "Smooth ramp kinematics (initial state = $(p.x0), nominal rate = $(p.ẋ0), amplitude = $(p.Δx), nominal time = $(p.t0))")
+end
+
+
+
+"""
+    OscillatoryDOF(amp,angfreq,phase,x0) <: AbstractDOFKinematics
+
+Set sinusoidal kinematics with amplitude `amp`, angular frequency `angfreq`,
+phase `phase`, and mean value `x0`. The function it provides is `x(t) = x0 + amp*sin(angfreq*t+phase)`.
+"""
+struct OscillatoryDOF <: AbstractDOFKinematics
+    "Amplitude"
+    A :: Float64
+
+    "Angular frequency"
+    Ω :: Float64
+
+    "Phase"
+    ϕ :: Float64
+
+    "Mean value"
+    x0 :: Float64
+
+    "Mean velocity"
+    ẋ0 :: Float64
+
+    x :: Abstract1DProfile
+    ẋ :: Abstract1DProfile
+    ẍ :: Abstract1DProfile
+end
+
+function OscillatoryDOF(A,Ω,ϕ,x0,ẋ0)
+    f(t) = ẋ0*t
+    x = ConstantProfile(x0) + FunctionProfile(f) + A*(Sinusoid(Ω) >> (ϕ/Ω))
+    ẋ = d_dt(x)
+    ẍ = d_dt(ẋ)
+    OscillatoryDOF(A,Ω,ϕ,x0,ẋ0,x,ẋ,ẍ)
+end
+
+function show(io::IO, p::OscillatoryDOF)
+  print(io, "Oscillatory kinematics (amplitude = $(p.A), ang freq = $(p.Ω), phase = $(p.ϕ), initial state = $(p.x0), mean velocity = $(p.ẋ0))")
+end
+
+"""
+    CustomDOF(f::Function) <: AbstractDOFKinematics
+
+Set custom kinematics for a degree of freedom with a function `f`
+that specifies its value at any given time.
+"""
+struct CustomDOF <: AbstractDOFKinematics
+    f :: Function
+
+    x :: Abstract1DProfile
+    ẋ :: Abstract1DProfile
+    ẍ :: Abstract1DProfile
+end
+function CustomDOF(f::Function)
+    x = FunctionProfile(f)
+    ẋ = d_dt(x)
+    ẍ = d_dt(ẋ)
+    CustomDOF(f,x,ẋ,ẍ)
+end
+
+function show(io::IO, p::CustomDOF)
+  print(io, "Custom kinematics")
+end
+
+struct SpecifiedDOF <: AbstractDOFKinematics
+    x0 :: Float64
+    ẋ0 :: Float64
+    ẍ0 :: Float64
+
+    x :: Abstract1DProfile
+    ẋ :: Abstract1DProfile
+    ẍ :: Abstract1DProfile
+end
+
+function SpecifiedDOF(x0,ẋ0,ẍ0)
+  x = ConstantProfile(x0)
+  ẋ = ConstantProfile(ẋ0)
+  ẍ = ConstantProfile(ẍ0)
+  SpecifiedDOF(x0,ẋ0,ẍ0,x,ẋ,ẍ)
+
+end
+
+
+#####
+
+
+
 
 """
 An abstract type for types that takes in time and returns `KinematicData(t,c, ċ, c̈, α, α̇, α̈)`.
 It is important to note that `c` and `α` only provide the values relative to
 their respective initial values at `t=0`.
 """
-abstract type Kinematics end
+abstract type AbstractKinematics end
 
 struct KinematicData
   t :: Float64
@@ -130,6 +316,46 @@ translational_acceleration(k::KinematicData;kwargs...) =
 ####
 
 """
+    Kinematics(xpk::AbstractDOFKinematics,ykp::AbstractDOFKinematics,apk::AbstractDOFKinematics[;pivot=(0.0,0.0)])
+
+Set the full 2-d kinematics of a rigid body, specifying the kinematics of the ``x``
+and ``y`` coordinates of the pivot point with `xpk` and `ypk`, respectively, and
+the angle ``\\alpha`` (with `apk`). The pivot point is specified (in body-fixed coordinates)
+with the optional argument `pivot`.
+"""
+struct Kinematics{XK<:AbstractDOFKinematics,YK<:AbstractDOFKinematics,AK<:AbstractDOFKinematics} <: AbstractKinematics
+   x̃p :: Float64
+   ỹp :: Float64
+   xpk :: XK
+   ypk :: YK
+   apk :: AK
+end
+
+Kinematics(xpk::AbstractDOFKinematics,ypk::AbstractDOFKinematics,apk::AbstractDOFKinematics;pivot=(0.0,0.0)) =
+                Kinematics(pivot...,xpk,ypk,apk)
+
+
+function (kin::Kinematics)(t)
+    z̃p = kin.x̃p + im*kin.ỹp
+    xpkd = kin.xpk(t)
+    ypkd = kin.ypk(t)
+    apkd = kin.apk(t)
+
+    zp = dof_state(xpkd) + im*dof_state(ypkd)
+    żp = dof_velocity(xpkd) + im*dof_velocity(ypkd)
+    z̈p = dof_acceleration(xpkd) + im*dof_acceleration(ypkd)
+    α = dof_state(apkd)
+    α̇ = dof_velocity(apkd)
+    α̈ = dof_acceleration(apkd)
+
+    dzp = z̃p*exp(im*α)
+    c = zp - dzp
+    ċ = żp - im*α̇*dzp
+    c̈ = z̈p - (im*α̈ - α̇^2)*dzp
+    KinematicData(t,c,ċ,c̈,α,α̇,α̈)
+end
+
+"""
     Constant(Up,Ω;[pivot = (0.0,0.0)])
 
 Set constant translational Up and angular velocity Ω with respect to a specified point P.
@@ -137,31 +363,15 @@ This point is established by its initial position `pivot` (note that the initial
 is assumed to be zero). By default, this initial position is (0,0).
 `Up` and `pivot` can be specified by either Tuple or by complex value.
 """
-struct Constant{C <: Complex, A <: Real} <: Kinematics
-    żp::C
-    α̇::A
-    zp0::C
-end
-Constant(żp, α̇;pivot=complex(0.0)) = Constant(complex(żp...), α̇, complex(pivot...))
-function (p::Constant{C})(t) where C
-  α = p.α̇*t
-  # z̃pc is position of pivot rel to centroid c, in comoving coordinates
-  # (initial c0 and α0 are both assumed to be zero)
-  z̃pc = p.zp0
-  zp = p.zp0 + p.żp*t
-  zpc = exp(im*α)*z̃pc
-  c = zp - zpc
-  ċ = p.żp - im*p.α̇*zpc
-  c̈ = p.α̇^2*zpc
-  KinematicData(t, c, ċ, c̈, α, p.α̇, 0.0)
-end
-function show(io::IO, p::Constant)
-  println(io, "Constant rotation (żp = $(p.żp), α̇ = $(p.α̇)) ")
-  print(io, "   about z̃p = $(p.zp0) (in comoving coordinates) ")
-end
+Constant(żp::Complex, α̇;pivot=complex(0.0)) =
+      Kinematics(ConstantVelocityDOF(real(żp)),
+                 ConstantVelocityDOF(imag(żp)),
+                 ConstantVelocityDOF(α̇); pivot=reim(pivot))
+
+Constant(żp::Tuple,α̇;pivot=(0.0,0.0)) = Constant(complex(żp...),α̇;pivot=complex(pivot...))
 
 """
-    Pitchup(U₀,a,K,α₀,t₀,Δα,ramp=EldredgeRamp(11.0)) <: Kinematics
+    Pitchup(U₀,a,K,α₀,t₀,Δα,ramp=EldredgeRamp(11.0)) <: AbstractKinematics
 
 Kinematics describing a pitch-ramp motion (horizontal translation with rotation)
 starting at time ``t_0`` about an axis at `a` (expressed relative to the centroid, in the ``\\tilde{x}``
@@ -173,59 +383,12 @@ given by the smooth ramp `EldredgeRamp` with a smoothness factor of 11 (larger v
 lead to sharper transitions on/off the ramp), but this
 can be replaced by another Eldredge ramp with a different value or a `ColoniusRamp`.
 """
-struct Pitchup <: Kinematics
-    "Freestream velocity"
-    U₀::Float64
-    "Axis of rotation, relative to the plate centroid"
-    a::Float64
+Pitchup(U₀,a,K,α₀,t₀,Δα;ramp=EldredgeRamp(11.0)) = Kinematics(ConstantVelocityDOF(U₀),ConstantStateDOF(0.0),SmoothRampDOF(α₀,2K,Δα,t₀),pivot=(a,0.0))
 
-    "Non-dimensional pitch rate ``K = \\dot{\\alpha}_0\\frac{c}{2U_0}``"
-    K::Float64
 
-    "Initial angle of attack"
-    α₀::Float64
-    "Nominal start of pitch up"
-    t₀::Float64
-
-    "Total pitching angle"
-    Δα::Float64
-
-    α::Abstract1DProfile
-    α̇::Abstract1DProfile
-    α̈::Abstract1DProfile
-end
-
-function Pitchup(U₀, a, K, α₀, t₀, Δα, ramp=EldredgeRamp(11.0))
-    Δt = 0.5Δα/K
-    p = ConstantProfile(α₀) + 2K*((ramp >> t₀) - (ramp >> (t₀ + Δt)))
-    ṗ = d_dt(p)
-    p̈ = d_dt(ṗ)
-
-    Pitchup(U₀, a, K, α₀, t₀, Δα, p, ṗ, p̈)
-end
-
-function (p::Pitchup)(t)
-    α = p.α(t)
-    α̇ = p.α̇(t)
-    α̈ = p.α̈(t)
-
-    c = p.U₀*t - p.a*exp(im*α)
-    ċ = p.U₀ - p.a*im*α̇*exp(im*α)
-    if (t - p.t₀) > p.Δα/p.K
-        c̈ = 0.0im
-    else
-        c̈ = p.a*exp(im*α)*(α̇^2 - im*α̈)
-    end
-
-    return KinematicData(t, c, ċ, c̈, α, α̇, α̈)
-end
-
-function show(io::IO, p::Pitchup)
-    print(io, "Pitch-up kinematics with rate K = $(p.K)")
-end
 
 """
-    Oscillation(Ux,Uy,α̇₀,ax,ay,Ω,Ax,Ay,ϕx,ϕy,α₀,Δα,ϕα) <: Kinematics
+    Oscillation(Ux,Uy,α̇₀,ax,ay,Ω,Ax,Ay,ϕx,ϕy,α₀,Δα,ϕα) <: AbstractKinematics
 
 Set 2-d oscillatory kinematics. This general constructor sets up motion of a
 rotational axis, located at `ax`, `ay` (expressed relative to the body centroid, in
@@ -238,98 +401,9 @@ x(t) = U_x t + A_x\\sin(\\Omega t - \\phi_x), \\quad y(t) = U_y t + A_y\\sin(\\O
  ``
 
 """
-struct Oscillation <: Kinematics
-    "Translational velocity in x"
-    Ux::Float64
+Oscillation(Ux,Uy,α̇₀,ax,ay,Ω,Ax,Ay,ϕx,ϕy,α₀,Δα,ϕα) =
+        Kinematics(OscillatoryDOF(Ax,Ω,ϕx,0.0,Ux),OscillatoryDOF(Ay,Ω,ϕy,0.0,Uy),OscillatoryDOF(Δα,Ω,ϕα,α₀,α̇₀),pivot=(ax,ay))
 
-    "Translational velocity in y"
-    Uy::Float64
-
-    "Constant rotation rate"
-    α̇₀::Float64
-
-    "Axis of pitch rotation, in body coordinates"
-    ax::Float64
-    ay::Float64
-
-    "Angular frequency"
-    Ω::Float64
-
-    "Amplitude of oscillatory motion in x"
-    Ax::Float64
-
-    "Amplitude of oscillatory motion in y"
-    Ay::Float64
-
-    "Phase of x motion (in radians)"
-    ϕx::Float64
-
-    "Phase of y motion (in radians)"
-    ϕy::Float64
-
-    "Mean angle of attack"
-    α₀::Float64
-
-    "Amplitude of oscillatory rotation (in radians)"
-    Δα::Float64
-
-    "Phase of rotational motion (in radians)"
-    ϕα::Float64
-
-
-    px::Abstract1DProfile
-    ṗx::Abstract1DProfile
-    p̈x::Abstract1DProfile
-
-    py::Abstract1DProfile
-    ṗy::Abstract1DProfile
-    p̈y::Abstract1DProfile
-
-    α::Abstract1DProfile
-    α̇::Abstract1DProfile
-    α̈::Abstract1DProfile
-end
-
-function Oscillation(Ux, Uy, α̇₀, ax, ay, Ω, Ax, Ay, ϕx, ϕy, α₀, Δα, ϕa)
-    Ω > 0.0 || error("Frequency must be positive and non-zero")
-    px = Ax*(Sinusoid(Ω) >> (ϕx/Ω))
-    ṗx = d_dt(px)
-    p̈x = d_dt(ṗx)
-    py = Ay*(Sinusoid(Ω) >> (ϕy/Ω))
-    ṗy = d_dt(py)
-    p̈y = d_dt(ṗy)
-    α = ConstantProfile(α₀) + Δα*(Sinusoid(Ω) >> (ϕa/Ω))
-    α̇ = d_dt(α)
-    α̈ = d_dt(α̇)
-    Oscillation(Ux, Uy, α̇₀, ax, ay, Ω, Ax, Ay, ϕx, ϕy, α₀, Δα, ϕa, px, ṗx, p̈x, py, ṗy, p̈y, α, α̇, α̈)
-end
-
-function (p::Oscillation)(t)
-    α = p.α̇₀*t + p.α(t)
-    α̇ = p.α̇₀   + p.α̇(t)
-    α̈ = p.α̈(t)
-
-    a = complex(p.ax,p.ay)
-    U = complex(p.Ux,p.Uy)
-    aeiα = a*exp(im*α)
-    c = U*t + p.px(t) + im*p.py(t) - aeiα
-    ċ = U + p.ṗx(t) + im*p.ṗy(t) - im*α̇*aeiα
-    c̈ = p.p̈x(t) + im*p.p̈y(t) + aeiα*(α̇^2 - im*α̈)
-
-    return KinematicData(t, c, ċ, c̈, α, α̇, α̈)
-end
-
-function show(io::IO, p::Oscillation)
-    println(io, "Oscillatory kinematics with")
-    println(io, "     Steady velocity U = ($(p.Ux),$(p.Uy))")
-    println(io, "     Ref angle α₀ = $(p.α₀)")
-    println(io, "     Mean rotation rate α̇₀ = $(p.α̇₀)")
-    println(io, "     Pitch axis (rel. to centroid) a = ($(p.ax),$(p.ay))")
-    println(io, "     Frequency Ω = $(p.Ω)")
-    println(io, "     x amplitude Ax, phase lag ϕx = ($(p.Ax), $(p.ϕx))")
-    println(io, "     y amplitude Ay, phase lag ϕy = ($(p.Ay), $(p.ϕy))")
-    println(io, "     α amplitude Δα, phase lag ϕα = ($(p.Δα), $(p.ϕα))")
-end
 
 
 """
@@ -340,11 +414,11 @@ relative to the centroid in the ``\\tilde{x}`` direction of the body-fixed coord
 of the form (in inertial coordinates)
 
 ``
-x(t) = U_0, \\quad y(t) = A\\sin(\\Omega t - \\phi_h),
+x(t) = U_0 t, \\quad y(t) = A\\sin(\\Omega t - \\phi_h),
  \\quad \\alpha(t) = \\alpha_0 + \\Delta\\alpha \\sin(\\Omega t - \\phi_p)
  ``
 """
-PitchHeave(U₀, a, Ω, α₀, Δα, ϕp, A, ϕh) = Oscillation(U₀, 0, 0, a, 0, Ω, 0, A, 0, ϕh, α₀, Δα, ϕp)
+PitchHeave(U₀, a, Ω, α₀, Δα, ϕp, A, ϕh) = Oscillation(U₀, 0.0, 0.0, a, 0.0, Ω, 0.0, A, 0.0, ϕh, α₀, Δα, ϕp)
 
 
 """
@@ -405,13 +479,22 @@ Set oscillatory rotational kinematics about the centroid of the form
 RotationalOscillation(Ω,Δα,ϕα) = RotationalOscillation(0,0,Ω,0,0,Δα,ϕα)
 
 
+####
+
+
+
+
+####
+
+
+
 
 abstract type Switch end
 abstract type SwitchOn <: Switch end
 abstract type SwitchOff <: Switch end
 
 """
-    SwitchedKinematics <: Kinematics
+    SwitchedKinematics <: AbstractKinematics
 
 Modulates a given set of kinematics between simple on/off states. The velocity
 specified by the given kinematics is toggled on/off.
@@ -419,7 +502,7 @@ specified by the given kinematics is toggled on/off.
 # Fields
 $(FIELDS)
 """
-struct SwitchedKinematics{S <: Switch} <: Kinematics
+struct SwitchedKinematics{S <: Switch} <: AbstractKinematics
 
     "time at which the kinematics should be turned on"
     t_on :: Float64
@@ -428,9 +511,9 @@ struct SwitchedKinematics{S <: Switch} <: Kinematics
     t_off :: Float64
 
     "kinematics to be followed in the on state"
-    kin :: Kinematics
+    kin :: AbstractKinematics
 
-    off :: Kinematics
+    off :: AbstractKinematics
 
     SwitchedKinematics(t_on,t_off,kin) = t_on > t_off ?
             new{SwitchOn}(t_on,t_off,kin,RigidBodyMotions.Constant(0,0)) :

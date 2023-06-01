@@ -11,14 +11,14 @@ A type to store the body's current kinematics
 # Fields
 
 - `data`: current kinematic data
-- `kin`: a [`Kinematics`](@ref) structure
+- `kin`: a [`AbstractKinematics`](@ref) structure
 
 The first six fields are meant as a cache of the current kinematics
 while the `kin` field can be used to find the plate kinematics at any time.
 """
 mutable struct RigidBodyMotion <: AbstractMotion
     data::KinematicData
-    kin::Kinematics
+    kin::AbstractKinematics
 end
 
 """
@@ -32,11 +32,11 @@ initial position is (0,0). `Up` and `pivot` can be specified by either Tuple or 
 RigidBodyMotion(Up::Union{Number,Tuple}, Ω::Number;kwargs...) = (kin = Constant(Up, Ω; kwargs...); RigidBodyMotion(kin(0), kin))
 
 """
-    RigidBodyMotion(kin::Kinematics)
+    RigidBodyMotion(kin::AbstractKinematics)
 
 Create an instance of rigid-body motion with kinematics `kin`.
 """
-RigidBodyMotion(kin::Kinematics) = RigidBodyMotion(kin(0), kin)
+RigidBodyMotion(kin::AbstractKinematics) = RigidBodyMotion(kin(0), kin)
 (m::RigidBodyMotion)(t) = m.kin(t)
 
 
@@ -55,7 +55,6 @@ function (m::RigidBodyMotion)(t,x̃::Union{Number,Tuple})
   z = exp(im*α)*z̃
   return KinematicData(t, c + z, ċ + im*α̇*z, c̈ + (im*α̈-α̇^2)*z, α, α̇, α̈)
 end
-
 
 """
     motion_velocity(b::Body,m::RigidBodyMotion,t::Real)

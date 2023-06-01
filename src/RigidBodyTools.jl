@@ -4,10 +4,13 @@ import Base: vec
 
 
 export Body
-export RigidBodyMotion, Kinematics, d_dt, motion_velocity, motion_state,
+export RigidBodyMotion, AbstractKinematics, d_dt, motion_velocity, motion_state,
           surface_velocity!, surface_velocity, update_body!,
           AbstractDeformationMotion, ConstantDeformationMotion, DeformationMotion,
           RigidAndDeformingMotion,maxvelocity, maxlistvelocity
+
+export AbstractDOFKinematics, DOFKinematicData, SmoothRampDOF, OscillatoryDOF, ConstantVelocityDOF, CustomDOF,
+        SpecifiedDOF, ConstantStateDOF, Kinematics
 
 export Oscillation, OscillationX, OscillationY, OscillationXY, RotationalOscillation,
         PitchHeave, Pitchup, EldredgeRamp, ColoniusRamp, SwitchedKinematics,

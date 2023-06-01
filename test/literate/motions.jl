@@ -196,11 +196,11 @@ m = TopMotion(vfcn)
 #md # DeformationMotion
 #md # ConstantDeformationMotion
 #md # RigidBodyMotion
-#md # RigidBodyMotion(::Kinematics)
+#md # RigidBodyMotion(::AbstractKinematics)
 #md # RigidBodyMotion(::Any,::Any)
 #md # RigidAndDeformingMotion
-#md # RigidAndDeformingMotion(::Kinematics,::AbstractDeformationMotion)
-#md # RigidAndDeformingMotion(::Kinematics,::Any,::Any)
+#md # RigidAndDeformingMotion(::AbstractKinematics,::AbstractDeformationMotion)
+#md # RigidAndDeformingMotion(::AbstractKinematics,::Any,::Any)
 #md # RigidAndDeformingMotion(::Any,::Any,::Any,::Any)
 #md # ```
 
@@ -218,7 +218,13 @@ m = TopMotion(vfcn)
 
 #md # ## Rigid body kinematics types
 #md # ```@docs
-#md # Kinematics
+#md # AbstractDOFKinematics
+#md # ConstantStateDOF
+#md # ConstantVelocityDOF
+#md # SmoothRampDOF
+#md # OscillatoryDOF
+#md # CustomDOF
+#md # AbstractKinematics
 #md # Oscillation
 #md # OscillationX
 #md # OscillationY
