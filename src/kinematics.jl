@@ -384,7 +384,10 @@ given by the smooth ramp `EldredgeRamp` with a smoothness factor of 11 (larger v
 lead to sharper transitions on/off the ramp), but this
 can be replaced by another Eldredge ramp with a different value or a `ColoniusRamp`.
 """
-Pitchup(U₀,a,K,α₀,t₀,Δα;ramp=EldredgeRamp(11.0)) = Kinematics(SmoothRampDOF(α₀,2K,Δα,t₀;ramp=ramp),ConstantVelocityDOF(U₀),ConstantStateDOF(0.0);pivot=(a,0.0))
+Pitchup(U₀,a,K,α₀,t₀,Δα;ramp=EldredgeRamp(11.0)) =
+            Kinematics(SmoothRampDOF(α₀,2K,Δα,t₀;ramp=ramp),
+                       ConstantVelocityDOF(U₀),
+                       ConstantStateDOF(0.0); pivot=(a,0.0))
 
 
 
@@ -403,7 +406,9 @@ x(t) = U_x t + A_x\\sin(\\Omega t - \\phi_x), \\quad y(t) = U_y t + A_y\\sin(\\O
 
 """
 Oscillation(Ux,Uy,α̇₀,ax,ay,Ω,Ax,Ay,ϕx,ϕy,α₀,Δα,ϕα) =
-        Kinematics(OscillatoryDOF(Δα,Ω,ϕα,α₀,α̇₀),OscillatoryDOF(Ax,Ω,ϕx,0.0,Ux),OscillatoryDOF(Ay,Ω,ϕy,0.0,Uy);pivot=(ax,ay))
+        Kinematics(OscillatoryDOF(Δα,Ω,ϕα,α₀,α̇₀),
+                   OscillatoryDOF(Ax,Ω,ϕx,0.0,Ux),
+                   OscillatoryDOF(Ay,Ω,ϕy,0.0,Uy); pivot=(ax,ay))
 
 
 
