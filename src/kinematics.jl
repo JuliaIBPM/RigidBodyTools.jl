@@ -18,6 +18,9 @@ import SpaceTimeFields: Abstract1DProfile, >>, ConstantProfile, d_dt, FunctionPr
 
 abstract type AbstractDOFKinematics end
 
+abstract type AbstractPrescribedDOFKinematics <: AbstractDOFKinematics end
+
+
 struct DOFKinematicData
     t :: Float64
     x :: Float64
@@ -25,18 +28,18 @@ struct DOFKinematicData
     ẍ :: Float64
 end
 
-(k::AbstractDOFKinematics)(t) = DOFKinematicData(t,k.x(t),k.ẋ(t),k.ẍ(t))
+(k::AbstractPrescribedDOFKinematics)(t) = DOFKinematicData(t,k.x(t),k.ẋ(t),k.ẍ(t))
 dof_state(kd::DOFKinematicData) = kd.x
 dof_velocity(kd::DOFKinematicData) = kd.ẋ
 dof_acceleration(kd::DOFKinematicData) = kd.ẍ
 
 
 """
-    ConstantStateDOF(x0::Float64) <: AbstractDOFKinematics
+    ConstantStateDOF(x0::Float64) <: AbstractPrescribedDOFKinematics
 
 Set kinematics with constant state `x0`.
 """
-struct ConstantStateDOF <: AbstractDOFKinematics
+struct ConstantStateDOF <: AbstractPrescribedDOFKinematics
     x0 :: Float64
 
     x :: Abstract1DProfile
@@ -54,11 +57,11 @@ function show(io::IO, p::ConstantStateDOF)
 end
 
 """
-    ConstantVelocityDOF(ẋ0::Float64) <: AbstractDOFKinematics
+    ConstantVelocityDOF(ẋ0::Float64) <: AbstractPrescribedDOFKinematics
 
 Set kinematics with constant velocity `ẋ0`.
 """
-struct ConstantVelocityDOF <: AbstractDOFKinematics
+struct ConstantVelocityDOF <: AbstractPrescribedDOFKinematics
     ẋ0 :: Float64
 
     x :: Abstract1DProfile
@@ -79,7 +82,7 @@ end
 
 
 """
-    SmoothRampDOF(x0,ẋ0,Δx,t0[;ramp=EldredgeRamp(11.0)]) <: AbstractDOFKinematics
+    SmoothRampDOF(x0,ẋ0,Δx,t0[;ramp=EldredgeRamp(11.0)]) <: AbstractPrescribedDOFKinematics
 
 Kinematics describing a smooth ramp motion starting at time `t0` with nominal rate `ẋ0`.
 The initial value is `x0`, and the ramp proceeds up to new value `x0 + Δx`.
@@ -88,7 +91,7 @@ given by the smooth ramp `EldredgeRamp` with a smoothness factor of 11 (larger v
 lead to sharper transitions on/off the ramp), but this
 can be replaced by another Eldredge ramp with a different value or a `ColoniusRamp`.
 """
-struct SmoothRampDOF <: AbstractDOFKinematics
+struct SmoothRampDOF <: AbstractPrescribedDOFKinematics
     x0 :: Float64
     ẋ0 :: Float64
     Δx :: Float64
@@ -114,12 +117,12 @@ end
 
 
 """
-    OscillatoryDOF(amp,angfreq,phase,x0) <: AbstractDOFKinematics
+    OscillatoryDOF(amp,angfreq,phase,x0) <: AbstractPrescribedDOFKinematics
 
 Set sinusoidal kinematics with amplitude `amp`, angular frequency `angfreq`,
 phase `phase`, and mean value `x0`. The function it provides is `x(t) = x0 + amp*sin(angfreq*t+phase)`.
 """
-struct OscillatoryDOF <: AbstractDOFKinematics
+struct OscillatoryDOF <: AbstractPrescribedDOFKinematics
     "Amplitude"
     A :: Float64
 
@@ -153,12 +156,12 @@ function show(io::IO, p::OscillatoryDOF)
 end
 
 """
-    CustomDOF(f::Function) <: AbstractDOFKinematics
+    CustomDOF(f::Function) <: AbstractPrescribedDOFKinematics
 
 Set custom kinematics for a degree of freedom with a function `f`
 that specifies its value at any given time.
 """
-struct CustomDOF <: AbstractDOFKinematics
+struct CustomDOF <: AbstractPrescribedDOFKinematics
     f :: Function
 
     x :: Abstract1DProfile
@@ -176,28 +179,28 @@ function show(io::IO, p::CustomDOF)
   print(io, "Custom kinematics")
 end
 
-struct SpecifiedDOF <: AbstractDOFKinematics
-    x0 :: Float64
-    ẋ0 :: Float64
-    ẍ0 :: Float64
+struct ExternalDOF <: AbstractDOFKinematics
 
-    x :: Abstract1DProfile
-    ẋ :: Abstract1DProfile
-    ẍ :: Abstract1DProfile
+  "Index of the external DOF vector"
+  index :: Int
+
+  "DOF name (α, x, y)"
+  name :: String
 end
 
-function SpecifiedDOF(x0,ẋ0,ẍ0)
-  x = ConstantProfile(x0)
-  ẋ = ConstantProfile(ẋ0)
-  ẍ = ConstantProfile(ẍ0)
-  SpecifiedDOF(x0,ẋ0,ẍ0,x,ẋ,ẍ)
-
+function show(io::IO, p::ExternalDOF)
+  print(io, "Externally-specified DOF")
 end
 
 
 #####
 
+# Joints
 
+
+
+
+#####
 
 
 """

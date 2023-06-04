@@ -10,7 +10,12 @@ notebookdir = "../examples"
 docdir = "../docs/src/manual"
 litdir = "./literate"
 
+if GROUP == "Transforms"
+  include("transforms.jl")
+end
+
 if GROUP == "All" || GROUP == "Auxiliary"
+  include("transforms.jl")
   include("motions.jl")
   include("bodies.jl")
 end

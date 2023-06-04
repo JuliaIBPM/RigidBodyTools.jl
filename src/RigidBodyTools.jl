@@ -1,5 +1,7 @@
 module RigidBodyTools
 
+using StaticArrays
+
 import Base: vec
 
 
