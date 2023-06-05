@@ -48,6 +48,7 @@ end
   R2 = [cos(-Θ) -sin(-Θ); sin(-Θ) cos(-Θ)]
   TM2_1 = MotionTransform(x2,R2)
   TM2_2 = MotionTransform(x2,Θ)
+  @test TM2_1 isa MotionTransform{2}
   @test TM2_1.matrix ≈ TM2_2.matrix
 
   TM3_1 = MotionTransform(rand(3),rotation_about_axis(rand(),rand(3)))
@@ -83,6 +84,12 @@ end
   @test isapprox(TMiTM.R,I,atol=1e-15)
   @test isapprox(TMiTM.matrix,I,atol=1e-15)
 
+  x = (rand(),rand())
+  θ = rand()
+  TM = MotionTransform(x,θ)
+  TR = RigidTransform(x,θ)
 
+  x̃ = (rand(),rand())
+  @test TM(x̃...) == TR(x̃...)
 
 end

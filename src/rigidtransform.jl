@@ -5,12 +5,10 @@
 #  - probably should distinguish in-place and non-in-place versions
 
 
-import Base: *, inv, transpose
-
-
 const I3 = SMatrix{3,3}(I)
 const O3 = SMatrix{3,3}(zeros(Float64,9))
 
+#=
 """
     RigidTransform(x::Tuple{Real,Real},α::Real)
 
@@ -105,7 +103,7 @@ function (T::RigidTransform)(b::Body{N,C}) where {N,C}
   b.cent = T.trans
   return b
 end
-
+=#
 
 ### Plucker transform matrices ###
 abstract type AbstractTransformOperator{ND} end
@@ -121,6 +119,9 @@ struct ForceTransform{ND} <: AbstractTransformOperator{ND}
    R :: SMatrix
    matrix :: SMatrix
 end
+
+const RigidTransform = MotionTransform{ND} where {ND}
+
 
 translation(T::AbstractTransformOperator{3}) = T.x
 rotation(T::AbstractTransformOperator{3}) = T.R
@@ -146,6 +147,49 @@ end
 inv(T::MotionTransform{ND}) where {ND} = transpose(ForceTransform{ND}(T.x,T.R))
 inv(T::ForceTransform{ND}) where {ND} = transpose(MotionTransform{ND}(T.x,T.R))
 
+vec(T::AbstractTransformOperator{2}) = [T.x[1],T.x[2],_get_angle_of_2d_transform(T)]
+
+function _get_angle_of_2d_transform(T::AbstractTransformOperator{2})
+  eith = T.R[1,1] + im*T.R[1,2]
+  return real(-im*log(eith))
+end
+
+
+### MotionTransform acting on position coordinate data ###
+
+function (T::MotionTransform{2})(x̃::Real,ỹ::Real)
+    Xr = T.R'*[x̃,ỹ,0.0]
+    return T.x[1] + Xr[1], T.x[2] + Xr[2]
+end
+function (T::MotionTransform{2})(x̃::AbstractVector{S},ỹ::AbstractVector{S}) where {S<:Real}
+    x = deepcopy(x̃)
+    y = deepcopy(ỹ)
+    for i = 1:length(x̃)
+        x[i],y[i] = T(x̃[i],ỹ[i])
+    end
+    return x, y
+end
+
+"""
+    (T::MotionTransform)(b::Body)
+
+Transforms a body (in-place) using the given `MotionTransform`. In using this
+transform `T` (which defines a transform from system A to system B), A is interpreted as an inertial coordinate
+system and B as the body system. Thus, the position vector in `T` is interpreted
+as the relative position of the body in inertial coordinates and the inverse of the rotation
+operator is applied to transform body-fixed coordinates to the inertial frame.
+"""
+function (T::MotionTransform{2})(b::Body{N,C}) where {N,C}
+  b.xend, b.yend = T(b.x̃end,b.ỹend)
+  b.x, b.y = _midpoints(b.xend,b.yend,C)
+
+  b.α = _get_angle_of_2d_transform(T)
+  b.cent = (T.x[1], T.x[2])
+  return b
+end
+
+
+###
 
 
 function _motion_transform_matrix(xA_to_B::SVector{3},RA_to_B::SMatrix{3,3})
@@ -210,6 +254,8 @@ for f in [:motion, :force]
     @eval $typename(x::Tuple,θ::Real) = $typename(SVector{2}(x...),θ)
 
     @eval $typename(x::Real,y::Real,θ::Real) = $typename(SVector{2}([x,y]),θ)
+
+    @eval $typename(c::Complex{T},θ::Real) where T<:Real = $typename((real(c),imag(c)),θ)
 
     @eval $typename(v::Vector) = $typename(v...)
 

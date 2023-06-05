@@ -3,7 +3,7 @@ module RigidBodyTools
 using StaticArrays
 using LinearAlgebra
 
-import Base: vec
+import Base: *, inv, transpose, vec
 
 
 export Body
