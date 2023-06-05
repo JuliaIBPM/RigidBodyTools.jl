@@ -161,7 +161,7 @@ for f in [:motion, :force]
 
     @eval $typename(c::Complex{T},θ::Real) where T<:Real = $typename((real(c),imag(c)),θ)
 
-    @eval $typename(v::Vector) = $typename(v...)
+    @eval $typename(v::AbstractVector) = $typename(v...)
 
     @eval $typename(T::RigidTransform) = $typename(vec(T))
 

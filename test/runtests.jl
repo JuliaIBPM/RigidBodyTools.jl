@@ -14,6 +14,10 @@ if GROUP == "Transforms"
   include("transforms.jl")
 end
 
+if GROUP == "Bodies"
+  include("bodies.jl")
+end
+
 if GROUP == "All" || GROUP == "Auxiliary"
   include("transforms.jl")
   include("motions.jl")

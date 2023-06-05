@@ -159,10 +159,10 @@ end
 
   tl = RigidTransformList([t1,t2])
   tl(bl)
-  @test bl[1].cent == tl[1].trans
-  @test bl[2].cent == tl[2].trans
-  @test bl[1].α == tl[1].α
-  @test bl[2].α == tl[2].α
+  @test [bl[1].cent...] == translation(tl[1])
+  @test [bl[2].cent...] == translation(tl[2])
+  @test bl[1].α == RigidBodyTools._get_angle_of_2d_transform(tl[1])
+  @test bl[2].α == RigidBodyTools._get_angle_of_2d_transform(tl[2])
 
   b1 = Rectangle(0.5,1.0,60)
   b2 = Rectangle(0.5,1.0,60)
@@ -216,9 +216,8 @@ end
 
     x = rand(15)
     tl = RigidTransformList(x)
-    @test tl[4].trans[1] == x[10]
-    @test tl[4].trans[2] == x[11]
-    @test tl[4].α == x[12]
+    @test translation(tl[4]) ≈ [x[10],x[11]]
+    @test RigidBodyTools._get_angle_of_2d_transform(tl[4]) ≈ x[12]
 
 
 
