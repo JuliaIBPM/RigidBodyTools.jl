@@ -104,19 +104,26 @@ end
 
 
 ### Plucker transform matrices ###
-abstract type AbstractTransformOperator end
+abstract type AbstractTransformOperator{ND} end
 
-struct MotionTransform{ND} <: AbstractTransformOperator
+struct MotionTransform{ND} <: AbstractTransformOperator{ND}
    x :: SVector
    R :: SMatrix
    matrix :: SMatrix
 end
 
-struct ForceTransform{ND} <: AbstractTransformOperator
+struct ForceTransform{ND} <: AbstractTransformOperator{ND}
    x :: SVector
    R :: SMatrix
    matrix :: SMatrix
 end
+
+translation(T::AbstractTransformOperator{3}) = T.x
+rotation(T::AbstractTransformOperator{3}) = T.R
+
+translation(T::AbstractTransformOperator{2}) = SVector{2}(T.x[1:2])
+rotation(T::AbstractTransformOperator{2}) = SMatrix{2,2}(T.R[1:2,1:2])
+
 
 (*)(T::AbstractTransformOperator,v) = T.matrix*v
 (*)(v,T::AbstractTransformOperator) = v*T.matrix

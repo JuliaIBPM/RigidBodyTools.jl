@@ -18,7 +18,7 @@ export AbstractDOFKinematics, AbstractPrescribedDOFKinematics, DOFKinematicData,
 
 export RigidTransform, rotation_about_x, rotation_about_y, rotation_about_z, rotation_from_quaternion,
           quaternion, rotation_about_axis, MotionTransform, ForceTransform, AbstractTransformOperator,
-          cross_matrix, cross_vector
+          cross_matrix, cross_vector, translation, rotation
 
 
 export Oscillation, OscillationX, OscillationY, OscillationXY, RotationalOscillation,
