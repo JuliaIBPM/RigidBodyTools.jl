@@ -1,6 +1,7 @@
 module RigidBodyTools
 
 using StaticArrays
+using LinearAlgebra
 
 import Base: vec
 
@@ -11,8 +12,14 @@ export RigidBodyMotion, AbstractKinematics, d_dt, motion_velocity, motion_state,
           AbstractDeformationMotion, ConstantDeformationMotion, DeformationMotion,
           RigidAndDeformingMotion,maxvelocity, maxlistvelocity
 
-export AbstractDOFKinematics, DOFKinematicData, SmoothRampDOF, OscillatoryDOF, ConstantVelocityDOF, CustomDOF,
-        SpecifiedDOF, ConstantStateDOF, Kinematics
+export AbstractDOFKinematics, AbstractPrescribedDOFKinematics, DOFKinematicData, SmoothRampDOF,
+        OscillatoryDOF, ConstantVelocityDOF, CustomDOF, ExogenousDOF, ConstantStateDOF,
+        UnconstrainedDOF, Kinematics
+
+export RigidTransform, rotation_about_x, rotation_about_y, rotation_about_z, rotation_from_quaternion,
+          quaternion, rotation_about_axis, MotionTransform, ForceTransform, AbstractTransformOperator,
+          cross_matrix, cross_vector
+
 
 export Oscillation, OscillationX, OscillationY, OscillationXY, RotationalOscillation,
         PitchHeave, Pitchup, EldredgeRamp, ColoniusRamp, SwitchedKinematics,

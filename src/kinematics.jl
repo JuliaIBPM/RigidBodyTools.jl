@@ -117,10 +117,11 @@ end
 
 
 """
-    OscillatoryDOF(amp,angfreq,phase,x0) <: AbstractPrescribedDOFKinematics
+    OscillatoryDOF(amp,angfreq,phase,x0,ẋ0) <: AbstractPrescribedDOFKinematics
 
 Set sinusoidal kinematics with amplitude `amp`, angular frequency `angfreq`,
-phase `phase`, and mean value `x0`. The function it provides is `x(t) = x0 + amp*sin(angfreq*t+phase)`.
+phase `phase`, mean value `x0` (without `ẋ0`), and mean velocity `ẋ0`.
+The function it provides is `x(t) = x0 + ẋ0*t + amp*sin(angfreq*t+phase)`.
 """
 struct OscillatoryDOF <: AbstractPrescribedDOFKinematics
     "Amplitude"
@@ -179,17 +180,36 @@ function show(io::IO, p::CustomDOF)
   print(io, "Custom kinematics")
 end
 
-struct ExternalDOF <: AbstractDOFKinematics
+"""
+    ExogenousDOF() <: AbstractDOFKinematics
 
-  "Index of the external DOF vector"
-  index :: Int
-
-  "DOF name (α, x, y)"
-  name :: String
+Sets a DOF as constrained, but with its behavior set by an exogenous process
+at every instant. For such a DOF, one must provide a vector  `[x,ẋ,ẍ]`.
+"""
+struct ExogenousDOF <: AbstractDOFKinematics
 end
 
-function show(io::IO, p::ExternalDOF)
-  print(io, "Externally-specified DOF")
+function show(io::IO, p::ExogenousDOF)
+  print(io, "Exogeneously-specified DOF")
+end
+
+"""
+    UnconstrainedDOF([f::Function]) <: AbstractDOFKinematics
+
+Sets a DOF as unconstrained, so that its behavior is either completely free
+or determined by a given force response (e.g., spring and/or damper). This force
+response is set by the optional input function `f`. The signature of `f` must be `f(x,xdot,t)`,
+where `x` and `xdot` are the state of the dof and its derivative,
+respectively, and `t` is the current time. It must return a single scalar,
+serving as a force or torque for that DOF.
+"""
+struct UnconstrainedDOF <: AbstractDOFKinematics
+  f :: Function
+end
+UnconstrainedDOF() = UnconstrainedDOF((x,xdot,t) -> zero(x))
+
+function show(io::IO, p::UnconstrainedDOF)
+  print(io, "Unconstrained DOF")
 end
 
 

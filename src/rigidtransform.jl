@@ -1,9 +1,11 @@
 # Rigid-body transformation routines
 
-export RigidTransform, motion_transform_matrix, motion_transform_matrix_2d,
-          force_transform_matrix, force_transform_matrix_2d,
-          rotation_about_x, rotation_about_y, rotation_about_z, rotation_from_quaternion,
-          quaternion, rotation_about_axis
+import Base: *, inv, transpose
+
+
+
+const I3 = SMatrix{3,3}(I)
+const O3 = SMatrix{3,3}(zeros(Float64,9))
 
 """
     RigidTransform(x::Tuple{Real,Real},α::Real)
@@ -102,9 +104,117 @@ end
 
 
 ### Plucker transform matrices ###
+abstract type AbstractTransformOperator end
+
+struct MotionTransform{ND} <: AbstractTransformOperator
+   x :: SVector
+   R :: SMatrix
+   matrix :: SMatrix
+end
+
+struct ForceTransform{ND} <: AbstractTransformOperator
+   x :: SVector
+   R :: SMatrix
+   matrix :: SMatrix
+end
+
+(*)(T::AbstractTransformOperator,v) = T.matrix*v
+(*)(v,T::AbstractTransformOperator) = v*T.matrix
+
+
+function transpose(T::MotionTransform{ND}) where {ND}
+    x = cross_vector(T.R*cross_matrix(-T.x)*T.R')
+    ForceTransform{ND}(x,transpose(T.R),transpose(T.matrix))
+end
+function transpose(T::ForceTransform{ND}) where {ND}
+    x = cross_vector(T.R*cross_matrix(-T.x)*T.R')
+    MotionTransform{ND}(x,transpose(T.R),transpose(T.matrix))
+end
+
+
+inv(T::MotionTransform{ND}) where {ND} = transpose(ForceTransform{ND}(T.x,T.R))
+inv(T::ForceTransform{ND}) where {ND} = transpose(MotionTransform{ND}(T.x,T.R))
+
+
+
+function _motion_transform_matrix(xA_to_B::SVector{3},RA_to_B::SMatrix{3,3})
+    xM = cross_matrix(xA_to_B)
+    Mtrans = SMatrix{6,6}([I3 O3;
+                          -xM I3])
+    Mrot = SMatrix{6,6}([RA_to_B O3;
+                         O3 RA_to_B])
+    return Mrot*Mtrans
+end
+
+function _force_transform_matrix(xA_to_B::SVector{3},RA_to_B::SMatrix{3,3})
+    xM = cross_matrix(xA_to_B)
+    Mtrans = SMatrix{6,6}([I3 -xM;
+                           O3 I3])
+    Mrot = SMatrix{6,6}([RA_to_B O3;
+                          O3   RA_to_B])
+    return Mrot*Mtrans
+end
+
+for f in [:motion, :force]
+
+    fname_underscore = Symbol("_",f,"_transform_matrix")
+    fname2d_underscore = Symbol(fname_underscore,"_2d")
+    typename = Symbol(uppercasefirst(string(f)),"Transform")
+
+
+    @eval $typename{3}(x_3d::SVector{3},R_3d::SMatrix{3,3}) = $typename(x_3d,R_3d)
+
+    @eval $typename{2}(x_3d::SVector{3},R_3d::SMatrix{3,3}) = $typename(SVector{2}(x_3d[1:2]),R_3d)
+
+
+    @eval function $typename(x_3d::SVector{3},R_3d::SMatrix{3,3})
+        M = $fname_underscore(x_3d,R_3d)
+        return $typename{3}(x_3d,R_3d,M)
+    end
+
+    @eval function $typename(x_2d::SVector{2},R_3d::SMatrix{3,3})
+        x_3d = SVector{3}([x_2d... 0.0])
+        M = $fname2d_underscore(x_3d,R_3d)
+        return $typename{2}(x_3d,R_3d,M)
+    end
+
+    @eval function $typename(x::AbstractVector,R::AbstractMatrix)
+        lenx = length(x)
+        nx, ny = size(R)
+        @assert (lenx == 2 || lenx == 3) "x has inconsistent length"
+        @assert nx == ny == 3 "Rotation matrix has inconsistent dimensions"
+
+        $typename(SVector{lenx}(x),SMatrix{nx,ny}(R))
+    end
+
+    @eval $typename(x::SVector{2},Θ::Real) = $typename(x,rotation_about_z(-Θ))
+
+    @eval $typename(x::Vector,θ::Real) = $typename(SVector{2}(x),θ)
+
+    @eval $typename(x::Tuple,θ::Real) = $typename(SVector{2}(x...),θ)
+
+    @eval $typename(x::Real,y::Real,θ::Real) = $typename(SVector{2}([x,y]),θ)
+
+    @eval $typename(v::Vector) = $typename(v...)
+
+    @eval $typename(T::RigidTransform) = $typename(vec(T))
+
+    @eval function $fname2d_underscore(x_3d::SVector{3},R_3d::SMatrix{3,3})
+        M_3d = $fname_underscore(x_3d,R_3d)
+        return SMatrix{3,3}(M_3d[3:5,3:5])
+    end
+
+    @eval function (*)(T1::$typename{ND},T2::$typename{ND}) where {ND}
+      x12 = cross_vector(T2.R'*cross_matrix(T1.x)*T2.R + cross_matrix(T2.x))
+      R12 = T1.R*T2.R
+      $typename{ND}(x12,R12,T1.matrix*T2.matrix)
+    end
+
+end
+
 
 """
-    motion_transform_matrix(xA_to_B::SVector,RA_to_B::SMatrix)
+    MotionTransform(xA_to_B::SVector,RA_to_B::SMatrix) -> MotionTransform
 
 Computes the 6 x 6 Plucker transform matrix for motion vectors, transforming
 from system A to system B. The input `xA_to_B` is the Euclidean vector from the origin of A to
@@ -112,18 +222,29 @@ the origin of B, expressed in A coordinates, and `RA_to_B` is the rotation
 matrix transforming coordinates in system A to those in system B. The resulting matrix has the form
 
 ``{}^B T^{(m)}_A = \\begin{bmatrix} R & 0 \\\\ 0 & R \\end{bmatrix} \\begin{bmatrix} 1 & 0 \\\\ -x^\\times & 1 \\end{bmatrix}``
-"""
-function motion_transform_matrix(xA_to_B::SVector{3},RA_to_B::SMatrix{3,3})
-    xM = cross_matrix(xA_to_B)
-    id = SMatrix{3,3}(I)
-    O = SMatrix{3,3}(zeros(9))
-    Mtrans = SMatrix{6,6}([id O; -xM id])
-    Mrot = SMatrix{6,6}([RA_to_B O; O RA_to_B])
-    return Mrot*Mtrans
-end
+""" MotionTransform(::SVector{3},::SMatrix)
+
 
 """
-    force_transform_matrix(xA_to_B::SVector,RA_to_B::SMatrix)
+    MotionTransform(xA_to_B,θ::Real) -> MotionTransform
+
+Computes the 3 x 3 2D Plucker transform matrix for motion vectors, transforming
+from system A to system B. The input `xA_to_B` is the 2-d Euclidean vector from the origin of A to
+the origin of B, expressed in A coordinates, and `θ` is the angle of system B relative
+to system A. `xA_to_B` can be in the form
+of a static vector, a vector, or a tuple.
+""" MotionTransform(::AbstractVector,::Real)
+
+"""
+    MotionTransform(T::RigidTransform) -> MotionTransform
+
+Computes the 3 x 3 2D Plucker transform matrix for motion vectors, transforming
+from system A to system B, from the rigid transform `T`.
+""" MotionTransform(::RigidTransform)
+
+
+"""
+    ForceTransform(xA_to_B::SVector,RA_to_B::SMatrix) -> ForceTransform
 
 Computes the 6 x 6 Plucker transform matrix for force vectors, transforming
 from system A to system B. The input `xA_to_B` is the Euclidean vector from the origin of A to
@@ -131,78 +252,24 @@ the origin of B, expressed in A coordinates, and `RA_to_B` is the rotation
 matrix transforming coordinates in system A to those in system B. The resulting matrix has the form
 
 ``{}^B T^{(f)}_A = \\begin{bmatrix} R & 0 \\\\ 0 & R \\end{bmatrix} \\begin{bmatrix} 1 & -x^\\times \\\\ 0 & 1 \\end{bmatrix}``
-"""
-function force_transform_matrix(xA_to_B::SVector{3},RA_to_B::SMatrix{3,3})
-    xM = cross_matrix(xA_to_B)
-    id = SMatrix{3,3}(I)
-    O = SMatrix{3,3}(zeros(9))
-    Mtrans = SMatrix{6,6}([id -xM; O id])
-    Mrot = SMatrix{6,6}([RA_to_B O; O RA_to_B])
-    return Mrot*Mtrans
-end
-
-for f in [:motion, :force]
-
-    fname = Symbol(f,"_transform_matrix")
-    fname2d = Symbol(fname,"_2d")
-
-    @eval $fname(x::AbstractVector,R::AbstractMatrix) = $fname(SVector{3}(x),SMatrix{3,3}(R))
-
-    @eval function $fname2d(xA_to_B::SVector{2},θ::Real)
-        x_3d = SVector{3}([xA_to_B... 0.0])
-
-        # We need to rotate in -Θ direction to get the A-to-B rotation matrix
-        R_3d = rotation_about_z(-θ)
-        T3d = $fname(x_3d,R_3d)
-        return SMatrix{3,3}(T3d[3:5,3:5])
-    end
-
-    @eval $fname2d(x::Vector,θ::Real) = $fname2d(SVector{2}(x),θ)
-
-    @eval $fname2d(x::Tuple,θ::Real) = $fname2d(SVector{2}(x...),θ)
-
-    @eval $fname2d(x::Real,y::Real,θ::Real) = $fname2d(SVector{2}([x,y]),θ)
-
-    @eval $fname2d(v::Vector) = $fname2d(v...)
-
-    @eval $fname2d(T::RigidTransform) = $fname2d(vec(T))
-
-
-end
-"""
-    motion_transform_matrix_2d(xA_to_B,θ::Real) -> SMatrix{3,3}
-
-Computes the 3 x 3 2D Plucker transform matrix for motion vectors, transforming
-from system A to system B. The input `xA_to_B` is the 2-d Euclidean vector from the origin of A to
-the origin of B, expressed in A coordinates, and `θ` is the angle of system B relative
-to system A. `xA_to_B` can be in the form
-of a static vector, a vector, or a tuple.
-""" motion_transform_matrix_2d
+""" ForceTransform(::SVector{3},::SMatrix)
 
 """
-    motion_transform_matrix_2d(T::RigidTransform) -> SMatrix{3,3}
-
-Computes the 3 x 3 2D Plucker transform matrix for motion vectors, transforming
-from system A to system B, from the rigid transform `T`.
-""" motion_transform_matrix_2d(::RigidTransform)
-
-
-"""
-    force_transform_matrix_2d(xA_to_B,θ::Real) -> SMatrix{3,3}
+    ForceTransform(xA_to_B,θ::Real) -> ForceTransform
 
 Computes the 3 x 3 2D Plucker transform matrix for force vectors, transforming
 from system A to system B. The input `xA_to_B` is the 2-d Euclidean vector from the origin of A to
 the origin of B, expressed in A coordinates, and `θ` is the angle of system B relative
 to system A. `xA_to_B` can be in the form
 of a static vector, a vector, or a tuple.
-""" force_transform_matrix_2d
+""" ForceTransform(::AbstractVector,::Real)
 
 """
-    force_transform_matrix_2d(T::RigidTransform) -> SMatrix{3,3}
+    ForceTransform(T::RigidTransform) -> ForceTransform
 
 Computes the 3 x 3 2D Plucker transform matrix for force vectors, transforming
 from system A to system B, from the rigid transform `T`.
-""" force_transform_matrix_2d(::RigidTransform)
+""" ForceTransform(::RigidTransform)
 
 
 
@@ -298,16 +365,29 @@ quaternion(θ::Real,v::Vector) = quaternion(θ,SVector{3}(v))
 """
     cross_matrix(v::SVector) -> SMatrix
 
-Takes a vector `v` and forms the correspsonding cross-product matrix `M`, so that
+Takes a vector `v` and forms the corresponding cross-product matrix `M`, so that
 ``v \\times w`` is equivalent to ``M\\cdot w``.
 """
 function cross_matrix(v::SVector{3})
-    M = @SMatrix[0.0 -v[3] v[2]; v[3] 0.0 -v[1]; -v[2] v[1] 0.0]
+    M = @SMatrix [0.0 -v[3] v[2]; v[3] 0.0 -v[1]; -v[2] v[1] 0.0]
     return M
 end
 
 cross_matrix(v::Vector) = cross_matrix(SVector{3}(v))
 
+"""
+    cross_vector(M::SMatrix) -> SVector
+
+Takes a matrix `M` and forms the corresponding axial vector `v` from the matrix's
+anti-symmetric part (``M_a = (M-M^{T})/2``), so that ``v \\times w`` is equivalent
+to ``M_a\\cdot w``.
+"""
+function cross_vector(M::SMatrix{3,3})
+    Ma = 0.5*(M - transpose(M))
+    return @SVector [Ma[3,2],Ma[1,3],Ma[2,1]]
+end
+
+cross_vector(M::Matrix) = cross_vector(SMatrix{3,3}(M))
 
 
 # Things to do here:
