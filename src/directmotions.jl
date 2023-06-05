@@ -79,8 +79,8 @@ function surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64}
      # Rotate to the inertial coordinate system
      T = RigidTransform(b.cent,b.α)
      for i in eachindex(u)
-         Utmp = T.rot*[u[i],v[i]]
-         u[i], v[i] = Utmp
+         Utmp = T.R'*[u[i],v[i],0.0]
+         u[i], v[i] = Utmp[1:2]
      end
 
      return u, v

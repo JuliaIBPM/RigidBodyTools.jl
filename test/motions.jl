@@ -193,9 +193,9 @@ end
   bl2 = deepcopy(bl)
   update_body!(bl2,x0,ml) # This should not change the bodies
   for i in 1:length(bl)
-    @test bl2[i].cent == bl[i].cent && bl2[i].α == bl[i].α
-    @test bl2[i].x̃ == bl[i].x̃ && bl2[i].ỹ == bl[i].ỹ
-    @test bl2[i].x == bl[i].x && bl2[i].y == bl[i].y
+    @test bl2[i].cent[1] ≈ bl[i].cent[1] && bl2[i].cent[2] ≈ bl[i].cent[2] && bl2[i].α ≈ bl[i].α
+    @test bl2[i].x̃ ≈ bl[i].x̃ && bl2[i].ỹ ≈ bl[i].ỹ
+    @test bl2[i].x ≈ bl[i].x && bl2[i].y ≈ bl[i].y
   end
 
   u, v = zero(b1.x),zero(b1.y)
