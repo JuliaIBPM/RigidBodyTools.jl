@@ -24,7 +24,7 @@ end
 @testset "Transforms" begin
 
   x = rand(3)
-  @test RigidBodyTools.cross_vector(RigidBodyTools.cross_matrix(x)) ≈ x
+  @test cross_vector(cross_matrix(x)) ≈ x
 
   r = rand(2)
   Θ = 0.0
@@ -42,6 +42,13 @@ end
 
   # Should give moment about origin of B
   @test fB ≈ fA .- [r[1]*fA[3]-r[2]*fA[2],0.0,0.0]
+
+  x2 = rand(2)
+  Θ = rand()
+  R2 = [cos(-Θ) -sin(-Θ); sin(-Θ) cos(-Θ)]
+  TM2_1 = MotionTransform(x2,R2)
+  TM2_2 = MotionTransform(x2,Θ)
+  @test TM2_1.matrix ≈ TM2_2.matrix
 
   TM3_1 = MotionTransform(rand(3),rotation_about_axis(rand(),rand(3)))
   TM3_2 = MotionTransform(rand(3),rotation_about_axis(rand(),rand(3)))
@@ -76,6 +83,6 @@ end
   @test isapprox(TMiTM.R,I,atol=1e-15)
   @test isapprox(TMiTM.matrix,I,atol=1e-15)
 
-  
+
 
 end

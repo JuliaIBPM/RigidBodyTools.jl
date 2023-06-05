@@ -1,7 +1,11 @@
 # Rigid-body transformation routines
 
-import Base: *, inv, transpose
+# Things to do here:
+#  - Combine RigidTransform with MotionTransform
+#  - probably should distinguish in-place and non-in-place versions
 
+
+import Base: *, inv, transpose
 
 
 const I3 = SMatrix{3,3}(I)
@@ -185,11 +189,16 @@ for f in [:motion, :force]
         return $typename{2}(x_3d,R_3d,M)
     end
 
+    @eval function $typename(x_2d::SVector{2},R_2d::SMatrix{2,2})
+      R_3d = SMatrix{3,3}([R_2d zeros(Float64,2,1); zeros(Float64,1,2) 1.0])
+      $typename(x_2d,R_3d)
+    end
+
     @eval function $typename(x::AbstractVector,R::AbstractMatrix)
         lenx = length(x)
         nx, ny = size(R)
         @assert (lenx == 2 || lenx == 3) "x has inconsistent length"
-        @assert nx == ny == 3 "Rotation matrix has inconsistent dimensions"
+        @assert (nx == ny == 3 || nx == ny == 2) "Rotation matrix has inconsistent dimensions"
 
         $typename(SVector{lenx}(x),SMatrix{nx,ny}(R))
     end
@@ -223,12 +232,19 @@ end
 """
     MotionTransform(xA_to_B::SVector,RA_to_B::SMatrix) -> MotionTransform
 
-Computes the 6 x 6 Plucker transform matrix for motion vectors, transforming
+Computes the Plucker transform matrix for motion vectors, transforming
 from system A to system B. The input `xA_to_B` is the Euclidean vector from the origin of A to
 the origin of B, expressed in A coordinates, and `RA_to_B` is the rotation
 matrix transforming coordinates in system A to those in system B. The resulting matrix has the form
 
 ``{}^B T^{(m)}_A = \\begin{bmatrix} R & 0 \\\\ 0 & R \\end{bmatrix} \\begin{bmatrix} 1 & 0 \\\\ -x^\\times & 1 \\end{bmatrix}``
+
+One can also provide `xA_to_B` as a standard vector and `RA_to_B` as a standard
+3 x 3 matrix.
+
+If `xA_to_B` has length 3, then a three-dimensional transform (a 6 x 6 Plucker transform)
+is created. If `xA_to_B` has length 2, then a two-dimensional transform (3 x 3 Plucker transform)
+is returned.
 """ MotionTransform(::SVector{3},::SMatrix)
 
 
@@ -395,9 +411,3 @@ function cross_vector(M::SMatrix{3,3})
 end
 
 cross_vector(M::Matrix) = cross_vector(SMatrix{3,3}(M))
-
-
-# Things to do here:
-#  - add an inverse operation
-#  - should be composite operations
-#  - probably should distinguish in-place and non-in-place versions
