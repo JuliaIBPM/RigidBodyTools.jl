@@ -19,6 +19,7 @@ Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
 SpaceTimeFields = "0af78db0-3b7c-4df8-88bd-686b7cc5245d"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 
 [compat]
 ColorTypes = "<0.10.1, 0.10"

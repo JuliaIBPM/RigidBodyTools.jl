@@ -248,6 +248,8 @@ from system A to system B, from the rigid transform `T`.
 
 ### Rotation matrices ###
 
+rotation_identity() = I3
+
 """
     rotation_about_z(θ::Real) -> SMatrix{3,3}
 
@@ -332,6 +334,8 @@ function quaternion(θ::Real,v::SVector{3})
 end
 
 quaternion(θ::Real,v::Vector) = quaternion(θ,SVector{3}(v))
+
+quaternion(q::AbstractVector) = quaternion(q[1],SVector{3}(q[2:4]))
 
 
 

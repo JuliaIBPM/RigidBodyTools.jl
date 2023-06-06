@@ -2,6 +2,7 @@ module RigidBodyTools
 
 using StaticArrays
 using LinearAlgebra
+using UnPack
 
 import Base: *, inv, transpose, vec
 
@@ -17,9 +18,11 @@ export AbstractDOFKinematics, AbstractPrescribedDOFKinematics, DOFKinematicData,
         UnconstrainedDOF, Kinematics
 
 export RigidTransform, rotation_about_x, rotation_about_y, rotation_about_z, rotation_from_quaternion,
-          quaternion, rotation_about_axis, MotionTransform, ForceTransform, AbstractTransformOperator,
+          quaternion, rotation_about_axis, rotation_identity,
+          MotionTransform, ForceTransform, AbstractTransformOperator,
           cross_matrix, cross_vector, translation, rotation
 
+export Joint, joint_transform, parent_to_child_transform
 
 export Oscillation, OscillationX, OscillationY, OscillationXY, RotationalOscillation,
         PitchHeave, Pitchup, EldredgeRamp, ColoniusRamp, SwitchedKinematics,
@@ -56,6 +59,8 @@ include("rigidbodymotions.jl")
 include("directmotions.jl")
 
 include("rigidtransform.jl")
+include("joints.jl")
+
 include("lists.jl")
 
 include("tools.jl")
