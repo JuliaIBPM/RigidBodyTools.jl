@@ -26,11 +26,14 @@ struct Joint{ND,JT}
     "Kinematics for prescribed DOFs"
     kins :: Vector{AbstractPrescribedDOFKinematics}
 
-    "Initial values for DOFs"
-    xinit_dofs :: Vector{Float64}
+    #"Initial values for DOFs"
+    #xinit_dofs :: Vector{Float64}
 
     "Joint parameters"
     params :: Dict
+
+    "Buffer for holding joint dof velocity"
+    vbuf :: Vector{Float64}
 
     "Transform matrix from parent to joint"
     Xp_to_j :: MotionTransform
@@ -39,20 +42,31 @@ struct Joint{ND,JT}
     Xch_to_j :: MotionTransform
 end
 
+"""
+    Joint(jtype::AbstractJointType,parent_id,Xp_to_j::MotionTransform,child_id,Xch_to_j::MotionTransform,
+            dofs::Vector{AbstractDOFKinematics};[params=Dict()])
 
-
-function Joint(::Type{JT},parent_id::Int,child_id::Int,Xp_to_j::MotionTransform{ND},Xch_to_j::MotionTransform{ND},dofs::Vector{T};
-                  params = Dict(), xinit = zeros(Float64,3(ND-1))) where {JT<:AbstractJointType,ND,T<:AbstractDOFKinematics}
+Construct a joint of type `jtype`, connecting parent body of id `parent_id` to child body
+of id `child_id`. The placement of the joint on the bodies is given by `Xp_to_j`
+and `Xch_to_j`, the transforms from the parent and child coordinate systems to the joint
+system, respectively. Each of the degrees of freedom for the joint is specified with
+`dofs`, a vector of `AbstractDOFKinematics`. Any parameters required by the joint
+can be passed along in the optional `params` dictionary.
+"""
+function Joint(::Type{JT},parent_id::Int,Xp_to_j::MotionTransform{ND},child_id::Int,Xch_to_j::MotionTransform{ND},dofs::Vector{T};
+                  params = Dict()) where {JT<:AbstractJointType,ND,T<:AbstractDOFKinematics}
     @assert length(dofs)==number_of_dofs(JT) "input dofs must have correct length"
     dof_lists = Dict("constrained" => Int[], "exogenous" => Int[], "unconstrained" => Int[])
     kins = AbstractDOFKinematics[]
 
-    # Note - should only need to provide enough dof kinematics for the *actual* dofs
     for (i,dof) in enumerate(dofs)
         _classify_joint!(dof_lists,kins,i,dof)
     end
+
+    vbuf = zeros(Float64,number_of_dofs(JT))
+
     Joint{ND,JT}(parent_id,child_id,dof_lists["constrained"],dof_lists["exogenous"],dof_lists["unconstrained"],
-            kins,xinit,params,Xp_to_j,Xch_to_j)
+            kins,params,vbuf,Xp_to_j,Xch_to_j)
 end
 
 
@@ -60,12 +74,25 @@ function check_q_dimension(q,C::Type{T}) where T<:AbstractJointType
   @assert length(q) == state_dimension(C) "Incorrect length of q"
 end
 
+"""
+    joint_transform(q::AbstractVector,joint::Joint)
+
+Use the joint dof entries in `q` to create a joint transform operator.
+The number of entries in `q` must be apprpriate for the type of joint `joint`.
+"""
 function joint_transform(q::AbstractVector,joint::Joint{ND,JT}) where {ND,JT<:AbstractJointType}
   @unpack params = joint
   check_q_dimension(q,JT)
   joint_transform(q,JT,params,Val(ND))
 end
 
+"""
+    parent_to_child_transform(q::AbstractVector,joint::Joint)
+
+Use the joint dof entries in `q` to create a transform operator from the
+parent of joint `joint` to the child of joint `joint`.
+The number of entries in `q` must be apprpriate for the type of joint `joint`.
+"""
 function parent_to_child_transform(q::AbstractVector,joint::Joint)
   @unpack Xp_to_j, Xch_to_j = joint
   Xj = joint_transform(q,joint)
@@ -83,9 +110,61 @@ _classify_joint!(dof_lists,kins,index,::ExogenousDOF) = (push!(dof_lists["exogen
 _classify_joint!(dof_lists,kins,index,::UnconstrainedDOF) = (push!(dof_lists["unconstrained"],index); nothing)
 
 
+### Joint evolution equations ###
 
-# Joint types
+zero_joint_state(joint::Joint{ND,JT}) where {ND,JT} = zeros(Float64,state_dimension(JT))
 
+function joint_velocity!(dqdt,q,t::Real,v_edof::AbstractVector,v_udof::AbstractVector,joint::Joint{ND,JT}) where {ND,JT}
+   @unpack kins, cdofs, edofs, udofs, vbuf = joint
+
+   # evaluate the prescribed kinematics at the current time
+   for (i,jdof) in enumerate(cdofs)
+     kd = kins[i](t)
+     vbuf[jdof] = dof_velocity(kd)
+   end
+
+   # parse the exogenous velocities into their entries
+   for (i,jdof) in enumerate(edofs)
+     vbuf[jdof] = v_edof[i]
+   end
+
+   # parse the unconstrained velocities into their entries
+   for (i,jdof) in enumerate(udofs)
+     vbuf[jdof] = v_udof[i]
+   end
+
+   joint_velocity!(dqdt,q,vbuf,JT)
+end
+
+
+function _joint_velocity_standard!(dqdt,q,v)
+    dqdt .= v
+end
+
+function _joint_velocity_quaternion!(dqdt,q,w)
+    dqdt[1] = -q[2]*w[1] - q[3]*w[2] - q[4]*w[3]
+    dqdt[2] =  q[1]*w[1] - q[4]*w[2] + q[3]*w[3]
+    dqdt[3] =  q[4]*w[1] + q[1]*w[2] - q[2]*w[3]
+    dqdt[4] = -q[3]*w[1] + q[2]*w[2] + q[1]*w[3]
+    dqdt .*= 0.5
+    return dqdt
+end
+
+function _joint_acceleration_standard!(dvdt,v,a)
+    dvdt .= a
+end
+
+
+#### Joint types ####
+
+## Default joint velocity calculation
+
+function joint_velocity!(dqdt,q,v::Vector,::Type{T}) where T<:AbstractJointType
+  _joint_velocity_standard!(dqdt,q,v)
+  nothing
+end
+
+## Revolute joint ##
 
 abstract type RevoluteJoint <: AbstractJointType end
 
@@ -98,6 +177,8 @@ function joint_transform(q::AbstractVector,::Type{RevoluteJoint},p::Dict,::Val{N
   return MotionTransform{ND}(x,R)
 end
 
+## Prismatic joint ##
+
 abstract type PrismaticJoint <: AbstractJointType end
 
 number_of_dofs(::Type{PrismaticJoint}) = 1
@@ -108,6 +189,8 @@ function joint_transform(q::AbstractVector,::Type{PrismaticJoint},p::Dict,::Val{
   x = SVector{3}([0.0,0.0,q[1]])
   return MotionTransform{3}(x,R)
 end
+
+## Helical joint ##
 
 abstract type HelicalJoint <: AbstractJointType end
 
@@ -120,6 +203,8 @@ function joint_transform(q::AbstractVector,C::Type{HelicalJoint},p::Dict,::Val{3
   return MotionTransform{3}(x,R)
 end
 
+## Cylindrical joint ##
+
 abstract type CylindricalJoint <: AbstractJointType end
 
 number_of_dofs(::Type{CylindricalJoint}) = 2
@@ -130,6 +215,8 @@ function joint_transform(q::AbstractVector,::Type{CylindricalJoint},p::Dict,::Va
   x = SVector{3}([0.0,0.0,q[2]])
   return MotionTransform{3}(x,R)
 end
+
+## Spherical joint ##
 
 abstract type SphericalJoint <: AbstractJointType end
 
@@ -142,6 +229,13 @@ function joint_transform(q::AbstractVector,::Type{SphericalJoint},p::Dict,::Val{
   return MotionTransform{3}(x,R)
 end
 
+function joint_velocity!(dqdt,q,v,::Type{SphericalJoint})
+  _joint_velocity_quaternion!(dqdt,q,v)
+  nothing
+end
+
+## Free joint (3d) ##
+
 abstract type FreeJoint <: AbstractJointType end
 
 number_of_dofs(::Type{FreeJoint}) = 6
@@ -153,6 +247,17 @@ function joint_transform(q::AbstractVector,::Type{FreeJoint},p::Dict,::Val{3})
   return MotionTransform{3}(R'*x,R)
 end
 
+function joint_velocity!(dqdt,q,v,::Type{FreeJoint})
+  qrdot, qtdot = view(dqdt,1:4), view(dqdt,5:7)
+  qr, qt = view(q,1:4), view(q,5:7)
+  vr, vt = view(v,1:3), view(v,4:6)
+  _joint_velocity_quaternion!(qrdot,qr,vr)
+  _joint_velocity_standard!(qtdot,qt,vt)
+  nothing
+end
+
+## Free joint (2d) ##
+
 abstract type FreeJoint2d <: AbstractJointType end
 
 number_of_dofs(::Type{FreeJoint2d}) = 3
@@ -163,5 +268,3 @@ function joint_transform(q::AbstractVector,::Type{FreeJoint2d},p::Dict,::Val{2})
   x = SVector{3}(q[2],q[3],0.0)
   return MotionTransform{2}(x,R)
 end
-
-###

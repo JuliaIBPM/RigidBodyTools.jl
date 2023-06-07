@@ -215,13 +215,6 @@ end
 
 #####
 
-# Joints
-
-
-
-
-#####
-
 
 """
 An abstract type for types that takes in time and returns `KinematicData(t,c, ċ, c̈, α, α̇, α̈)`.
