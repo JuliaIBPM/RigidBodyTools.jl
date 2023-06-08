@@ -70,6 +70,8 @@ function Joint(::Type{JT},parent_id::Int,Xp_to_j::MotionTransform{ND},child_id::
 end
 
 
+state_dimension(j::Joint{ND,JT}) where {ND,JT} = state_dimension(JT)
+
 function check_q_dimension(q,C::Type{T}) where T<:AbstractJointType
   @assert length(q) == state_dimension(C) "Incorrect length of q"
 end
@@ -112,10 +114,27 @@ _classify_joint!(dof_lists,kins,index,::UnconstrainedDOF) = (push!(dof_lists["un
 
 ### Joint evolution equations ###
 
-zero_joint_state(joint::Joint{ND,JT}) where {ND,JT} = zeros(Float64,state_dimension(JT))
+"""
+    zero_joint_state_and_vel(joint::Joint)
 
-function joint_velocity!(dqdt,q,t::Real,v_edof::AbstractVector,v_udof::AbstractVector,joint::Joint{ND,JT}) where {ND,JT}
+Create a vector of zeros for the state of the joint and the parts of the
+joint velocity that must be advanced (from acceleration).
+"""
+function zero_joint_state_and_vel(joint::Joint{ND,JT}) where {ND,JT}
+    @unpack cdofs, edofs, udofs = joint
+
+    return zeros(Float64,state_dimension(JT) + length(edofs) + length(udofs))
+end
+
+function joint_rhs!(dxdt,x,t::Real,a_edof::AbstractVector,a_udof::AbstractVector,joint::Joint{ND,JT}) where {ND,JT}
    @unpack kins, cdofs, edofs, udofs, vbuf = joint
+
+   # x holds both q and the parts of qdot that must be advanced
+   q = view(x,1:state_dimension(JT))
+   veu = view(x,state_dimension(JT)+1:state_dimension(JT)+length(edofs)+length(udofs))
+
+   qdot = view(dxdt,1:state_dimension(JT))
+   aeu = view(dxdt,state_dimension(JT)+1:state_dimension(JT)+length(edofs)+length(udofs))
 
    # evaluate the prescribed kinematics at the current time
    for (i,jdof) in enumerate(cdofs)
@@ -125,15 +144,17 @@ function joint_velocity!(dqdt,q,t::Real,v_edof::AbstractVector,v_udof::AbstractV
 
    # parse the exogenous velocities into their entries
    for (i,jdof) in enumerate(edofs)
-     vbuf[jdof] = v_edof[i]
+     vbuf[jdof] = veu[i]
+     aeu[i] = a_edof[i]
    end
 
    # parse the unconstrained velocities into their entries
    for (i,jdof) in enumerate(udofs)
-     vbuf[jdof] = v_udof[i]
+     vbuf[jdof] = veu[length(edofs)+i]
+     aeu[length(edofs)+i] = a_udof[i]
    end
 
-   joint_velocity!(dqdt,q,vbuf,JT)
+   joint_velocity!(qdot,q,vbuf,JT)
 end
 
 

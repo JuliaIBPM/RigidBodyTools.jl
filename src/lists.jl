@@ -1,13 +1,14 @@
 import Base: @propagate_inbounds,getindex, setindex!,iterate,size,length,push!,
               collect,view
 
-export BodyList, MotionList, RigidTransformList, getrange
+export BodyList, MotionList, RigidTransformList, JointList, getrange
 
 abstract type SetOfBodies end
 
 const LISTS = [:BodyList, :Body],
               [:MotionList, :AbstractMotion],
-              [:RigidTransformList, :RigidTransform]
+              [:RigidTransformList, :RigidTransform],
+              [:JointList, :Joint]
 
 """
     BodyList([b1,b2,...])
@@ -26,6 +27,12 @@ Create a list of motions
 
 Create a list of rigid transforms
 """ RigidTransformList
+
+"""
+    JointList([t1,t2,...])
+
+Create a list of joints
+""" JointList
 
 for (listtype,listelement) in LISTS
 

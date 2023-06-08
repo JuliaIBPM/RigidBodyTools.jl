@@ -55,11 +55,13 @@ numpts(::Body{N}) where {N} = N
 numpts(::Nothing) = 0
 
 include("kinematics.jl")
+include("rigidtransform.jl")
+include("joints.jl")
+
 include("rigidbodymotions.jl")
 include("directmotions.jl")
 
-include("rigidtransform.jl")
-include("joints.jl")
+
 
 include("lists.jl")
 
