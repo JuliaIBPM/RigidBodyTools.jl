@@ -22,7 +22,7 @@ export RigidTransform, rotation_about_x, rotation_about_y, rotation_about_z, rot
           MotionTransform, ForceTransform, AbstractTransformOperator,
           cross_matrix, cross_vector, translation, rotation
 
-export Joint, joint_transform, parent_to_child_transform
+export Joint, joint_transform, parent_to_child_transform, LinkedSystem
 
 export Oscillation, OscillationX, OscillationY, OscillationXY, RotationalOscillation,
         PitchHeave, Pitchup, EldredgeRamp, ColoniusRamp, SwitchedKinematics,
@@ -57,11 +57,10 @@ numpts(::Nothing) = 0
 include("kinematics.jl")
 include("rigidtransform.jl")
 include("joints.jl")
+include("linkedsystem.jl")
 
 include("rigidbodymotions.jl")
 include("directmotions.jl")
-
-
 
 include("lists.jl")
 

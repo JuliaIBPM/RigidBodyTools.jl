@@ -1,5 +1,5 @@
 import Base: @propagate_inbounds,getindex, setindex!,iterate,size,length,push!,
-              collect,view
+              collect,view,findall
 
 export BodyList, MotionList, RigidTransformList, JointList, getrange
 
@@ -7,8 +7,7 @@ abstract type SetOfBodies end
 
 const LISTS = [:BodyList, :Body],
               [:MotionList, :AbstractMotion],
-              [:RigidTransformList, :RigidTransform],
-              [:JointList, :Joint]
+              [:RigidTransformList, :RigidTransform]
 
 """
     BodyList([b1,b2,...])
@@ -28,11 +27,6 @@ Create a list of motions
 Create a list of rigid transforms
 """ RigidTransformList
 
-"""
-    JointList([t1,t2,...])
-
-Create a list of joints
-""" JointList
 
 for (listtype,listelement) in LISTS
 
@@ -53,6 +47,8 @@ for (listtype,listelement) in LISTS
   @eval iterate(A::$listtype,I) = iterate(A.list,I)
   @eval size(A::$listtype) = size(A.list)
   @eval length(A::$listtype) = length(A.list)
+
+  @eval findall(f::Function,A::$listtype) = findall(f,A.list)
 
   @eval push!(bl::$listtype,b::$listelement) = push!(bl.list,b)
 

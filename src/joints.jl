@@ -69,6 +69,13 @@ function Joint(::Type{JT},parent_id::Int,Xp_to_j::MotionTransform{ND},child_id::
             kins,params,vbuf,Xp_to_j,Xch_to_j)
 end
 
+function Base.show(io::IO, joint::Joint{ND,JT}) where {ND,JT}
+    println(io, "Joint of dimension $ND and type $JT")
+    println(io, "   Constrained dofs = $(joint.cdofs)")
+    println(io, "   Exogenous dofs = $(joint.edofs)")
+    println(io, "   Unconstrained dofs = $(joint.udofs)")
+end
+
 
 state_dimension(j::Joint{ND,JT}) where {ND,JT} = state_dimension(JT)
 

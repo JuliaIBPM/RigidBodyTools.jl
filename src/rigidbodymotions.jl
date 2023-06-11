@@ -17,8 +17,11 @@ The first six fields are meant as a cache of the current kinematics
 while the `kin` field can be used to find the plate kinematics at any time.
 """
 mutable struct RigidBodyMotion <: AbstractMotion
-    data::KinematicData
-    kin::AbstractKinematics
+    data :: KinematicData # What is the purpose of this?
+    #kin :: AbstractKinematics
+    joints :: Vector{Joint}
+    child_ids :: Vector{Int}
+    parent_id :: Vector{Int}
 end
 
 """
