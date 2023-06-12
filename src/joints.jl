@@ -76,8 +76,16 @@ function Base.show(io::IO, joint::Joint{ND,JT}) where {ND,JT}
     println(io, "   Unconstrained dofs = $(joint.udofs)")
 end
 
+physical_dimension(j::Joint{ND}) where {ND} = ND
+function physical_dimension(jvec::Vector{<:Joint})
+  @assert allequal(physical_dimension.(jvec)) "Not all joints are same physical dimension"
+  return physical_dimension(first(jvec))
+end
+
 
 state_dimension(j::Joint{ND,JT}) where {ND,JT} = state_dimension(JT)
+number_of_dofs(j::Joint{ND,JT}) where {ND,JT} = number_of_dofs(JT)
+
 
 function check_q_dimension(q,C::Type{T}) where T<:AbstractJointType
   @assert length(q) == state_dimension(C) "Incorrect length of q"

@@ -1,13 +1,14 @@
 import Base: @propagate_inbounds,getindex, setindex!,iterate,size,length,push!,
               collect,view,findall
 
-export BodyList, MotionList, RigidTransformList, JointList, getrange
+export BodyList, MotionList, RigidTransformList, MotionTransformList, getrange
 
 abstract type SetOfBodies end
 
 const LISTS = [:BodyList, :Body],
               [:MotionList, :AbstractMotion],
-              [:RigidTransformList, :RigidTransform]
+              [:RigidTransformList, :RigidTransform],
+              [:MotionTransformList, :MotionTransform]
 
 """
     BodyList([b1,b2,...])
@@ -27,6 +28,11 @@ Create a list of motions
 Create a list of rigid transforms
 """ RigidTransformList
 
+"""
+    MotionTransformList([t1,t2,...])
+
+Create a list of motion transforms
+""" MotionTransformList
 
 for (listtype,listelement) in LISTS
 
@@ -177,6 +183,11 @@ Carry out in-place transformations of each body in `bl` with the
 corresponding transformation in `tl`.
 """
 @inline function (tl::RigidTransformList)(bl::BodyList)
+  length(tl) == length(bl) || error("Inconsistent lengths of lists")
+  map((T,b) -> T(b),tl,bl)
+end
+
+@inline function (tl::MotionTransformList)(bl::BodyList)
   length(tl) == length(bl) || error("Inconsistent lengths of lists")
   map((T,b) -> T(b),tl,bl)
 end

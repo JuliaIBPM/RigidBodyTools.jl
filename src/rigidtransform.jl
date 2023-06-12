@@ -5,6 +5,7 @@
 #  - probably should distinguish in-place and non-in-place versions
 
 
+const O3VECTOR = SVector{3}(zeros(Float64,3))
 const I3 = SMatrix{3,3}(I)
 const O3 = SMatrix{3,3}(zeros(Float64,9))
 
@@ -124,6 +125,8 @@ for f in [:motion, :force]
     @eval $typename{3}(x_3d::SVector{3},R_3d::SMatrix{3,3}) = $typename(x_3d,R_3d)
 
     @eval $typename{2}(x_3d::SVector{3},R_3d::SMatrix{3,3}) = $typename(SVector{2}(x_3d[1:2]),R_3d)
+
+    @eval $typename{ND}() where {ND} = $typename{ND}(O3VECTOR,rotation_identity())
 
 
     @eval function $typename(x_3d::SVector{3},R_3d::SMatrix{3,3})
