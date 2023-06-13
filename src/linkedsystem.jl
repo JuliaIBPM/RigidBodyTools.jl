@@ -198,21 +198,44 @@ function zero_joint(ls::LinkedSystem;dimfcn=state_and_vel_dimension)
     mapreduce(joint -> zero_joint(joint;dimfcn=dimfcn),vcat,ls.joints)
 end
 
+"""
+    init_joint(ls::LinkedSystem[;tinit = 0.0])
+
+Initialize the global linked system state and velocity vector, using
+the prescribed motions for constrained degrees of freedom to initialize
+those components (evaluated at `tinit`, which by default is 0).
+"""
 function init_joint(ls::LinkedSystem;kwargs...)
     mapreduce(joint -> init_joint(joint;kwargs...),vcat,ls.joints)
 end
 
+"""
+    statevector(x::AbstractVector,ls::LinkedSystem)
+
+Returns a view of the global state/velocity vector for a linked system containing only the state.
+"""
 function statevector(x::AbstractVector,ls::LinkedSystem)
    @unpack state_indices = ls
    return view(x,state_indices)
 end
 
+"""
+    velvector(x::AbstractVector,ls::LinkedSystem)
+
+Returns a view of the global state/velocity vector for a linked system containing only the velocity.
+"""
 function velvector(x::AbstractVector,ls::LinkedSystem)
    @unpack vel_indices = ls
    return view(x,vel_indices)
 end
 
 
+"""
+    joint_rhs!(dxdt::AbstractVector,x::AbstractVector,t::Real,a_edof,a_udof,ls::LinkedSystem)
+
+Sets the right-hand side vector `dxdt` (mutating) for linked system `ls`, using the current state/velocity vector `x`,
+the current time `t`, exogenous accelerations `a_edof` and unconstrained accelerations `a_udof`.
+"""
 function joint_rhs!(dxdt::AbstractVector,x::AbstractVector,t::Real,a_edof::AbstractVector,a_udof::AbstractVector,ls::LinkedSystem)
     @unpack joints = ls
     for (jid,joint) in enumerate(joints)
