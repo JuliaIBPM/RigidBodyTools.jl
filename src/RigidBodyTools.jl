@@ -22,7 +22,8 @@ export RigidTransform, rotation_about_x, rotation_about_y, rotation_about_z, rot
           MotionTransform, ForceTransform, AbstractTransformOperator,
           cross_matrix, cross_vector, translation, rotation
 
-export Joint, joint_transform, parent_to_child_transform, LinkedSystem
+export Joint, joint_transform, parent_to_child_transform, LinkedSystem, state_dimension,
+        exogenous_dimension, constrained_dimension, unconstrained_dimension, state_and_vel_dimension
 
 export Oscillation, OscillationX, OscillationY, OscillationXY, RotationalOscillation,
         PitchHeave, Pitchup, EldredgeRamp, ColoniusRamp, SwitchedKinematics,

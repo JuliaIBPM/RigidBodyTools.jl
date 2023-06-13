@@ -11,6 +11,10 @@ struct LinkedSystem{ND}
     parent_joint :: Vector{Int}
     child_bodies :: Vector{Vector{Int}}
     child_joints :: Vector{Vector{Int}}
+
+    state_indices :: Vector{Int}
+    vel_indices :: Vector{Int}
+
 end
 
 
@@ -42,7 +46,14 @@ function LinkedSystem(joints::Vector{<:Joint},nbody::Int)
     total_members = mapreduce(x -> length(x),+,lslists)
     @assert total_members == nbody "Not all bodies are members of linked lists"
 
-    LinkedSystem{physical_dimension(joints)}(lscnt,nbody,lslists,joints,parent_body,parent_joint,child_bodies,child_joints)
+    state_indices = mapreduce(jid -> _getrange(joints,state_and_vel_dimension,jid)[1:state_dimension(joints[jid])],
+                              vcat,eachindex(joints))
+    vel_indices = mapreduce(jid -> _getrange(joints,state_and_vel_dimension,jid)[state_dimension(joints[jid])+1:state_and_vel_dimension(joints[jid])],
+                              vcat,eachindex(joints))
+
+
+    LinkedSystem{physical_dimension(joints)}(lscnt,nbody,lslists,joints,parent_body,parent_joint,
+                                              child_bodies,child_joints,state_indices,vel_indices)
 end
 
 function Base.show(io::IO, ls::LinkedSystem)
@@ -101,40 +112,49 @@ function first_joint(lsid::Int,ls::LinkedSystem)
 end
 
 
-number_of_dofs(ls::LinkedSystem) = mapreduce(x -> number_of_dofs(x),+,ls.joints)
-state_dimension(ls::LinkedSystem) = mapreduce(x -> state_dimension(x),+,ls.joints)
+for f in [:number_of_dofs,:state_dimension,:state_and_vel_dimension,:constrained_dimension,
+           :exogenous_dimension,:unconstrained_dimension]
+   @eval $f(ls::LinkedSystem) = mapreduce(x -> $f(x),+,ls.joints)
+end
+
 
 
 """
-    getrange(ls::LinkedSystem,jid::Int) -> Range
+    getrange(ls::LinkedSystem,dimfcn::Function,jid::Int) -> Range
 
 Return the subrange of indices in the global state vector
 for the state corresponding to joint `jid` in linked system `ls`.
 """
-function getrange(ls::LinkedSystem,jid::Int)
+function getrange(ls::LinkedSystem,dimfcn::Function,jid::Int)
     @unpack joints = ls
+    _getrange(joints,dimfcn,jid)
+end
+
+function _getrange(joints::Vector{<:Joint},dimfcn::Function,jid::Int)
     0 < jid <= length(joints) || error("Unavailable joint")
     first = 1
     j = 1
     while j < jid
-        first += state_dimension(joints[j])
+        first += dimfcn(joints[j])
         j += 1
     end
-    last = first+state_dimension(joints[jid])-1
+    last = first+dimfcn(joints[jid])-1
     return first:last
 end
 
+
 """
-    view(q::AbstractVector,ls::LinkedSystem,jid::Int) -> SubArray
+    view(q::AbstractVector,ls::LinkedSystem,jid::Int[;dimfcn=state_dimension]) -> SubArray
 
 Provide a view of the range of values in vector `q` corresponding to the state
-of the joint with index `jid` in a LinkedSystem `ls`.
+of the joint with index `jid` in a LinkedSystem `ls`. The optional argument `dimfcn`
+can be set to `state_dimension`, `constrained_dimension`, `unconstrained_dimension`,
+or `exogenous_dimension`.
 """
-function Base.view(q::AbstractVector,ls::LinkedSystem,jid::Int)
-    length(q) == state_dimension(ls) || error("Inconsistent size of data for viewing")
-    return view(q,getrange(ls,jid))
+function Base.view(q::AbstractVector,ls::LinkedSystem,jid::Int;dimfcn::Function=state_dimension)
+    length(q) == dimfcn(ls) || error("Inconsistent size of data for viewing")
+    return view(q,getrange(ls,dimfcn,jid))
 end
-
 
 """
     linked_system_transform(q::AbstractVector,ls::LinkedSystem) -> MotionTransformList
@@ -160,6 +180,47 @@ function _joint_descendants_transform!(ml,Xp::MotionTransform,jid::Int,q::Abstra
     ml[bid] = deepcopy(Xch)
     for jcid in child_joints[bid]
         _joint_descendants_transform!(ml,Xch,jcid,q,ls)
+    end
+    nothing
+end
+
+"""
+    zero_joint(ls::LinkedSystem[;dimfcn=state_and_vel_dimension])
+
+Create a vector of zeros for the some aspect of the state of the linked system(s) `ls`, based
+on the argument `dimfcn`. By default, it uses `state_and_vel_dimension` and creates a zero vector sized
+according to the the state of the joint and the parts of the
+joint velocity that must be advanced (from acceleration). Alternatively, one
+can use `state_dimension`, `constrained_dimension`, `unconstrained_dimension`,
+or `exogenous_dimension`.
+"""
+function zero_joint(ls::LinkedSystem;dimfcn=state_and_vel_dimension)
+    mapreduce(joint -> zero_joint(joint;dimfcn=dimfcn),vcat,ls.joints)
+end
+
+function init_joint(ls::LinkedSystem;kwargs...)
+    mapreduce(joint -> init_joint(joint;kwargs...),vcat,ls.joints)
+end
+
+function statevector(x::AbstractVector,ls::LinkedSystem)
+   @unpack state_indices = ls
+   return view(x,state_indices)
+end
+
+function velvector(x::AbstractVector,ls::LinkedSystem)
+   @unpack vel_indices = ls
+   return view(x,vel_indices)
+end
+
+
+function joint_rhs!(dxdt::AbstractVector,x::AbstractVector,t::Real,a_edof::AbstractVector,a_udof::AbstractVector,ls::LinkedSystem)
+    @unpack joints = ls
+    for (jid,joint) in enumerate(joints)
+        dxdt_j = view(dxdt,ls,jid;dimfcn=state_and_vel_dimension)
+        x_j = view(x,ls,jid;dimfcn=state_and_vel_dimension)
+        a_edof_j = view(a_edof,ls,jid;dimfcn=exogenous_dimension)
+        a_udof_j = view(a_udof,ls,jid;dimfcn=unconstrained_dimension)
+        joint_rhs!(dxdt_j,x_j,t,a_edof_j,a_udof_j,joint)
     end
     nothing
 end

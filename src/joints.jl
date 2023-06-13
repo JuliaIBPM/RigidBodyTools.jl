@@ -77,6 +77,7 @@ function Base.show(io::IO, joint::Joint{ND,JT}) where {ND,JT}
 end
 
 physical_dimension(j::Joint{ND}) where {ND} = ND
+
 function physical_dimension(jvec::Vector{<:Joint})
   @assert allequal(physical_dimension.(jvec)) "Not all joints are same physical dimension"
   return physical_dimension(first(jvec))
@@ -86,6 +87,10 @@ end
 state_dimension(j::Joint{ND,JT}) where {ND,JT} = state_dimension(JT)
 number_of_dofs(j::Joint{ND,JT}) where {ND,JT} = number_of_dofs(JT)
 
+constrained_dimension(j::Joint) = length(j.cdofs)
+exogenous_dimension(j::Joint) = length(j.edofs)
+unconstrained_dimension(j::Joint) = length(j.udofs)
+state_and_vel_dimension(j::Joint) = state_dimension(j) + exogenous_dimension(j) + unconstrained_dimension(j)
 
 function check_q_dimension(q,C::Type{T}) where T<:AbstractJointType
   @assert length(q) == state_dimension(C) "Incorrect length of q"
@@ -130,26 +135,39 @@ _classify_joint!(dof_lists,kins,index,::UnconstrainedDOF) = (push!(dof_lists["un
 ### Joint evolution equations ###
 
 """
-    zero_joint_state_and_vel(joint::Joint)
+    zero_joint(joint::Joint[;dimfcn=state_and_vel_dimension])
 
-Create a vector of zeros for the state of the joint and the parts of the
-joint velocity that must be advanced (from acceleration).
+Create a vector of zeros for different aspects of the joint state, based
+on the argument `dimfcn`. By default, it uses `state_and_vel_dimension` and creates a zero vector sized
+according to the the state of the joint and the parts of the
+joint velocity that must be advanced (from acceleration). Alternatively, one
+can use `state_dimension`, `constrained_dimension`, `unconstrained_dimension`,
+or `exogenous_dimension`.
 """
-function zero_joint_state_and_vel(joint::Joint{ND,JT}) where {ND,JT}
-    @unpack cdofs, edofs, udofs = joint
-
-    return zeros(Float64,state_dimension(JT) + length(edofs) + length(udofs))
+function zero_joint(joint::Joint{ND,JT};dimfcn=state_and_vel_dimension) where {ND,JT}
+    return zeros(Float64,dimfcn(joint))
 end
 
-function joint_rhs!(dxdt,x,t::Real,a_edof::AbstractVector,a_udof::AbstractVector,joint::Joint{ND,JT}) where {ND,JT}
+function init_joint(joint::Joint{ND,JT};tinit = 0.0) where {ND,JT}
+    @unpack kins, cdofs = joint
+    x = zero_joint(joint)
+    q = view(x,1:state_dimension(joint))
+    for (i,jdof) in enumerate(cdofs)
+      kd = kins[i](tinit)
+      q[jdof] = dof_state(kd)
+    end
+    return x
+end
+
+function joint_rhs!(dxdt::AbstractVector,x::AbstractVector,t::Real,a_edof::AbstractVector,a_udof::AbstractVector,joint::Joint{ND,JT}) where {ND,JT}
    @unpack kins, cdofs, edofs, udofs, vbuf = joint
 
    # x holds both q and the parts of qdot that must be advanced
-   q = view(x,1:state_dimension(JT))
-   veu = view(x,state_dimension(JT)+1:state_dimension(JT)+length(edofs)+length(udofs))
+   q = view(x,1:state_dimension(joint))
+   veu = view(x,state_dimension(joint)+1:state_and_vel_dimension(joint))
 
-   qdot = view(dxdt,1:state_dimension(JT))
-   aeu = view(dxdt,state_dimension(JT)+1:state_dimension(JT)+length(edofs)+length(udofs))
+   qdot = view(dxdt,1:state_dimension(joint))
+   aeu = view(dxdt,state_dimension(joint)+1:state_and_vel_dimension(joint))
 
    # evaluate the prescribed kinematics at the current time
    for (i,jdof) in enumerate(cdofs)
@@ -165,8 +183,8 @@ function joint_rhs!(dxdt,x,t::Real,a_edof::AbstractVector,a_udof::AbstractVector
 
    # parse the unconstrained velocities into their entries
    for (i,jdof) in enumerate(udofs)
-     vbuf[jdof] = veu[length(edofs)+i]
-     aeu[length(edofs)+i] = a_udof[i]
+     vbuf[jdof] = veu[exogenous_dimension(joint)+i]
+     aeu[exogenous_dimension(joint)+i] = a_udof[i]
    end
 
    joint_velocity!(qdot,q,vbuf,JT)
