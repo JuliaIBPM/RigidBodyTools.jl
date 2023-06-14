@@ -58,7 +58,6 @@ numpts(::Nothing) = 0
 include("kinematics.jl")
 include("rigidtransform.jl")
 include("joints.jl")
-include("linkedsystem.jl")
 
 include("rigidbodymotions.jl")
 include("directmotions.jl")
