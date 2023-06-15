@@ -165,8 +165,9 @@ end
 """
     linked_system_transform(q::AbstractVector,ls::RigidBodyMotion) -> MotionTransformList
 
-Return a MotionTransformList by parsing the overall state vector `q`
-into the individual joints.
+Parse the overall state vector `q` into the individual joints and construct
+the inertial system-to-body transforms for every body. Return these
+transforms in a `MotionTransformList`.
 """
 function linked_system_transform(q::AbstractVector,ls::RigidBodyMotion{ND}) where {ND}
     X = MotionTransform{ND}()
@@ -189,6 +190,57 @@ function _joint_descendants_transform!(ml,Xp::MotionTransform,jid::Int,q::Abstra
     end
     nothing
 end
+
+function zero_plucker(ND::Int)
+  pd = plucker_dimension(Val(ND))
+  SVector{pd}(zeros(Float64,pd))
+end
+
+"""
+    body_velocities(x::AbstractVector,t::Real,ls::RigidBodyMotion) ->
+
+Compute the velocities of bodies for the rigid body system `ls`, expressing each in its own coordinate system.
+To carry this out, the function evaluates velocities of dofs with prescribed kinematics at time `t` and
+and obtains the remaining free dofs (exogenous and unconstrained) from the state/velocity vector `x`.
+"""
+function body_velocities(x::AbstractVector,t::Real,ls::RigidBodyMotion{ND}) where {ND}
+    v0 = zero_plucker(ND)
+    vl = [v0 for jb in 1:ls.nbody]
+    for lsid in 1:number_of_linked_systems(ls)
+      jid = first_joint(lsid,ls)
+      _child_velocity_from_parent!(vl,v0,jid,x,t,ls)
+    end
+    return vl
+end
+
+function _child_velocity_from_parent!(vl,vp::SVector,jid::Int,x::AbstractVector,t::Real,ls::RigidBodyMotion)
+    @unpack joints, child_joints = ls
+
+    joint = joints[jid]
+    xJ = view(x,ls,jid;dimfcn=state_and_vel_dimension)
+    q = statevector(x,ls)
+    vJ = joint_velocity(xJ,t,joint)
+    qJ = view(q,ls,jid)
+
+    Xp_to_ch = parent_to_child_transform(qJ,joint)
+    xJ_to_ch = inv(joint.Xch_to_j)
+
+    vch = _child_velocity_from_parent(Xp_to_ch,vp,xJ_to_ch,vJ)
+    bid = joint.child_id
+    vl[bid] = deepcopy(vch)
+
+    for jcid in child_joints[bid]
+        _child_velocity_from_parent!(vl,vch,jcid,x,t,ls)
+    end
+    nothing
+
+end
+
+
+function _child_velocity_from_parent(Xp_to_ch::MotionTransform,vp::SVector,XJ_to_ch::MotionTransform,vJ::SVector)
+    vch = Xp_to_ch*vp + XJ_to_ch*vJ
+end
+
 
 """
     zero_joint(ls::RigidBodyMotion[;dimfcn=state_and_vel_dimension])
@@ -253,6 +305,7 @@ function joint_rhs!(dxdt::AbstractVector,x::AbstractVector,t::Real,a_edof::Abstr
     end
     nothing
 end
+
 
 
 #=

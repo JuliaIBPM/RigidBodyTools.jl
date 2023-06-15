@@ -9,6 +9,9 @@ const O3VECTOR = SVector{3}(zeros(Float64,3))
 const I3 = SMatrix{3,3}(I)
 const O3 = SMatrix{3,3}(zeros(Float64,9))
 
+plucker_dimension(::Val{2}) = 3
+plucker_dimension(::Val{3}) = 6
+
 
 ### Plucker transform matrices ###
 abstract type AbstractTransformOperator{ND} end
@@ -48,9 +51,12 @@ function transpose(T::ForceTransform{ND}) where {ND}
     MotionTransform{ND}(x,transpose(T.R),transpose(T.matrix))
 end
 
-
 inv(T::MotionTransform{ND}) where {ND} = transpose(ForceTransform{ND}(T.x,T.R))
 inv(T::ForceTransform{ND}) where {ND} = transpose(MotionTransform{ND}(T.x,T.R))
+
+rotation_transform(T::MotionTransform{ND}) where {ND} = MotionTransform{ND}(O3VECTOR,T.R)
+rotation_transform(T::ForceTransform{ND}) where {ND} = ForceTransform{ND}(O3VECTOR,T.R)
+
 
 vec(T::AbstractTransformOperator{2}) = [T.x[1],T.x[2],_get_angle_of_2d_transform(T)]
 

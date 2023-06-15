@@ -87,6 +87,15 @@ end
 state_dimension(j::Joint{ND,JT}) where {ND,JT} = state_dimension(JT)
 number_of_dofs(j::Joint{ND,JT}) where {ND,JT} = number_of_dofs(JT)
 
+"""
+    motion_subspace(j::Joint)
+
+Return the `6 x ndof` (3d) or `3 x ndof` (2d) matrix providing the mapping from joint dof velocities
+to the full Plucker velocity vector of the joint. This matrix represents
+the subspace of free motion in the full space. It is orthogonal to the constrained subspace.
+"""
+motion_subspace(j::Joint{ND,JT}) where {ND,JT} = motion_subspace(JT,j.params,Val(ND))
+
 constrained_dimension(j::Joint) = length(j.cdofs)
 exogenous_dimension(j::Joint) = length(j.edofs)
 unconstrained_dimension(j::Joint) = length(j.udofs)
@@ -162,40 +171,73 @@ end
 function joint_rhs!(dxdt::AbstractVector,x::AbstractVector,t::Real,a_edof::AbstractVector,a_udof::AbstractVector,joint::Joint{ND,JT}) where {ND,JT}
    @unpack kins, cdofs, edofs, udofs, vbuf = joint
 
+   # Evaluate the velocity of the dofs and place the result in joint.vbuf
+   _joint_velocity!(x,t,joint)
+
    # x holds both q and the parts of qdot that must be advanced
    q = view(x,1:state_dimension(joint))
-   veu = view(x,state_dimension(joint)+1:state_and_vel_dimension(joint))
 
    qdot = view(dxdt,1:state_dimension(joint))
    aeu = view(dxdt,state_dimension(joint)+1:state_and_vel_dimension(joint))
 
-   # evaluate the prescribed kinematics at the current time
-   for (i,jdof) in enumerate(cdofs)
-     kd = kins[i](t)
-     vbuf[jdof] = dof_velocity(kd)
-   end
-
-   # parse the exogenous velocities into their entries
+   # parse the exogenous accelerations into their entries
    for (i,jdof) in enumerate(edofs)
-     vbuf[jdof] = veu[i]
      aeu[i] = a_edof[i]
    end
 
-   # parse the unconstrained velocities into their entries
+   # parse the unconstrained accelerations into their entries
    for (i,jdof) in enumerate(udofs)
-     vbuf[jdof] = veu[exogenous_dimension(joint)+i]
      aeu[exogenous_dimension(joint)+i] = a_udof[i]
    end
 
-   joint_velocity!(qdot,q,vbuf,JT)
+   joint_dqdt!(qdot,q,vbuf,JT)
+end
+
+"""
+    joint_velocity(x::AbstractVector,t,joint::Joint)
+
+Given a joint `joint`'s full state/velocity vector `x`, compute the joint Plucker velocity at time `t`.
+"""
+function joint_velocity(x::AbstractVector,t::Real,joint::Joint)
+    @unpack vbuf = joint
+
+    _joint_velocity!(x,t,joint)
+
+    return motion_subspace(joint)*vbuf
+
+end
+
+function _joint_velocity!(x::AbstractVector,t::Real,joint::Joint)
+  @unpack kins, cdofs, edofs, udofs, vbuf = joint
+
+  veu = view(x,state_dimension(joint)+1:state_and_vel_dimension(joint))
+  
+  vbuf .= 0.0
+
+  # evaluate the prescribed kinematics at the current time
+  for (i,jdof) in enumerate(cdofs)
+    kd = kins[i](t)
+    vbuf[jdof] = dof_velocity(kd)
+  end
+
+  # parse the exogenous velocities into their entries
+  for (i,jdof) in enumerate(edofs)
+    vbuf[jdof] = veu[i]
+  end
+
+  # parse the unconstrained velocities into their entries
+  for (i,jdof) in enumerate(udofs)
+    vbuf[jdof] = veu[exogenous_dimension(joint)+i]
+  end
+
 end
 
 
-function _joint_velocity_standard!(dqdt,q,v)
+function _joint_dqdt_standard!(dqdt,q,v)
     dqdt .= v
 end
 
-function _joint_velocity_quaternion!(dqdt,q,w)
+function _joint_dqdt_quaternion!(dqdt,q,w)
     dqdt[1] = -q[2]*w[1] - q[3]*w[2] - q[4]*w[3]
     dqdt[2] =  q[1]*w[1] - q[4]*w[2] + q[3]*w[3]
     dqdt[3] =  q[4]*w[1] + q[1]*w[2] - q[2]*w[3]
@@ -204,18 +246,20 @@ function _joint_velocity_quaternion!(dqdt,q,w)
     return dqdt
 end
 
-function _joint_acceleration_standard!(dvdt,v,a)
-    dvdt .= a
-end
-
 
 #### Joint types ####
 
 ## Default joint velocity calculation
 
-function joint_velocity!(dqdt,q,v::Vector,::Type{T}) where T<:AbstractJointType
-  _joint_velocity_standard!(dqdt,q,v)
+function joint_dqdt!(dqdt,q,v::Vector,::Type{T}) where T<:AbstractJointType
+  _joint_dqdt_standard!(dqdt,q,v)
   nothing
+end
+
+function motion_subspace(JT::Type{<:AbstractJointType},p::Dict,::Val{2})
+  S3 = motion_subspace(JT,p,Val(3))
+  m, n = size(S3)
+  SMatrix{3,n}(S3[3:5,:])
 end
 
 ## Revolute joint ##
@@ -231,6 +275,8 @@ function joint_transform(q::AbstractVector,::Type{RevoluteJoint},p::Dict,::Val{N
   return MotionTransform{ND}(x,R)
 end
 
+motion_subspace(::Type{RevoluteJoint},p::Dict,::Val{3}) = SMatrix{6,1,Float64}([0 0 1 0 0 0]')
+
 ## Prismatic joint ##
 
 abstract type PrismaticJoint <: AbstractJointType end
@@ -243,6 +289,9 @@ function joint_transform(q::AbstractVector,::Type{PrismaticJoint},p::Dict,::Val{
   x = SVector{3}([0.0,0.0,q[1]])
   return MotionTransform{3}(x,R)
 end
+
+motion_subspace(::Type{PrismaticJoint},p::Dict,::Val{3}) = SMatrix{6,1,Float64}([0 0 0 0 0 1]')
+
 
 ## Helical joint ##
 
@@ -257,6 +306,8 @@ function joint_transform(q::AbstractVector,C::Type{HelicalJoint},p::Dict,::Val{3
   return MotionTransform{3}(x,R)
 end
 
+motion_subspace(::Type{HelicalJoint},p::Dict,::Val{3}) = SMatrix{6,1,Float64}([0 0 1 0 0 p["pitch"]]')
+
 ## Cylindrical joint ##
 
 abstract type CylindricalJoint <: AbstractJointType end
@@ -269,6 +320,8 @@ function joint_transform(q::AbstractVector,::Type{CylindricalJoint},p::Dict,::Va
   x = SVector{3}([0.0,0.0,q[2]])
   return MotionTransform{3}(x,R)
 end
+
+motion_subspace(::Type{CylindricalJoint},p::Dict,::Val{3}) = SMatrix{6,2,Float64}([0 0 1 0 0 0; 0 0 0 0 0 1]')
 
 ## Spherical joint ##
 
@@ -283,8 +336,12 @@ function joint_transform(q::AbstractVector,::Type{SphericalJoint},p::Dict,::Val{
   return MotionTransform{3}(x,R)
 end
 
-function joint_velocity!(dqdt,q,v,::Type{SphericalJoint})
-  _joint_velocity_quaternion!(dqdt,q,v)
+motion_subspace(::Type{SphericalJoint},p::Dict,::Val{3}) = SMatrix{6,3,Float64}([1 0 0 0 0 0;
+                                                                                 0 1 0 0 0 0;
+                                                                                 0 0 1 0 0 0]')
+
+function joint_dqdt!(dqdt,q,v,::Type{SphericalJoint})
+  _joint_dqdt_quaternion!(dqdt,q,v)
   nothing
 end
 
@@ -301,12 +358,15 @@ function joint_transform(q::AbstractVector,::Type{FreeJoint},p::Dict,::Val{3})
   return MotionTransform{3}(R'*x,R)
 end
 
-function joint_velocity!(dqdt,q,v,::Type{FreeJoint})
+motion_subspace(::Type{FreeJoint},p::Dict,::Val{3}) = SMatrix{6,6,Float64}(I)
+
+
+function joint_dqdt!(dqdt,q,v,::Type{FreeJoint})
   qrdot, qtdot = view(dqdt,1:4), view(dqdt,5:7)
   qr, qt = view(q,1:4), view(q,5:7)
   vr, vt = view(v,1:3), view(v,4:6)
-  _joint_velocity_quaternion!(qrdot,qr,vr)
-  _joint_velocity_standard!(qtdot,qt,vt)
+  _joint_dqdt_quaternion!(qrdot,qr,vr)
+  _joint_dqdt_standard!(qtdot,qt,vt)
   nothing
 end
 
@@ -322,3 +382,5 @@ function joint_transform(q::AbstractVector,::Type{FreeJoint2d},p::Dict,::Val{2})
   x = SVector{3}(q[2],q[3],0.0)
   return MotionTransform{2}(x,R)
 end
+
+motion_subspace(::Type{FreeJoint2d},p::Dict,::Val{2}) = SMatrix{3,3,Float64}(I)
