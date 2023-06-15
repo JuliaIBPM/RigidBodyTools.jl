@@ -4,7 +4,10 @@ using StaticArrays
 using LinearAlgebra
 using UnPack
 
-import Base: *, inv, transpose, vec
+import Base: *, +, -, inv, transpose, vec
+
+import Base: @propagate_inbounds,getindex, setindex!,iterate,size,length,push!,
+              collect,view,findall
 
 
 export Body
@@ -21,6 +24,8 @@ export RigidTransform, rotation_about_x, rotation_about_y, rotation_about_z, rot
           quaternion, rotation_about_axis, rotation_identity,
           MotionTransform, ForceTransform, AbstractTransformOperator, rotation_transform,
           cross_matrix, cross_vector, translation, rotation, motion_subspace, joint_velocity
+
+export PluckerForce, PluckerMotion
 
 export Joint, joint_transform, parent_to_child_transform, LinkedSystem, state_dimension,
         exogenous_dimension, constrained_dimension, unconstrained_dimension, state_and_vel_dimension

@@ -1,14 +1,14 @@
-import Base: @propagate_inbounds,getindex, setindex!,iterate,size,length,push!,
-              collect,view,findall
 
-export BodyList, MotionList, RigidTransformList, MotionTransformList, getrange
+
+export BodyList, MotionList, RigidTransformList, MotionTransformList, PluckerMotionList, getrange
 
 abstract type SetOfBodies end
 
 const LISTS = [:BodyList, :Body],
               [:MotionList, :AbstractMotion],
               [:RigidTransformList, :RigidTransform],
-              [:MotionTransformList, :MotionTransform]
+              [:MotionTransformList, :MotionTransform],
+              [:PluckerMotionList, :PluckerMotion]
 
 """
     BodyList([b1,b2,...])
@@ -270,6 +270,40 @@ function motion_state(bl::BodyList,motion::AbstractMotion)
     return x
 end
 
+
+"""
+    surface_velocity!(u::AbstractVector,v::AbstractVector,bl::BodyList,x::AbstractVector,ls::RigidBodyMotion,t::Real)
+
+Calculate the surface velocity components `u` and `v` for the points on bodies `bl`. The function evaluates
+prescribed kinematics at time `t` and draws non-prescribed (exogenous and unconstrained) velocities from
+vector `x`.
+"""
+function RigidBodyTools.surface_velocity!(u::AbstractVector,v::AbstractVector,bl::BodyList,x::AbstractVector,ls::RigidBodyMotion,t::Real)
+    q = statevector(x,ls)
+    ml = linked_system_transform(q,ls)
+    vl = body_velocities(x,t,ls)
+    for bid in 1:length(bl)
+        velocity_in_inertial_coordinates_2d!(view(u,bl,bid),view(v,bl,bid),bl[bid],vl[bid],inv(ml[bid]))
+    end
+end
+
+"""
+    update_body!(bl::BodyList,x::AbstractVector,ls::RigidBodyMotion)
+
+Update body `b` with the rigid-body motion `ls` and state/velocity vector `x`.
+"""
+function update_body!(bl::BodyList,x::AbstractVector,ls::RigidBodyMotion)
+    q = statevector(x,ls)
+    ml = linked_system_transform(q,ls)
+    ml(bl)
+    return bl
+end
+
+# Should eliminate the individual routines for update_body! and surface_velocity!, since they do not make as much
+# sense in that form (with their argument signature)
+
+#=
+
 """
     surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
                      bl::BodyList,ml::Union{AbstractMotion,MotionList},t::Real[;inertial=true])
@@ -314,6 +348,8 @@ function update_body!(bl::BodyList,x::AbstractVector,ml::MotionList)
     end
     return bl
 end
+
+=#
 
 """
     maxlistvelocity(bl::BodyList,ml::Union{AbstractMotion,List}[,tmax=100,dt=0.01])

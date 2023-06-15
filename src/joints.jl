@@ -194,7 +194,7 @@ function joint_rhs!(dxdt::AbstractVector,x::AbstractVector,t::Real,a_edof::Abstr
 end
 
 """
-    joint_velocity(x::AbstractVector,t,joint::Joint)
+    joint_velocity(x::AbstractVector,t,joint::Joint) -> PluckerMotion
 
 Given a joint `joint`'s full state/velocity vector `x`, compute the joint Plucker velocity at time `t`.
 """
@@ -203,7 +203,7 @@ function joint_velocity(x::AbstractVector,t::Real,joint::Joint)
 
     _joint_velocity!(x,t,joint)
 
-    return motion_subspace(joint)*vbuf
+    return PluckerMotion(motion_subspace(joint)*vbuf)
 
 end
 
@@ -211,7 +211,7 @@ function _joint_velocity!(x::AbstractVector,t::Real,joint::Joint)
   @unpack kins, cdofs, edofs, udofs, vbuf = joint
 
   veu = view(x,state_dimension(joint)+1:state_and_vel_dimension(joint))
-  
+
   vbuf .= 0.0
 
   # evaluate the prescribed kinematics at the current time

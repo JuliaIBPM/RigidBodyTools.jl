@@ -12,6 +12,55 @@ const O3 = SMatrix{3,3}(zeros(Float64,9))
 plucker_dimension(::Val{2}) = 3
 plucker_dimension(::Val{3}) = 6
 
+### Plucker vectors ###
+abstract type AbstractPluckerVector{ND} end
+
+struct PluckerMotion{ND} <: AbstractPluckerVector{ND}
+  data :: SVector
+end
+
+struct PluckerForce{ND} <: AbstractPluckerVector{ND}
+  data :: SVector
+end
+
+for typename in [:PluckerMotion,:PluckerForce]
+
+  fname_underscore = Symbol("_",lowercase(string(typename)))
+
+  @eval function $typename{ND}() where {ND}
+    pd = plucker_dimension(Val(ND))
+    $typename{ND}(SVector{pd}(zeros(Float64,pd)))
+  end
+
+  @eval $typename(v::SVector{3}) = $typename{2}(v)
+
+  @eval $typename(v::SVector{6}) = $typename{3}(v)
+
+  @eval $typename(v::AbstractVector) = $fname_underscore(v,Val(length(v)))
+
+  @eval $fname_underscore(v,::Val{3}) = $typename(SVector{3}(v))
+
+  @eval $fname_underscore(v,::Val{6}) = $typename(SVector{6}(v))
+
+  @eval (+)(a::$typename{ND},b::$typename{ND}) where {ND} = $typename{ND}(a.data+b.data)
+
+  @eval (-)(a::$typename{ND},b::$typename{ND}) where {ND} = $typename{ND}(a.data-b.data)
+
+  @eval (-)(a::$typename{ND}) where {ND} = $typename{ND}(-a.data)
+
+  @eval @propagate_inbounds getindex(A::$typename, i::Int) = A.data[i]
+  @eval @propagate_inbounds getindex(A::$typename, I...) = A.data[I...]
+
+  @eval iterate(A::$typename) = iterate(A.data)
+  @eval iterate(A::$typename,I) = iterate(A.data,I)
+  @eval size(A::$typename) = size(A.data)
+  @eval length(A::$typename) = length(A.data)
+
+
+end
+
+
+
 
 ### Plucker transform matrices ###
 abstract type AbstractTransformOperator{ND} end
@@ -40,6 +89,9 @@ rotation(T::AbstractTransformOperator{2}) = SMatrix{2,2}(T.R[1:2,1:2])
 
 (*)(T::AbstractTransformOperator,v) = T.matrix*v
 (*)(v,T::AbstractTransformOperator) = v*T.matrix
+
+(*)(T::MotionTransform,v::PluckerMotion) = PluckerMotion(T*v.data)
+(*)(T::ForceTransform,v::PluckerForce) = PluckerForce(T*v.data)
 
 
 function transpose(T::MotionTransform{ND}) where {ND}
