@@ -1,6 +1,9 @@
 abstract type AbstractDeformationMotion <: AbstractMotion end
 
 #=
+NOTE: The combined rigid/deforming motion needs to be updated, so
+that deforming motion is added to an underlying linked system. 
+
 To create a subtype of AbstractDeformationMotion, one must
 extend `motion_velocity(body,m,t)`, to supply the
 surface values of the motion in-place in vectors `u` and `v`.

@@ -28,7 +28,8 @@ export RigidTransform, rotation_about_x, rotation_about_y, rotation_about_z, rot
 export PluckerForce, PluckerMotion
 
 export Joint, joint_transform, parent_to_child_transform, LinkedSystem, position_dimension,
-        exogenous_dimension, constrained_dimension, unconstrained_dimension, position_and_vel_dimension
+        exogenous_dimension, constrained_dimension, unconstrained_dimension, position_and_vel_dimension,
+        body_transforms
 
 export Oscillation, OscillationX, OscillationY, OscillationXY, RotationalOscillation,
         PitchHeave, Pitchup, EldredgeRamp, ColoniusRamp, SwitchedKinematics,

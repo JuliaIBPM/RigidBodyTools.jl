@@ -9,7 +9,7 @@ inertial system and possibly to each other, via joints. The basic constructor is
 a vector of joints of [`Joint`](@ref) type, each specifying the connection between
 a parent and a child body. (The parent may be the inertial coordinate system.)
 """
-struct RigidBodyMotion{ND}
+struct RigidBodyMotion{ND} <: AbstractMotion
     nls :: Int
     nbody :: Int
 
@@ -163,13 +163,13 @@ function Base.view(q::AbstractVector,ls::RigidBodyMotion,jid::Int;dimfcn::Functi
 end
 
 """
-    linked_system_transform(q::AbstractVector,ls::RigidBodyMotion) -> MotionTransformList
+    body_transforms(q::AbstractVector,ls::RigidBodyMotion) -> MotionTransformList
 
 Parse the overall position vector `q` into the individual joints and construct
 the inertial system-to-body transforms for every body. Return these
 transforms in a `MotionTransformList`.
 """
-function linked_system_transform(q::AbstractVector,ls::RigidBodyMotion{ND}) where {ND}
+function body_transforms(q::AbstractVector,ls::RigidBodyMotion{ND}) where {ND}
     X = MotionTransform{ND}()
     ml = [deepcopy(X) for jb in 1:ls.nbody]
     for lsid in 1:number_of_linked_systems(ls)
@@ -194,7 +194,7 @@ end
 
 
 """
-    body_velocities(x::AbstractVector,t::Real,ls::RigidBodyMotion) ->
+    body_velocities(x::AbstractVector,t::Real,ls::RigidBodyMotion) -> PluckerMotionList
 
 Compute the velocities of bodies for the rigid body system `ls`, expressing each in its own coordinate system.
 To carry this out, the function evaluates velocities of dofs with prescribed kinematics at time `t` and
@@ -253,13 +253,15 @@ function zero_joint(ls::RigidBodyMotion;dimfcn=position_and_vel_dimension)
 end
 
 """
-    init_joint(ls::RigidBodyMotion[;tinit = 0.0])
+    init_state(ls::RigidBodyMotion[;tinit = 0.0])
 
 Initialize the global linked system state vector, using
 the prescribed motions for constrained degrees of freedom to initialize
 the position components (evaluated at `tinit`, which by default is 0).
+The other degrees of freedom are initialized to zero, and can be
+set manually.
 """
-function init_joint(ls::RigidBodyMotion;kwargs...)
+function init_state(ls::RigidBodyMotion;kwargs...)
     mapreduce(joint -> init_joint(joint;kwargs...),vcat,ls.joints)
 end
 
@@ -320,7 +322,7 @@ function velocity_in_body_coordinates_2d!(u::AbstractVector,v::AbstractVector,b:
     end
 end
 
-function velocity_in_inertial_coordinates_2d!(u::AbstractVector,v::AbstractVector,b::Body,vb::PluckerMotion,Xb_to_0::MotionTransform)
+function surface_velocity!(u::AbstractVector,v::AbstractVector,b::Body,vb::PluckerMotion,Xb_to_0::MotionTransform)
     Rb_to_0 = rotation_transform(Xb_to_0)
     for i in 1:numpts(b)
         vp = Rb_to_0*velocity_in_body_coordinates_2d(b.x̃[i],b.ỹ[i],vb)

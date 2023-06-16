@@ -272,29 +272,29 @@ end
 
 
 """
-    surface_velocity!(u::AbstractVector,v::AbstractVector,bl::BodyList,x::AbstractVector,ls::RigidBodyMotion,t::Real)
+    surface_velocity!(u::AbstractVector,v::AbstractVector,bl::BodyList,x::AbstractVector,m::RigidBodyMotion,t::Real)
 
 Calculate the surface velocity components `u` and `v` for the points on bodies `bl`. The function evaluates
-prescribed kinematics at time `t` and draws non-prescribed (exogenous and unconstrained) velocities from
+prescribed kinematics at time `t` and extracts non-prescribed (exogenous and unconstrained) velocities from
 state vector `x`.
 """
-function RigidBodyTools.surface_velocity!(u::AbstractVector,v::AbstractVector,bl::BodyList,x::AbstractVector,ls::RigidBodyMotion,t::Real)
-    q = positionvector(x,ls)
-    ml = linked_system_transform(q,ls)
-    vl = body_velocities(x,t,ls)
+function surface_velocity!(u::AbstractVector,v::AbstractVector,bl::BodyList,x::AbstractVector,m::RigidBodyMotion,t::Real)
+    q = positionvector(x,m)
+    ml = body_transforms(q,m)
+    vl = body_velocities(x,t,m)
     for bid in 1:length(bl)
-        velocity_in_inertial_coordinates_2d!(view(u,bl,bid),view(v,bl,bid),bl[bid],vl[bid],inv(ml[bid]))
+        surface_velocity!(view(u,bl,bid),view(v,bl,bid),bl[bid],vl[bid],inv(ml[bid]))
     end
 end
 
 """
-    update_body!(bl::BodyList,x::AbstractVector,ls::RigidBodyMotion)
+    update_body!(bl::BodyList,x::AbstractVector,m::RigidBodyMotion)
 
-Update body `b` with the rigid-body motion `ls` and state vector `x`.
+Update body `b` with the rigid-body motion `m` and state vector `x`.
 """
-function update_body!(bl::BodyList,x::AbstractVector,ls::RigidBodyMotion)
-    q = positionvector(x,ls)
-    ml = linked_system_transform(q,ls)
+function update_body!(bl::BodyList,x::AbstractVector,m::RigidBodyMotion)
+    q = positionvector(x,m)
+    ml = body_transforms(q,m)
     ml(bl)
     return bl
 end

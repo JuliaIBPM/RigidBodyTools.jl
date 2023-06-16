@@ -157,6 +157,14 @@ function zero_joint(joint::Joint{ND,JT};dimfcn=position_and_vel_dimension) where
     return zeros(Float64,dimfcn(joint))
 end
 
+"""
+    init_joint(joint::Joint[;tinit=0.0])
+
+Create an initial state vector for a joint. It initializes the joint's constrained
+degrees of freedom with their kinematics, evaluated at time `tinit` (equal to zero, by default).
+Other degrees of freedom (exogenous, unconstrained) are initialized to zero, so
+they can be set manually.
+"""
 function init_joint(joint::Joint{ND,JT};tinit = 0.0) where {ND,JT}
     @unpack kins, cdofs = joint
     x = zero_joint(joint)
