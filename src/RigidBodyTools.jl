@@ -17,7 +17,7 @@ export RigidBodyMotion, AbstractKinematics, d_dt, motion_velocity, motion_state,
           RigidAndDeformingMotion,maxvelocity, maxlistvelocity
 
 export AbstractDOFKinematics, AbstractPrescribedDOFKinematics, DOFKinematicData, SmoothRampDOF,
-        OscillatoryDOF, ConstantVelocityDOF, CustomDOF, ExogenousDOF, ConstantStateDOF,
+        OscillatoryDOF, ConstantVelocityDOF, CustomDOF, ExogenousDOF, ConstantPositionDOF,
         UnconstrainedDOF, Kinematics
 
 export RigidTransform, rotation_about_x, rotation_about_y, rotation_about_z, rotation_from_quaternion,
@@ -27,8 +27,8 @@ export RigidTransform, rotation_about_x, rotation_about_y, rotation_about_z, rot
 
 export PluckerForce, PluckerMotion
 
-export Joint, joint_transform, parent_to_child_transform, LinkedSystem, state_dimension,
-        exogenous_dimension, constrained_dimension, unconstrained_dimension, state_and_vel_dimension
+export Joint, joint_transform, parent_to_child_transform, LinkedSystem, position_dimension,
+        exogenous_dimension, constrained_dimension, unconstrained_dimension, position_and_vel_dimension
 
 export Oscillation, OscillationX, OscillationY, OscillationXY, RotationalOscillation,
         PitchHeave, Pitchup, EldredgeRamp, ColoniusRamp, SwitchedKinematics,

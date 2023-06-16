@@ -276,10 +276,10 @@ end
 
 Calculate the surface velocity components `u` and `v` for the points on bodies `bl`. The function evaluates
 prescribed kinematics at time `t` and draws non-prescribed (exogenous and unconstrained) velocities from
-vector `x`.
+state vector `x`.
 """
 function RigidBodyTools.surface_velocity!(u::AbstractVector,v::AbstractVector,bl::BodyList,x::AbstractVector,ls::RigidBodyMotion,t::Real)
-    q = statevector(x,ls)
+    q = positionvector(x,ls)
     ml = linked_system_transform(q,ls)
     vl = body_velocities(x,t,ls)
     for bid in 1:length(bl)
@@ -290,10 +290,10 @@ end
 """
     update_body!(bl::BodyList,x::AbstractVector,ls::RigidBodyMotion)
 
-Update body `b` with the rigid-body motion `ls` and state/velocity vector `x`.
+Update body `b` with the rigid-body motion `ls` and state vector `x`.
 """
 function update_body!(bl::BodyList,x::AbstractVector,ls::RigidBodyMotion)
-    q = statevector(x,ls)
+    q = positionvector(x,ls)
     ml = linked_system_transform(q,ls)
     ml(bl)
     return bl

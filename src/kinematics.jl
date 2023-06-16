@@ -29,31 +29,31 @@ struct DOFKinematicData
 end
 
 (k::AbstractPrescribedDOFKinematics)(t) = DOFKinematicData(t,k.x(t),k.ẋ(t),k.ẍ(t))
-dof_state(kd::DOFKinematicData) = kd.x
+dof_position(kd::DOFKinematicData) = kd.x
 dof_velocity(kd::DOFKinematicData) = kd.ẋ
 dof_acceleration(kd::DOFKinematicData) = kd.ẍ
 
 
 """
-    ConstantStateDOF(x0::Float64) <: AbstractPrescribedDOFKinematics
+    ConstantPositionDOF(x0::Float64) <: AbstractPrescribedDOFKinematics
 
-Set kinematics with constant state `x0`.
+Set kinematics with constant position `x0`.
 """
-struct ConstantStateDOF <: AbstractPrescribedDOFKinematics
+struct ConstantPositionDOF <: AbstractPrescribedDOFKinematics
     x0 :: Float64
 
     x :: Abstract1DProfile
     ẋ :: Abstract1DProfile
     ẍ :: Abstract1DProfile
 end
-function ConstantStateDOF(x0)
+function ConstantPositionDOF(x0)
     x = ConstantProfile(x0)
     ẋ = d_dt(x)
     ẍ = d_dt(ẋ)
-    ConstantStateDOF(x0,x,ẋ,ẍ)
+    ConstantPositionDOF(x0,x,ẋ,ẍ)
 end
-function show(io::IO, p::ConstantStateDOF)
-  print(io, "Constant state kinematics (state = $(p.x0))")
+function show(io::IO, p::ConstantPositionDOF)
+  print(io, "Constant position kinematics (position = $(p.x0))")
 end
 
 """
@@ -111,7 +111,7 @@ function SmoothRampDOF(x0,ẋ0,Δx,t0; ramp = EldredgeRamp(11.0))
 end
 
 function show(io::IO, p::SmoothRampDOF)
-  print(io, "Smooth ramp kinematics (initial state = $(p.x0), nominal rate = $(p.ẋ0), amplitude = $(p.Δx), nominal time = $(p.t0))")
+  print(io, "Smooth ramp kinematics (initial position = $(p.x0), nominal rate = $(p.ẋ0), amplitude = $(p.Δx), nominal time = $(p.t0))")
 end
 
 
@@ -153,7 +153,7 @@ function OscillatoryDOF(A,Ω,ϕ,x0,ẋ0)
 end
 
 function show(io::IO, p::OscillatoryDOF)
-  print(io, "Oscillatory kinematics (amplitude = $(p.A), ang freq = $(p.Ω), phase = $(p.ϕ), initial state = $(p.x0), mean velocity = $(p.ẋ0))")
+  print(io, "Oscillatory kinematics (amplitude = $(p.A), ang freq = $(p.Ω), phase = $(p.ϕ), initial position = $(p.x0), mean velocity = $(p.ẋ0))")
 end
 
 """
@@ -199,7 +199,7 @@ end
 Sets a DOF as unconstrained, so that its behavior is either completely free
 or determined by a given force response (e.g., spring and/or damper). This force
 response is set by the optional input function `f`. The signature of `f` must be `f(x,xdot,t)`,
-where `x` and `xdot` are the state of the dof and its derivative,
+where `x` and `xdot` are the position of the dof and its derivative,
 respectively, and `t` is the current time. It must return a single scalar,
 serving as a force or torque for that DOF.
 """
@@ -358,10 +358,10 @@ function (kin::Kinematics)(t)
     xpkd = kin.xpk(t)
     ypkd = kin.ypk(t)
 
-    zp = dof_state(xpkd) + im*dof_state(ypkd)
+    zp = dof_position(xpkd) + im*dof_position(ypkd)
     żp = dof_velocity(xpkd) + im*dof_velocity(ypkd)
     z̈p = dof_acceleration(xpkd) + im*dof_acceleration(ypkd)
-    α = dof_state(apkd)
+    α = dof_position(apkd)
     α̇ = dof_velocity(apkd)
     α̈ = dof_acceleration(apkd)
 
@@ -403,7 +403,7 @@ can be replaced by another Eldredge ramp with a different value or a `ColoniusRa
 Pitchup(U₀,a,K,α₀,t₀,Δα;ramp=EldredgeRamp(11.0)) =
             Kinematics(SmoothRampDOF(α₀,2K,Δα,t₀;ramp=ramp),
                        ConstantVelocityDOF(U₀),
-                       ConstantStateDOF(0.0); pivot=(a,0.0))
+                       ConstantPositionDOF(0.0); pivot=(a,0.0))
 
 
 

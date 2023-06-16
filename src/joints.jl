@@ -84,7 +84,7 @@ function physical_dimension(jvec::Vector{<:Joint})
 end
 
 
-state_dimension(j::Joint{ND,JT}) where {ND,JT} = state_dimension(JT)
+position_dimension(j::Joint{ND,JT}) where {ND,JT} = position_dimension(JT)
 number_of_dofs(j::Joint{ND,JT}) where {ND,JT} = number_of_dofs(JT)
 
 """
@@ -99,10 +99,10 @@ motion_subspace(j::Joint{ND,JT}) where {ND,JT} = motion_subspace(JT,j.params,Val
 constrained_dimension(j::Joint) = length(j.cdofs)
 exogenous_dimension(j::Joint) = length(j.edofs)
 unconstrained_dimension(j::Joint) = length(j.udofs)
-state_and_vel_dimension(j::Joint) = state_dimension(j) + exogenous_dimension(j) + unconstrained_dimension(j)
+position_and_vel_dimension(j::Joint) = position_dimension(j) + exogenous_dimension(j) + unconstrained_dimension(j)
 
 function check_q_dimension(q,C::Type{T}) where T<:AbstractJointType
-  @assert length(q) == state_dimension(C) "Incorrect length of q"
+  @assert length(q) == position_dimension(C) "Incorrect length of q"
 end
 
 """
@@ -144,26 +144,26 @@ _classify_joint!(dof_lists,kins,index,::UnconstrainedDOF) = (push!(dof_lists["un
 ### Joint evolution equations ###
 
 """
-    zero_joint(joint::Joint[;dimfcn=state_and_vel_dimension])
+    zero_joint(joint::Joint[;dimfcn=position_and_vel_dimension])
 
 Create a vector of zeros for different aspects of the joint state, based
-on the argument `dimfcn`. By default, it uses `state_and_vel_dimension` and creates a zero vector sized
-according to the the state of the joint and the parts of the
+on the argument `dimfcn`. By default, it uses `position_and_vel_dimension` and creates a zero vector sized
+according to the the position of the joint and the parts of the
 joint velocity that must be advanced (from acceleration). Alternatively, one
-can use `state_dimension`, `constrained_dimension`, `unconstrained_dimension`,
+can use `position_dimension`, `constrained_dimension`, `unconstrained_dimension`,
 or `exogenous_dimension`.
 """
-function zero_joint(joint::Joint{ND,JT};dimfcn=state_and_vel_dimension) where {ND,JT}
+function zero_joint(joint::Joint{ND,JT};dimfcn=position_and_vel_dimension) where {ND,JT}
     return zeros(Float64,dimfcn(joint))
 end
 
 function init_joint(joint::Joint{ND,JT};tinit = 0.0) where {ND,JT}
     @unpack kins, cdofs = joint
     x = zero_joint(joint)
-    q = view(x,1:state_dimension(joint))
+    q = view(x,1:position_dimension(joint))
     for (i,jdof) in enumerate(cdofs)
       kd = kins[i](tinit)
-      q[jdof] = dof_state(kd)
+      q[jdof] = dof_position(kd)
     end
     return x
 end
@@ -175,10 +175,10 @@ function joint_rhs!(dxdt::AbstractVector,x::AbstractVector,t::Real,a_edof::Abstr
    _joint_velocity!(x,t,joint)
 
    # x holds both q and the parts of qdot that must be advanced
-   q = view(x,1:state_dimension(joint))
+   q = view(x,1:position_dimension(joint))
 
-   qdot = view(dxdt,1:state_dimension(joint))
-   aeu = view(dxdt,state_dimension(joint)+1:state_and_vel_dimension(joint))
+   qdot = view(dxdt,1:position_dimension(joint))
+   aeu = view(dxdt,position_dimension(joint)+1:position_and_vel_dimension(joint))
 
    # parse the exogenous accelerations into their entries
    for (i,jdof) in enumerate(edofs)
@@ -196,7 +196,7 @@ end
 """
     joint_velocity(x::AbstractVector,t,joint::Joint) -> PluckerMotion
 
-Given a joint `joint`'s full state/velocity vector `x`, compute the joint Plucker velocity at time `t`.
+Given a joint `joint`'s full state vector `x`, compute the joint Plucker velocity at time `t`.
 """
 function joint_velocity(x::AbstractVector,t::Real,joint::Joint)
     @unpack vbuf = joint
@@ -210,7 +210,7 @@ end
 function _joint_velocity!(x::AbstractVector,t::Real,joint::Joint)
   @unpack kins, cdofs, edofs, udofs, vbuf = joint
 
-  veu = view(x,state_dimension(joint)+1:state_and_vel_dimension(joint))
+  veu = view(x,position_dimension(joint)+1:position_and_vel_dimension(joint))
 
   vbuf .= 0.0
 
@@ -267,7 +267,7 @@ end
 abstract type RevoluteJoint <: AbstractJointType end
 
 number_of_dofs(::Type{RevoluteJoint}) = 1
-state_dimension(::Type{RevoluteJoint}) = 1
+position_dimension(::Type{RevoluteJoint}) = 1
 
 function joint_transform(q::AbstractVector,::Type{RevoluteJoint},p::Dict,::Val{ND}) where {ND}
   R = rotation_about_z(-q[1])
@@ -282,7 +282,7 @@ motion_subspace(::Type{RevoluteJoint},p::Dict,::Val{3}) = SMatrix{6,1,Float64}([
 abstract type PrismaticJoint <: AbstractJointType end
 
 number_of_dofs(::Type{PrismaticJoint}) = 1
-state_dimension(::Type{PrismaticJoint}) = 1
+position_dimension(::Type{PrismaticJoint}) = 1
 
 function joint_transform(q::AbstractVector,::Type{PrismaticJoint},p::Dict,::Val{3})
   R = rotation_identity()
@@ -298,7 +298,7 @@ motion_subspace(::Type{PrismaticJoint},p::Dict,::Val{3}) = SMatrix{6,1,Float64}(
 abstract type HelicalJoint <: AbstractJointType end
 
 number_of_dofs(::Type{HelicalJoint}) = 1
-state_dimension(::Type{HelicalJoint}) = 1
+position_dimension(::Type{HelicalJoint}) = 1
 
 function joint_transform(q::AbstractVector,C::Type{HelicalJoint},p::Dict,::Val{3})
   R = rotation_about_z(-q[1])
@@ -313,7 +313,7 @@ motion_subspace(::Type{HelicalJoint},p::Dict,::Val{3}) = SMatrix{6,1,Float64}([0
 abstract type CylindricalJoint <: AbstractJointType end
 
 number_of_dofs(::Type{CylindricalJoint}) = 2
-state_dimension(::Type{CylindricalJoint}) = 2
+position_dimension(::Type{CylindricalJoint}) = 2
 
 function joint_transform(q::AbstractVector,::Type{CylindricalJoint},p::Dict,::Val{3})
   R = rotation_about_z(-q[1])
@@ -328,7 +328,7 @@ motion_subspace(::Type{CylindricalJoint},p::Dict,::Val{3}) = SMatrix{6,2,Float64
 abstract type SphericalJoint <: AbstractJointType end
 
 number_of_dofs(::Type{SphericalJoint}) = 3
-state_dimension(::Type{SphericalJoint}) = 4
+position_dimension(::Type{SphericalJoint}) = 4
 
 function joint_transform(q::AbstractVector,::Type{SphericalJoint},p::Dict,::Val{3})
   R = rotation_from_quaternion(quaternion(q))
@@ -350,7 +350,7 @@ end
 abstract type FreeJoint <: AbstractJointType end
 
 number_of_dofs(::Type{FreeJoint}) = 6
-state_dimension(::Type{FreeJoint}) = 7
+position_dimension(::Type{FreeJoint}) = 7
 
 function joint_transform(q::AbstractVector,::Type{FreeJoint},p::Dict,::Val{3})
   R = rotation_from_quaternion(quaternion(q[1:4]))
@@ -375,7 +375,7 @@ end
 abstract type FreeJoint2d <: AbstractJointType end
 
 number_of_dofs(::Type{FreeJoint2d}) = 3
-state_dimension(::Type{FreeJoint2d}) = 3
+position_dimension(::Type{FreeJoint2d}) = 3
 
 function joint_transform(q::AbstractVector,::Type{FreeJoint2d},p::Dict,::Val{2})
   R = rotation_about_z(-q[1])

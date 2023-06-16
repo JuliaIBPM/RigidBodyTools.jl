@@ -21,7 +21,7 @@ struct RigidBodyMotion{ND}
     child_bodies :: Vector{Vector{Int}}
     child_joints :: Vector{Vector{Int}}
 
-    state_indices :: Vector{Int}
+    position_indices :: Vector{Int}
     vel_indices :: Vector{Int}
 
 end
@@ -55,13 +55,13 @@ function RigidBodyMotion(joints::Vector{<:Joint},nbody::Int)
     total_members = mapreduce(x -> length(x),+,lslists)
     @assert total_members == nbody "Not all bodies have been added as members of linked lists"
 
-    state_indices = mapreduce(jid -> _getrange(joints,state_and_vel_dimension,jid)[1:state_dimension(joints[jid])],
+    position_indices = mapreduce(jid -> _getrange(joints,position_and_vel_dimension,jid)[1:position_dimension(joints[jid])],
                               vcat,eachindex(joints))
-    vel_indices = mapreduce(jid -> _getrange(joints,state_and_vel_dimension,jid)[state_dimension(joints[jid])+1:state_and_vel_dimension(joints[jid])],
+    vel_indices = mapreduce(jid -> _getrange(joints,position_and_vel_dimension,jid)[position_dimension(joints[jid])+1:position_and_vel_dimension(joints[jid])],
                               vcat,eachindex(joints))
 
     RigidBodyMotion{physical_dimension(joints)}(lscnt,nbody,lslists,joints,parent_body,parent_joint,
-                                              child_bodies,child_joints,state_indices,vel_indices)
+                                              child_bodies,child_joints,position_indices,vel_indices)
 end
 
 function Base.show(io::IO, ls::RigidBodyMotion)
@@ -119,7 +119,7 @@ function first_joint(lsid::Int,ls::RigidBodyMotion)
 end
 
 
-for f in [:number_of_dofs,:state_dimension,:state_and_vel_dimension,:constrained_dimension,
+for f in [:number_of_dofs,:position_dimension,:position_and_vel_dimension,:constrained_dimension,
            :exogenous_dimension,:unconstrained_dimension]
    @eval $f(ls::RigidBodyMotion) = mapreduce(x -> $f(x),+,ls.joints)
 end
@@ -150,14 +150,14 @@ end
 
 
 """
-    view(q::AbstractVector,ls::RigidBodyMotion,jid::Int[;dimfcn=state_dimension]) -> SubArray
+    view(q::AbstractVector,ls::RigidBodyMotion,jid::Int[;dimfcn=position_dimension]) -> SubArray
 
-Provide a view of the range of values in vector `q` corresponding to the state
+Provide a view of the range of values in vector `q` corresponding to the position
 of the joint with index `jid` in a RigidBodyMotion `ls`. The optional argument `dimfcn`
-can be set to `state_dimension`, `constrained_dimension`, `unconstrained_dimension`,
+can be set to `position_dimension`, `constrained_dimension`, `unconstrained_dimension`,
 or `exogenous_dimension`.
 """
-function Base.view(q::AbstractVector,ls::RigidBodyMotion,jid::Int;dimfcn::Function=state_dimension)
+function Base.view(q::AbstractVector,ls::RigidBodyMotion,jid::Int;dimfcn::Function=position_dimension)
     length(q) == dimfcn(ls) || error("Inconsistent size of data for viewing")
     return view(q,getrange(ls,dimfcn,jid))
 end
@@ -165,7 +165,7 @@ end
 """
     linked_system_transform(q::AbstractVector,ls::RigidBodyMotion) -> MotionTransformList
 
-Parse the overall state vector `q` into the individual joints and construct
+Parse the overall position vector `q` into the individual joints and construct
 the inertial system-to-body transforms for every body. Return these
 transforms in a `MotionTransformList`.
 """
@@ -198,7 +198,7 @@ end
 
 Compute the velocities of bodies for the rigid body system `ls`, expressing each in its own coordinate system.
 To carry this out, the function evaluates velocities of dofs with prescribed kinematics at time `t` and
-and obtains the remaining free dofs (exogenous and unconstrained) from the state/velocity vector `x`.
+and obtains the remaining free dofs (exogenous and unconstrained) from the state vector `x`.
 """
 function body_velocities(x::AbstractVector,t::Real,ls::RigidBodyMotion{ND}) where {ND}
     v0 = PluckerMotion{2}()
@@ -214,8 +214,8 @@ function _child_velocity_from_parent!(vl,vp::PluckerMotion,jid::Int,x::AbstractV
     @unpack joints, child_joints = ls
 
     joint = joints[jid]
-    xJ = view(x,ls,jid;dimfcn=state_and_vel_dimension)
-    q = statevector(x,ls)
+    xJ = view(x,ls,jid;dimfcn=position_and_vel_dimension)
+    q = positionvector(x,ls)
     vJ = joint_velocity(xJ,t,joint)
     qJ = view(q,ls,jid)
 
@@ -240,44 +240,43 @@ end
 
 
 """
-    zero_joint(ls::RigidBodyMotion[;dimfcn=state_and_vel_dimension])
+    zero_joint(ls::RigidBodyMotion[;dimfcn=position_and_vel_dimension])
 
-Create a vector of zeros for the some aspect of the state of the linked system(s) `ls`, based
-on the argument `dimfcn`. By default, it uses `state_and_vel_dimension` and creates a zero vector sized
-according to the the state of the joint and the parts of the
-joint velocity that must be advanced (from acceleration). Alternatively, one
-can use `state_dimension`, `constrained_dimension`, `unconstrained_dimension`,
+Create a vector of zeros for some aspect of the state of the linked system(s) `ls`, based
+on the argument `dimfcn`. By default, it uses `position_and_vel_dimension` and creates a zero vector sized
+according to the state of the joint. Alternatively, one
+can use `position_dimension`, `constrained_dimension`, `unconstrained_dimension`,
 or `exogenous_dimension`.
 """
-function zero_joint(ls::RigidBodyMotion;dimfcn=state_and_vel_dimension)
+function zero_joint(ls::RigidBodyMotion;dimfcn=position_and_vel_dimension)
     mapreduce(joint -> zero_joint(joint;dimfcn=dimfcn),vcat,ls.joints)
 end
 
 """
     init_joint(ls::RigidBodyMotion[;tinit = 0.0])
 
-Initialize the global linked system state and velocity vector, using
+Initialize the global linked system state vector, using
 the prescribed motions for constrained degrees of freedom to initialize
-those components (evaluated at `tinit`, which by default is 0).
+the position components (evaluated at `tinit`, which by default is 0).
 """
 function init_joint(ls::RigidBodyMotion;kwargs...)
     mapreduce(joint -> init_joint(joint;kwargs...),vcat,ls.joints)
 end
 
 """
-    statevector(x::AbstractVector,ls::RigidBodyMotion)
+    positionvector(x::AbstractVector,ls::RigidBodyMotion)
 
-Returns a view of the global state/velocity vector for a linked system containing only the state.
+Returns a view of the global state vector for a linked system containing only the position.
 """
-function statevector(x::AbstractVector,ls::RigidBodyMotion)
-   @unpack state_indices = ls
-   return view(x,state_indices)
+function positionvector(x::AbstractVector,ls::RigidBodyMotion)
+   @unpack position_indices = ls
+   return view(x,position_indices)
 end
 
 """
     velvector(x::AbstractVector,ls::RigidBodyMotion)
 
-Returns a view of the global state/velocity vector for a linked system containing only the velocity.
+Returns a view of the global state vector for a linked system containing only the velocity.
 """
 function velvector(x::AbstractVector,ls::RigidBodyMotion)
    @unpack vel_indices = ls
@@ -288,14 +287,14 @@ end
 """
     joint_rhs!(dxdt::AbstractVector,x::AbstractVector,t::Real,a_edof,a_udof,ls::RigidBodyMotion)
 
-Sets the right-hand side vector `dxdt` (mutating) for linked system `ls`, using the current state/velocity vector `x`,
+Sets the right-hand side vector `dxdt` (mutating) for linked system `ls`, using the current state vector `x`,
 the current time `t`, exogenous accelerations `a_edof` and unconstrained accelerations `a_udof`.
 """
 function joint_rhs!(dxdt::AbstractVector,x::AbstractVector,t::Real,a_edof::AbstractVector,a_udof::AbstractVector,ls::RigidBodyMotion)
     @unpack joints = ls
     for (jid,joint) in enumerate(joints)
-        dxdt_j = view(dxdt,ls,jid;dimfcn=state_and_vel_dimension)
-        x_j = view(x,ls,jid;dimfcn=state_and_vel_dimension)
+        dxdt_j = view(dxdt,ls,jid;dimfcn=position_and_vel_dimension)
+        x_j = view(x,ls,jid;dimfcn=position_and_vel_dimension)
         a_edof_j = view(a_edof,ls,jid;dimfcn=exogenous_dimension)
         a_udof_j = view(a_udof,ls,jid;dimfcn=unconstrained_dimension)
         joint_rhs!(dxdt_j,x_j,t,a_edof_j,a_udof_j,joint)
