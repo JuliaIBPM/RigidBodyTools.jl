@@ -220,6 +220,9 @@ end
 
 _length_and_mod(x::Vector{T}) where T <: Real = (n = length(x); return n ÷ CHUNK, n % CHUNK)
 
+#
+# NOTE: The routines motion_velocity and motion_state should not be extended to lists
+#
 """
     motion_velocity(bl::BodyList,ml::MotionList,t::Real) -> Vector
 
@@ -271,33 +274,6 @@ function motion_state(bl::BodyList,motion::AbstractMotion)
 end
 
 
-"""
-    surface_velocity!(u::AbstractVector,v::AbstractVector,bl::BodyList,x::AbstractVector,m::RigidBodyMotion,t::Real)
-
-Calculate the surface velocity components `u` and `v` for the points on bodies `bl`. The function evaluates
-prescribed kinematics at time `t` and extracts non-prescribed (exogenous and unconstrained) velocities from
-state vector `x`.
-"""
-function surface_velocity!(u::AbstractVector,v::AbstractVector,bl::BodyList,x::AbstractVector,m::RigidBodyMotion,t::Real)
-    q = positionvector(x,m)
-    ml = body_transforms(q,m)
-    vl = body_velocities(x,t,m)
-    for bid in 1:length(bl)
-        surface_velocity!(view(u,bl,bid),view(v,bl,bid),bl[bid],vl[bid],inv(ml[bid]))
-    end
-end
-
-"""
-    update_body!(bl::BodyList,x::AbstractVector,m::RigidBodyMotion)
-
-Update body `b` with the rigid-body motion `m` and state vector `x`.
-"""
-function update_body!(bl::BodyList,x::AbstractVector,m::RigidBodyMotion)
-    q = positionvector(x,m)
-    ml = body_transforms(q,m)
-    ml(bl)
-    return bl
-end
 
 # Should eliminate the individual routines for update_body! and surface_velocity!, since they do not make as much
 # sense in that form (with their argument signature)

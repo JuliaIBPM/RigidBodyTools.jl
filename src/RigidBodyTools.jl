@@ -56,6 +56,7 @@ abstract type Shifted <: PointShiftType end
 abstract type Body{N,C<:BodyClosureType} end
 
 abstract type AbstractMotion end
+abstract type AbstractDeformationMotion <: AbstractMotion end
 
 
 numpts(::Body{N}) where {N} = N
@@ -65,10 +66,11 @@ include("kinematics.jl")
 include("rigidtransform.jl")
 include("joints.jl")
 
+include("lists.jl")
+
 include("rigidbodymotions.jl")
 include("directmotions.jl")
 
-include("lists.jl")
 
 include("tools.jl")
 include("assignvelocity.jl")
