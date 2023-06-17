@@ -421,8 +421,7 @@ function surface_velocity!(u::AbstractVector,v::AbstractVector,b::Body,vb::Pluck
     _surface_velocity!(u,v,b,deformation,t)
     for i in 1:numpts(b)
         vp = velocity_in_body_coordinates_2d(b.x̃[i],b.ỹ[i],vb)
-        vp[2] += u[i]
-        vp[3] += v[i]
+        vp += PluckerMotion([0.0,u[i],v[i]])
         vp = Rb_to_0*vp
         u[i] = vp[2]
         v[i] = vp[3]
@@ -478,6 +477,29 @@ function update_body!(b::Body,x::AbstractVector,m::RigidBodyMotion)
     T = body_transforms(q,m)[1]
     T(b)
     return b
+end
+
+"""
+    maxvelocity(b::Body,x::AbstractVector,m::RigidBodyMotion[,tmax=100,dt=0.01])
+
+Search through the given motion `m` applied to body `b` and return `(umax,i,t)`,
+the maximum velocity magnitude, the index of the body points where it
+occurs, and the time at which it occurs.
+"""
+function maxvelocity(bl::Union{Body,BodyList},x::AbstractVector,m::RigidBodyMotion;tf=10.0,dt=0.01)
+    u, v = zeros(numpts(bl)), zeros(numpts(bl))
+    i = 1
+    umax = 0.0
+    tmax = 0.0
+    for t in 0.0:dt:tf
+        surface_velocity!(u,v,bl,x,m,t)
+        umag = sqrt.(u.^2+v.^2)
+        umax_t, i_t = findmax(umag)
+        if umax_t > umax
+            umax, i, tmax = umax_t, i_t, t
+        end
+    end
+    return umax, i, tmax
 end
 
 #=
