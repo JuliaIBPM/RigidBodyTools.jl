@@ -98,6 +98,10 @@ end
 
 RigidBodyMotion(joints::Vector{<:Joint},bodies::BodyList) = RigidBodyMotion(joints,[NullDeformationMotion() for bi in 1:length(bodies)],bodies)
 
+RigidBodyMotion(joint::Joint,def::AbstractDeformationMotion,body::Body) = RigidBodyMotion([joint],[def],BodyList([body]))
+RigidBodyMotion(joint::Joint,body::Body) = RigidBodyMotion([joint],BodyList([body]))
+
+
 function Base.show(io::IO, ls::RigidBodyMotion)
     println(io, "$(ls.nls) linked system(s) of bodies")
 end
@@ -108,6 +112,10 @@ function _list_of_linked_bodies!(lslist,bodyid,child_bodies)
         _list_of_linked_bodies!(lslist,childid,child_bodies)
     end
     nothing
+end
+
+function _check_for_only_one_body(ls::RigidBodyMotion)
+    @assert ls.nbody == 1 "Linked system must only contain one body"
 end
 
 
@@ -192,7 +200,6 @@ can be set to `position_dimension`, `constrained_dimension`, `unconstrained_dime
 or `exogenous_dimension`.
 """
 function Base.view(q::AbstractVector,ls::RigidBodyMotion,jid::Int;dimfcn::Function=position_dimension)
-    length(q) == dimfcn(ls) || error("Inconsistent size of data for viewing")
     return view(q,getrange(ls,dimfcn,jid))
 end
 
@@ -301,6 +308,11 @@ function zero_motion_state(bl::BodyList,ls::RigidBodyMotion)
     return x
 end
 
+function zero_motion_state(b::Body,ls::RigidBodyMotion)
+    _check_for_only_one_body(ls)
+    zero_motion_state(BodyList([b]),ls)
+end
+
 """
     init_motion_state(bl::BodyList,ls::RigidBodyMotion[;tinit = 0.0])
 
@@ -318,6 +330,11 @@ function init_motion_state(bl::BodyList,ls::RigidBodyMotion;kwargs...)
       append!(x,xi)
     end
     return x
+end
+
+function init_motion_state(b::Body,ls::RigidBodyMotion;kwargs...)
+    _check_for_only_one_body(ls)
+    init_motion_state(BodyList([b]),ls;kwargs...)
 end
 
 """
@@ -375,6 +392,10 @@ function motion_rhs!(dxdt::AbstractVector,x::AbstractVector,t::Real,a_edof::Abst
     nothing
 end
 
+function motion_rhs!(dxdt::AbstractVector,x::AbstractVector,t::Real,a_edof::AbstractVector,a_udof::AbstractVector,ls::RigidBodyMotion,b::Body)
+  _check_for_only_one_body(ls)
+  motion_rhs!(dxdt,x,t,a_edof,a_udof,ls,BodyList([b]))
+end
 
 function velocity_in_body_coordinates_2d(x̃,ỹ,vb::PluckerMotion{2})
     Xb_to_p = MotionTransform(x̃,ỹ,0.0)
@@ -428,6 +449,11 @@ function surface_velocity!(u::AbstractVector,v::AbstractVector,bl::BodyList,x::A
     end
 end
 
+function surface_velocity!(u::AbstractVector,v::AbstractVector,b::Body,x::AbstractVector,m::RigidBodyMotion,t::Real)
+    _check_for_only_one_body(m)
+    surface_velocity!(u,v,BodyList([b]),x,m,t)
+end
+
 """
     update_body!(bl::BodyList,x::AbstractVector,m::RigidBodyMotion)
 
@@ -444,6 +470,15 @@ function update_body!(bl::BodyList,x::AbstractVector,m::RigidBodyMotion)
     return bl
 end
 
+function update_body!(b::Body,x::AbstractVector,m::RigidBodyMotion)
+    _check_for_only_one_body(m)
+    @unpack deformations = m
+    q = positionvector(x,m)
+    _update_body!(b,deformationvector(x,m,1),deformations[1])
+    T = body_transforms(q,m)[1]
+    T(b)
+    return b
+end
 
 #=
 """
