@@ -5,7 +5,7 @@
 #md # ```
 
 #=
-This notebook discusses the use of Plücker vectors and their transforms for
+Here we discuss the use of Plücker vectors and their transforms for
 describing rigid-body motion and force. Plücker vectors succinctly describe
 both the angular (rotational) and linear (translational) part of motion, and the angular (moment) and
 linear (force) part of force. In three dimensions, a Plücker vector is 6-dimensional,
@@ -177,3 +177,14 @@ which gives the expected result. Now let's transform back, using the inverse,
 and check that we get back to `vA`
 =#
 inv(XA_to_B)*vB
+
+#md # ## Transform functions
+#md # ```@docs
+#md # PluckerMotion
+#md # PluckerForce
+#md # LinearAlgebra.dot(::PluckerForce,::PluckerMotion)
+#md # MotionTransform
+#md # ForceTransform
+#md # Base.inv(::AbstractTransformOperator)
+#md # update_body!
+#md # ```

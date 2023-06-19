@@ -9,7 +9,7 @@ import Base: *, +, -, inv, transpose, vec
 import Base: @propagate_inbounds,getindex, setindex!,iterate,size,length,push!,
               collect,view,findall
 
-import LinearAlgebra: dot              
+import LinearAlgebra: dot
 
 
 export Body
@@ -20,7 +20,7 @@ export RigidBodyMotion, AbstractKinematics, d_dt, motion_velocity, motion_state,
 
 export AbstractDOFKinematics, AbstractPrescribedDOFKinematics, DOFKinematicData, SmoothRampDOF,
         OscillatoryDOF, ConstantVelocityDOF, CustomDOF, ExogenousDOF, ConstantPositionDOF,
-        UnconstrainedDOF, Kinematics
+        UnconstrainedDOF, Kinematics, dof_position, dof_velocity, dof_acceleration
 
 export RigidTransform, rotation_about_x, rotation_about_y, rotation_about_z, rotation_from_quaternion,
           quaternion, rotation_about_axis, rotation_identity,

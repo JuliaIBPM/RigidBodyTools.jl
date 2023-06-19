@@ -82,17 +82,15 @@ end
 
 
 """
-    SmoothRampDOF(x0,ẋ0,Δx,t0[;ramp=EldredgeRamp(11.0)]) <: AbstractPrescribedDOFKinematics
+    SmoothRampDOF(ẋ0,Δx,t0[;ramp=EldredgeRamp(11.0)]) <: AbstractPrescribedDOFKinematics
 
-Kinematics describing a smooth ramp motion starting at time `t0` with nominal rate `ẋ0`.
-The initial value is `x0`, and the ramp proceeds up to new value `x0 + Δx`.
+Kinematics describing a smooth ramp change in position `Δx` starting at time `t0` with nominal rate `ẋ0`.
 The optional ramp argument is assumed to be
 given by the smooth ramp `EldredgeRamp` with a smoothness factor of 11 (larger values
 lead to sharper transitions on/off the ramp), but this
 can be replaced by another Eldredge ramp with a different value or a `ColoniusRamp`.
 """
 struct SmoothRampDOF <: AbstractPrescribedDOFKinematics
-    x0 :: Float64
     ẋ0 :: Float64
     Δx :: Float64
     t0 :: Float64
@@ -102,26 +100,25 @@ struct SmoothRampDOF <: AbstractPrescribedDOFKinematics
     ẍ :: Abstract1DProfile
 end
 
-function SmoothRampDOF(x0,ẋ0,Δx,t0; ramp = EldredgeRamp(11.0))
+function SmoothRampDOF(ẋ0,Δx,t0; ramp = EldredgeRamp(11.0))
     Δt = Δx/ẋ0
-    x = ConstantProfile(x0) + ẋ0*((ramp >> t0) - (ramp >> (t0 + Δt)))
+    x = ẋ0*((ramp >> t0) - (ramp >> (t0 + Δt)))
     ẋ = d_dt(x)
     ẍ = d_dt(ẋ)
-    SmoothRampDOF(x0,ẋ0,Δx,t0,x,ẋ,ẍ)
+    SmoothRampDOF(ẋ0,Δx,t0,x,ẋ,ẍ)
 end
 
 function show(io::IO, p::SmoothRampDOF)
-  print(io, "Smooth ramp kinematics (initial position = $(p.x0), nominal rate = $(p.ẋ0), amplitude = $(p.Δx), nominal time = $(p.t0))")
+  print(io, "Smooth position ramp kinematics (nominal rate = $(p.ẋ0), amplitude = $(p.Δx), nominal time = $(p.t0))")
 end
 
 
-
 """
-    OscillatoryDOF(amp,angfreq,phase,x0,ẋ0) <: AbstractPrescribedDOFKinematics
+    OscillatoryDOF(amp,angfreq,phase,ẋ0) <: AbstractPrescribedDOFKinematics
 
 Set sinusoidal kinematics with amplitude `amp`, angular frequency `angfreq`,
-phase `phase`, mean value `x0` (without `ẋ0`), and mean velocity `ẋ0`.
-The function it provides is `x(t) = x0 + ẋ0*t + amp*sin(angfreq*t+phase)`.
+phase `phase`, and mean velocity `ẋ0`.
+The function it provides is `x(t) = ẋ0*t + amp*sin(angfreq*t+phase)`.
 """
 struct OscillatoryDOF <: AbstractPrescribedDOFKinematics
     "Amplitude"
@@ -133,9 +130,6 @@ struct OscillatoryDOF <: AbstractPrescribedDOFKinematics
     "Phase"
     ϕ :: Float64
 
-    "Mean value"
-    x0 :: Float64
-
     "Mean velocity"
     ẋ0 :: Float64
 
@@ -144,16 +138,16 @@ struct OscillatoryDOF <: AbstractPrescribedDOFKinematics
     ẍ :: Abstract1DProfile
 end
 
-function OscillatoryDOF(A,Ω,ϕ,x0,ẋ0)
+function OscillatoryDOF(A,Ω,ϕ,ẋ0)
     f(t) = ẋ0*t
-    x = ConstantProfile(x0) + FunctionProfile(f) + A*(Sinusoid(Ω) >> (ϕ/Ω))
+    x = FunctionProfile(f) + A*(Sinusoid(Ω) >> (ϕ/Ω))
     ẋ = d_dt(x)
     ẍ = d_dt(ẋ)
-    OscillatoryDOF(A,Ω,ϕ,x0,ẋ0,x,ẋ,ẍ)
+    OscillatoryDOF(A,Ω,ϕ,ẋ0,x,ẋ,ẍ)
 end
 
 function show(io::IO, p::OscillatoryDOF)
-  print(io, "Oscillatory kinematics (amplitude = $(p.A), ang freq = $(p.Ω), phase = $(p.ϕ), initial position = $(p.x0), mean velocity = $(p.ẋ0))")
+  print(io, "Oscillatory kinematics (amplitude = $(p.A), ang freq = $(p.Ω), phase = $(p.ϕ), mean velocity = $(p.ẋ0))")
 end
 
 """

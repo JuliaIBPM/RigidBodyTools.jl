@@ -1,4 +1,4 @@
-# # Creating and transforming bodies
+# # Creating bodies
 
 #md # ```@meta
 #md # CurrentModule = RigidBodyTools
@@ -10,7 +10,8 @@ The most basic functions of this package create an object of type
 Generally speaking, we are interesting in creating the object and placing it
 in a certain position and orientation. We do this in two steps: we create the
 basic shape, centered at the origin with a default orientation, and then
-we transform the shape to a desired location and orientation using a `RigidTransform`.
+we transform the shape to a desired location and orientation. We will discuss
+the shapes in this notebook, and the transforms in the following notebook.
 
 It is useful to stress that each body stores two types of points internally:
 the *endpoints* of the segments that comprise the body surface, and the

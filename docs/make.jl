@@ -8,10 +8,10 @@ makedocs(
     clean = true,
     pages = [
         "Home" => "index.md",
-        "Manual" => ["manual/shapes.md",
-                     "manual/motions.md",
-                     "manual/bodylists.md"
-                     ]
+        "Bodies and Transforms" => ["manual/shapes.md",
+                                    "manual/transforms.md",
+                                    "manual/bodylists.md"],
+        "Motions" => ["manual/dofmotions.md"]
         #"Internals" => [ "internals/properties.md"]
     ],
     #format = Documenter.HTML(assets = ["assets/custom.css"])

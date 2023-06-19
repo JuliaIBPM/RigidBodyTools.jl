@@ -177,6 +177,11 @@ function transpose(T::ForceTransform{ND}) where {ND}
     MotionTransform{ND}(x,transpose(T.R),transpose(T.matrix))
 end
 
+"""
+    inv(X::AbstractTransformOperator) -> AbstractTransformOperator
+
+Return the inverse of the motion or force transform `X`.
+"""
 inv(T::MotionTransform{ND}) where {ND} = transpose(ForceTransform{ND}(T.x,T.R))
 inv(T::ForceTransform{ND}) where {ND} = transpose(MotionTransform{ND}(T.x,T.R))
 
