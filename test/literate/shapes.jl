@@ -80,48 +80,6 @@ In that case, we can use
 =#
 plot(b,fill=:false,linecolor=:black)
 
-#=
-## Transforming the shape
-Now, suppose we wish to place a shape at a different spot, with a different
-orientation. For this example, we will use a rectangle, since circles aren't
-much help for demonstrating orientation changes.
-=#
-b = Rectangle(2.0,1.0,0.02)
-plot(b)
-
-#=
-Okay, now let's place it at (-1,-3), with an angle of π/3. We first
-create a `RigidTransform`.
-=#
-T = RigidTransform((-1.0,-3.0),π/3)
-
-#=
-Now we apply this operator. The object `T` is function-like, and modifies
-the body in place:
-=#
-T(b)
-
-#=
-Now `b` is transformed. Let's plot it:
-=#
-plot(b)
-
-#=
-There is an important thing to stress here. Each body keeps two sets of
-coordinates for the surface points. One that describe the shape in the
-original configuration, which we will refer to as the *body coordinate system*
-(or *reference* coordinates), and another set that describes the shape in the *inertial coordinate system*,
-which we, the viewers, are in. Only the second set of coordinates have been
-changed by the transform.
-
-This also means that, when we apply another transform to the body, **it is
-not a composite operation**; it applies the transform to the reference shape,
-not the current shape.
-
-Sometimes we need information about the normals in the reference system.
-For these, we can use `normalmid` with the flag `ref=true`:
-=#
-nx, ny = normalmid(b,ref=true)
 
 #=
 ## Other shapes
@@ -131,20 +89,15 @@ b1, b2 = Square(1.0,0.02), Ellipse(0.6,0.1,0.02)
 plot(plot(b1), plot(b2))
 
 #=
-A NACA 4412 airfoil, with chord length 1, and 0.02 spacing between points,
-which we will place at 20 degrees angle of attack
+A NACA 4412 airfoil, with chord length 1, and 0.02 spacing between points.
 =#
 b = NACA4(0.04,0.4,0.12,0.02)
-T = RigidTransform((0.0,0.0),-20π/180)
-T(b)
 plot(b)
 
 #=
-A flat plate with no thickness, at 45 degrees angle of attack
+A flat plate with no thickness
 =#
 b = Plate(1.0,0.02)
-T = RigidTransform((0.0,0.0),-45π/180)
-T(b)
 plot(b)
 
 
@@ -201,11 +154,6 @@ scatter!(b,markersize=3,markercolor=:black)
 #md # Square
 #md # ```
 
-#md # ## Rigid transformations of shapes
-#md # ```@docs
-#md # RigidTransform
-#md # Base.vec(::RigidTransform)
-#md # ```
 
 #md # ## Shape utilities
 #md # ```@docs

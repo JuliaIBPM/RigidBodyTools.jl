@@ -143,6 +143,12 @@ be constructed from composite transforms.
 =#
 
 #=
+Sometimes we need information about the normals in the body system.
+For these, we can use `normalmid` with the flag `ref=true`:
+=#
+nx, ny = normalmid(b,ref=true)
+
+#=
 ## Transforming Plücker vectors
 Transforms can be applied to Plücker vectors to transform their components
 between systems. Let's consider a 2d example in which the motion based at system A
