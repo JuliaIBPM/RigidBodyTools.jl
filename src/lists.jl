@@ -177,19 +177,25 @@ list `bl`.
 Base.sum(f::AbstractVector,bl::BodyList,i::Int) = sum(view(f,bl,i))
 
 """
-    (tl::RigidTransformList)(bl::BodyList) -> BodyList
+    (tl::MotionTransformList)(bl::BodyList) -> BodyList
+
+Carry out transformations of each body in `bl` with the
+corresponding transformation in `tl`, creating a new body list.
+"""
+@inline function (tl::MotionTransformList)(bl::BodyList)
+  bl_transform = deepcopy(bl)
+  update_body!(bl_transform,tl)
+end
+
+"""
+    update_body!(bl::BodyList,tl::MotionTransformList) -> BodyList
 
 Carry out in-place transformations of each body in `bl` with the
 corresponding transformation in `tl`.
 """
-@inline function (tl::RigidTransformList)(bl::BodyList)
+@inline function update_body!(bl::BodyList,tl::MotionTransformList)
   length(tl) == length(bl) || error("Inconsistent lengths of lists")
-  map((T,b) -> T(b),tl,bl)
-end
-
-@inline function (tl::MotionTransformList)(bl::BodyList)
-  length(tl) == length(bl) || error("Inconsistent lengths of lists")
-  map((T,b) -> T(b),tl,bl)
+  map((T,b) -> update_body!(b,T),tl,bl)
 end
 
 """
@@ -223,6 +229,7 @@ _length_and_mod(x::Vector{T}) where T <: Real = (n = length(x); return n ÷ CHUN
 #
 # NOTE: The routines motion_velocity and motion_state should not be extended to lists
 #
+#=
 """
     motion_velocity(bl::BodyList,ml::MotionList,t::Real) -> Vector
 
@@ -272,7 +279,7 @@ function motion_state(bl::BodyList,motion::AbstractMotion)
     end
     return x
 end
-
+=#
 
 
 # Should eliminate the individual routines for update_body! and surface_velocity!, since they do not make as much

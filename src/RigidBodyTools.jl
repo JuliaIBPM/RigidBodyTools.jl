@@ -9,12 +9,14 @@ import Base: *, +, -, inv, transpose, vec
 import Base: @propagate_inbounds,getindex, setindex!,iterate,size,length,push!,
               collect,view,findall
 
+import LinearAlgebra: dot              
+
 
 export Body
 export RigidBodyMotion, AbstractKinematics, d_dt, motion_velocity, motion_state,
           surface_velocity!, surface_velocity, update_body!,
           AbstractDeformationMotion, ConstantDeformationMotion, DeformationMotion,
-          RigidAndDeformingMotion,maxvelocity, maxlistvelocity
+          NullDeformationMotion,maxvelocity, maxlistvelocity
 
 export AbstractDOFKinematics, AbstractPrescribedDOFKinematics, DOFKinematicData, SmoothRampDOF,
         OscillatoryDOF, ConstantVelocityDOF, CustomDOF, ExogenousDOF, ConstantPositionDOF,
@@ -25,11 +27,11 @@ export RigidTransform, rotation_about_x, rotation_about_y, rotation_about_z, rot
           MotionTransform, ForceTransform, AbstractTransformOperator, rotation_transform,
           cross_matrix, cross_vector, translation, rotation, motion_subspace, joint_velocity
 
-export PluckerForce, PluckerMotion
+export PluckerForce, PluckerMotion, motion_rhs!, zero_joint, init_motion_state
 
 export Joint, joint_transform, parent_to_child_transform, LinkedSystem, position_dimension,
         exogenous_dimension, constrained_dimension, unconstrained_dimension, position_and_vel_dimension,
-        body_transforms
+        body_transforms, number_of_dofs
 
 export Oscillation, OscillationX, OscillationY, OscillationXY, RotationalOscillation,
         PitchHeave, Pitchup, EldredgeRamp, ColoniusRamp, SwitchedKinematics,

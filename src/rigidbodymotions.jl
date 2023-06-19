@@ -50,7 +50,7 @@ struct RigidBodyMotion{ND} <: AbstractMotion
 end
 
 
-function RigidBodyMotion(joints::Vector{<:Joint},deformations::Vector{<:AbstractDeformationMotion},bodies::BodyList)
+function RigidBodyMotion(joints::Vector{<:Joint},bodies::BodyList,deformations::Vector{<:AbstractDeformationMotion})
     nbody = length(bodies)
     parent_body = zeros(Int,nbody)
     parent_joint = zeros(Int,nbody)
@@ -96,14 +96,16 @@ function RigidBodyMotion(joints::Vector{<:Joint},deformations::Vector{<:Abstract
                                               child_bodies,child_joints,position_indices,vel_indices,deformation_indices)
 end
 
-RigidBodyMotion(joints::Vector{<:Joint},bodies::BodyList) = RigidBodyMotion(joints,[NullDeformationMotion() for bi in 1:length(bodies)],bodies)
+RigidBodyMotion(joints::Vector{<:Joint},bodies::BodyList) = RigidBodyMotion(joints,bodies,[NullDeformationMotion() for bi in 1:length(bodies)])
 
-RigidBodyMotion(joint::Joint,def::AbstractDeformationMotion,body::Body) = RigidBodyMotion([joint],[def],BodyList([body]))
+RigidBodyMotion(joint::Joint,body::Body,def::AbstractDeformationMotion) = RigidBodyMotion([joint],BodyList([body]),[def])
 RigidBodyMotion(joint::Joint,body::Body) = RigidBodyMotion([joint],BodyList([body]))
 
 
 function Base.show(io::IO, ls::RigidBodyMotion)
     println(io, "$(ls.nls) linked system(s) of bodies")
+    println(io, "   $(ls.nbody) bodies")
+    println(io, "   $(length(ls.joints)) joints")
 end
 
 function _list_of_linked_bodies!(lslist,bodyid,child_bodies)
@@ -465,7 +467,7 @@ function update_body!(bl::BodyList,x::AbstractVector,m::RigidBodyMotion)
         _update_body!(b,deformationvector(x,m,bid),deformations[bid])
     end
     ml = body_transforms(q,m)
-    ml(bl)
+    update_body!(bl,ml)
     return bl
 end
 
@@ -475,7 +477,7 @@ function update_body!(b::Body,x::AbstractVector,m::RigidBodyMotion)
     q = positionvector(x,m)
     _update_body!(b,deformationvector(x,m,1),deformations[1])
     T = body_transforms(q,m)[1]
-    T(b)
+    update_body!(b,t)
     return b
 end
 

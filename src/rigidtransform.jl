@@ -15,12 +15,56 @@ plucker_dimension(::Val{3}) = 6
 ### Plucker vectors ###
 abstract type AbstractPluckerVector{ND} end
 
+"""
+    PluckerMotion(data::AbstractVector) -> SVector
+
+Creates an instance of a Plucker motion vector,
+
+``v = \\begin{bmatrix} \\Omega \\\\ U \\end{bmatrix}``
+
+using the vector in `data`. If `data` is of length 6, then it creates a 3d motion vector,
+and the first 3 entries are assumed to comprise the rotational component `\\Omega` and the last 3 entries the
+translational component `U`. If `data` is of length 3, then it creates
+a 2d motion vector, assuming that the first entry in `data` represents
+the rotational component and the second and third entries the
+x and y translational components.
+"""
 struct PluckerMotion{ND} <: AbstractPluckerVector{ND}
   data :: SVector
 end
 
+function show(io::IO, p::PluckerMotion{3})
+  print(io, "3d Plucker motion vector, Ω = $(p.data[1:3]), v = $(p.data[4:6])")
+end
+
+function show(io::IO, p::PluckerMotion{2})
+  print(io, "2d Plucker motion vector, Ω = $(p.data[1]), U = $(p.data[2:3])")
+end
+
+"""
+    PluckerForce(data::AbstractVector) -> SVector
+
+Creates an instance of a Plucker force vector,
+
+``f = \\begin{bmatrix} M \\\\ F \\end{bmatrix}``
+
+using the vector in `data`. If `data` is of length 6, then it creates a 3d force vector,
+and the first 3 entries are assumed to comprise the moment component `M` and the last 3 entries the
+force component `F`. If `data` is of length 3, then it creates
+a 2d force vector, assuming that the first entry in `data` represents
+the moment component and the second and third entries the
+x and y force components.
+"""
 struct PluckerForce{ND} <: AbstractPluckerVector{ND}
   data :: SVector
+end
+
+function show(io::IO, p::PluckerForce{3})
+  print(io, "3d Plucker force vector, M = $(p.data[1:3]), F = $(p.data[4:6])")
+end
+
+function show(io::IO, p::PluckerForce{2})
+  print(io, "2d Plucker force vector, M = $(p.data[1]), F = $(p.data[2:3])")
 end
 
 for typename in [:PluckerMotion,:PluckerForce]
@@ -33,6 +77,11 @@ for typename in [:PluckerMotion,:PluckerForce]
   end
 
   @eval $typename(v::SVector{3}) = $typename{2}(v)
+
+  @eval $typename(Ω::Real,U::AbstractVector) = $typename([Ω,U...])
+
+  @eval $typename(Ω::AbstractVector,U::AbstractVector) = $typename([Ω...,U...])
+
 
   @eval $typename(v::SVector{6}) = $typename{3}(v)
 
@@ -59,6 +108,16 @@ for typename in [:PluckerMotion,:PluckerForce]
 
 end
 
+"""
+    dot(f::PluckerForce,v::PluckerMotion) -> Real
+
+Calculate the scalar product between force `f` and motion `v`. The
+commutation of this is also possible, `dot(v,f)`.
+"""
+dot(f::PluckerForce{ND},v::PluckerMotion{ND}) where {ND} = dot(f.data,v.data)
+
+dot(v::PluckerMotion{ND},f::PluckerForce{ND}) where {ND} = dot(f,v)
+
 
 
 
@@ -79,6 +138,21 @@ end
 
 const RigidTransform = MotionTransform{ND} where {ND}
 
+function show(io::IO, p::MotionTransform{3})
+  print(io, "3d motion transform, x = $(p.x), R = $(p.R)")
+end
+
+function show(io::IO, p::ForceTransform{3})
+  print(io, "3d force transform, x = $(p.x), R = $(p.R)")
+end
+
+function show(io::IO, p::MotionTransform{2})
+  print(io, "2d motion transform, x = $(p.x[1:2]), R = $(p.R[1:2,1:2])")
+end
+
+function show(io::IO, p::ForceTransform{2})
+  print(io, "2d force transform, x = $(p.x[1:2]), R = $(p.R[1:2,1:2])")
+end
 
 translation(T::AbstractTransformOperator{3}) = T.x
 rotation(T::AbstractTransformOperator{3}) = T.R
@@ -112,6 +186,7 @@ rotation_transform(T::ForceTransform{ND}) where {ND} = ForceTransform{ND}(O3VECT
 
 vec(T::AbstractTransformOperator{2}) = [T.x[1],T.x[2],_get_angle_of_2d_transform(T)]
 
+
 function _get_angle_of_2d_transform(T::AbstractTransformOperator{2})
   eith = T.R[1,1] + im*T.R[1,2]
   return real(-im*log(eith))
@@ -134,7 +209,22 @@ function (T::MotionTransform{2})(x̃::AbstractVector{S},ỹ::AbstractVector{S}) 
 end
 
 """
-    (T::MotionTransform)(b::Body)
+    (T::MotionTransform)(b::Body) -> Body
+
+Transforms a body `b` using the given `MotionTransform`, creating a copy of this body
+with the new configuration. In using this
+transform `T` (which defines a transform from system A to system B), A is interpreted as an inertial coordinate
+system and B as the body system. Thus, the position vector in `T` is interpreted
+as the relative position of the body in inertial coordinates and the inverse of the rotation
+operator is applied to transform body-fixed coordinates to the inertial frame.
+"""
+function (T::MotionTransform{2})(b::Body)
+    b_transform = deepcopy(b)
+    update_body!(b_transform,T)
+end
+
+"""
+    update_body!(b::Body,t::MotionTransform)
 
 Transforms a body (in-place) using the given `MotionTransform`. In using this
 transform `T` (which defines a transform from system A to system B), A is interpreted as an inertial coordinate
@@ -142,7 +232,7 @@ system and B as the body system. Thus, the position vector in `T` is interpreted
 as the relative position of the body in inertial coordinates and the inverse of the rotation
 operator is applied to transform body-fixed coordinates to the inertial frame.
 """
-function (T::MotionTransform{2})(b::Body{N,C}) where {N,C}
+function update_body!(b::Body{N,C},T::MotionTransform{2}) where {N,C}
   b.xend, b.yend = T(b.x̃end,b.ỹend)
   b.x, b.y = _midpoints(b.xend,b.yend,C)
 

@@ -215,6 +215,7 @@ end
 
 #####
 
+#=
 
 """
 An abstract type for types that takes in time and returns `KinematicData(t,c, ċ, c̈, α, α̇, α̈)`.
@@ -500,7 +501,7 @@ Set oscillatory rotational kinematics about the centroid of the form
 """
 RotationalOscillation(Ω,Δα,ϕα) = RotationalOscillation(0,0,Ω,0,0,Δα,ϕα)
 
-
+=#
 ####
 
 
@@ -516,7 +517,7 @@ abstract type SwitchOn <: Switch end
 abstract type SwitchOff <: Switch end
 
 """
-    SwitchedKinematics <: AbstractKinematics
+    SwitchedKinematics <: AbstractDOFKinematics
 
 Modulates a given set of kinematics between simple on/off states. The velocity
 specified by the given kinematics is toggled on/off.
@@ -524,7 +525,7 @@ specified by the given kinematics is toggled on/off.
 # Fields
 $(FIELDS)
 """
-struct SwitchedKinematics{S <: Switch} <: AbstractKinematics
+struct SwitchedKinematics{S <: Switch} <: AbstractDOFKinematics
 
     "time at which the kinematics should be turned on"
     t_on :: Float64
@@ -533,13 +534,13 @@ struct SwitchedKinematics{S <: Switch} <: AbstractKinematics
     t_off :: Float64
 
     "kinematics to be followed in the on state"
-    kin :: AbstractKinematics
+    kin :: AbstractDOFKinematics
 
-    off :: AbstractKinematics
+    off :: AbstractDOFKinematics
 
     SwitchedKinematics(t_on,t_off,kin) = t_on > t_off ?
-            new{SwitchOn}(t_on,t_off,kin,RigidBodyMotions.Constant(0,0)) :
-            new{SwitchOff}(t_on,t_off,kin,RigidBodyMotions.Constant(0,0))
+            new{SwitchOn}(t_on,t_off,kin,ConstantVelocityDOF(0.0)) :
+            new{SwitchOff}(t_on,t_off,kin,ConstantVelocityDOF(0.0))
 end
 
 # note that these do not introduce impulsive changes into the derivatives
