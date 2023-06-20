@@ -78,8 +78,8 @@ end
 
 physical_dimension(j::Joint{ND}) where {ND} = ND
 
-function physical_dimension(jvec::Vector{<:Joint})
-  @assert allequal(physical_dimension.(jvec)) "Not all joints are same physical dimension"
+function physical_dimension(jvec::Vector{<:Joint{ND}}) where {ND}
+  #@assert allequal(physical_dimension.(jvec)) "Not all joints are same physical dimension"
   return physical_dimension(first(jvec))
 end
 
