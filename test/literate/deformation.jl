@@ -113,7 +113,7 @@ ufcn(x,y,t) = 0.25*(x^2+y^2)*y*Ω*cos(Ω*t)
 vfcn(x,y,t) = -0.25*(x^2+y^2)*x*Ω*cos(Ω*t)
 def = DeformationMotion(ufcn,vfcn)
 
-ls = RigidBodyTools.RigidBodyMotion(joint,body,def)
+ls = RigidBodyMotion(joint,body,def)
 
 @animate_motion body ls π/100 4π (-2,2) (-2,2)
 
@@ -165,3 +165,9 @@ Let's try it out
 As desired, the top surface deforms vertically, but the rest of the
 surface is stationary.
 =#
+
+#md # ## Deformation functions
+#md # ```@docs
+#md # DeformationMotion
+#md # ConstantDeformationMotion
+#md # ```

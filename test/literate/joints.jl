@@ -318,3 +318,35 @@ We can plot these on each body using the `view` function for `BodyList`.
 For example, the vector of u velocities on body 2 is
 =#
 plot(view(u,bodies,2))
+
+
+#md # ## Joint functions
+#md # ```@docs
+#md # Joint
+#md # zero_joint
+#md # init_joint
+#md # ```
+
+#md # ## System and state functions
+#md # ```@docs
+#md # RigidBodyMotion
+#md # zero_motion_state
+#md # init_motion_state
+#md # Base.view(::AbstractVector,::RigidBodyMotion,::Int)
+#md # positionvector
+#md # velvector
+#md # deformationvector
+#md # motion_rhs!
+#md # surface_velocity!
+#md # maxvelocity
+#md # ```
+
+#md # ## Joint types
+#md # ```@docs
+#md # RevoluteJoint
+#md # PrismaticJoint
+#md # HelicalJoint
+#md # SphericalJoint
+#md # FreeJoint
+#md # FreeJoint2d
+#md # ```

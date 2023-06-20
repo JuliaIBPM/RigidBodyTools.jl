@@ -142,7 +142,6 @@ plot(b)
 scatter!(b,markersize=3,markercolor=:black)
 
 #md # ## Body functions
-
 #md # ```@docs
 #md # BasicBody
 #md # Polygon

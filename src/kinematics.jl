@@ -29,8 +29,26 @@ struct DOFKinematicData
 end
 
 (k::AbstractPrescribedDOFKinematics)(t) = DOFKinematicData(t,k.x(t),k.ẋ(t),k.ẍ(t))
+
+"""
+    dof_position(kd::DOFKinematicData) -> Float64
+
+Returns the position of the given kinematic data of the degree of freedom
+"""
 dof_position(kd::DOFKinematicData) = kd.x
+
+"""
+    dof_velocity(kd::DOFKinematicData) -> Float64
+
+Returns the velocity of the given kinematic data of the degree of freedom
+"""
 dof_velocity(kd::DOFKinematicData) = kd.ẋ
+
+"""
+    dof_acceleration(kd::DOFKinematicData) -> Float64
+
+Returns the acceleration of the given kinematic data of the degree of freedom
+"""
 dof_acceleration(kd::DOFKinematicData) = kd.ẍ
 
 

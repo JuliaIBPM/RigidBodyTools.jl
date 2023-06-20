@@ -163,7 +163,6 @@ scatter!(b,markersize=3,markercolor=:black)
 ````
 
 ## Body functions
-
 ```@docs
 BasicBody
 Polygon

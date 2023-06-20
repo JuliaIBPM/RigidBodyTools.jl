@@ -342,6 +342,37 @@ For example, the vector of u velocities on body 2 is
 plot(view(u,bodies,2))
 ````
 
+## Joint functions
+```@docs
+Joint
+zero_joint
+init_joint
+```
+
+## System and state functions
+```@docs
+RigidBodyMotion
+zero_motion_state
+init_motion_state
+Base.view(::AbstractVector,::RigidBodyMotion,::Int)
+positionvector
+velvector
+deformationvector
+motion_rhs!
+surface_velocity!
+maxvelocity
+```
+
+## Joint types
+```@docs
+RevoluteJoint
+PrismaticJoint
+HelicalJoint
+SphericalJoint
+FreeJoint
+FreeJoint2d
+```
+
 ---
 
 *This page was generated using [Literate.jl](https://github.com/fredrikekre/Literate.jl).*
