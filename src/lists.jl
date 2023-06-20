@@ -1,11 +1,10 @@
 
 
-export BodyList, MotionList, RigidTransformList, MotionTransformList, PluckerMotionList, getrange
+export BodyList, RigidTransformList, MotionTransformList, PluckerMotionList, getrange
 
 abstract type SetOfBodies end
 
 const LISTS = [:BodyList, :Body],
-              [:MotionList, :AbstractMotion],
               [:RigidTransformList, :RigidTransform],
               [:MotionTransformList, :MotionTransform],
               [:PluckerMotionList, :PluckerMotion]
@@ -16,11 +15,6 @@ const LISTS = [:BodyList, :Body],
 Create a list of bodies
 """ BodyList
 
-"""
-    MotionList([m1,m2,...])
-
-Create a list of motions
-""" MotionList
 
 """
     RigidTransformList([t1,t2,...])
@@ -125,10 +119,10 @@ end
 
 
 """
-    getrange(bl::BodyList,i::Int) -> Range
+    getrange(bl::BodyList,bid::Int) -> Range
 
 Return the subrange of indices in the global set of surface point data
-corresponding to body `i` in a BodyList `bl`.
+corresponding to body `bid` in a BodyList `bl`.
 """
 function getrange(bl::BodyList,i::Int)
     i <= length(bl) || error("Unavailable body")
@@ -142,6 +136,24 @@ function getrange(bl::BodyList,i::Int)
     return first:last
 end
 
+"""
+    global_to_local_index(i::Int,bl::BodyList) -> (Int, Int)
+
+Return the ID `bid` of the body in body list `bl` on which global index `i` sits,
+as well as the local index of `iloc` on that body and return as `(bid,iloc)`
+"""
+function global_to_local_index(i::Int,bl::BodyList)
+    bid = 1
+    ir = getrange(bl,bid)
+    while !(in(i,ir)) && bid <= length(bl)
+        bid += 1
+        ir = getrange(bl,bid)
+    end
+
+    return bid, i-first(ir)+1
+end
+
+#=
 """
     getrange(bl::BodyList,ml::MotionList,i::Int) -> Range
 
@@ -159,16 +171,17 @@ function getrange(bl::BodyList,ml::MotionList,i::Int)
     last = first+length(motion_state(bl[i],ml[i]))-1
     return first:last
 end
+=#
 
 """
-    view(f::AbstractVector,bl::BodyList,i::Int) -> SubArray
+    view(f::AbstractVector,bl::BodyList,bid::Int) -> SubArray
 
 Provide a view of the range of values in vector `f` corresponding to the Lagrange
-points of the body with index `i` in a BodyList `bl`.
+points of the body with index `bid` in a BodyList `bl`.
 """
-function Base.view(f::AbstractVector,bl::BodyList,i::Int)
+function Base.view(f::AbstractVector,bl::BodyList,bid::Int)
     length(f) == numpts(bl) || error("Inconsistent size of data for viewing")
-    return view(f,getrange(bl,i))
+    return view(f,getrange(bl,bid))
 end
 
 """
@@ -228,26 +241,3 @@ function RigidTransformList(x::Vector{T}) where T <: Real
 end
 
 _length_and_mod(x::Vector{T}) where T <: Real = (n = length(x); return n ÷ CHUNK, n % CHUNK)
-
-
-"""
-    maxlistvelocity(bl::BodyList,ml::Union{AbstractMotion,List}[,tmax=100,dt=0.01])
-
-Search through the given motions `ml` applied to bodies `bl` and return `(umax,i,t,bodyindex)`,
-the maximum velocity magnitude, the index of the body points where it
-occurs, the time at which it occurs, and the body index it occurs on.
-"""
-function maxlistvelocity(bl::BodyList,ml::Union{AbstractMotion,MotionList};kwargs...)
-    i = 1
-    umax = 0.0
-    tmax = 0.0
-    bmax = 1
-    for j in 1:length(bl)
-        mlj = isa(ml,AbstractMotion) ? ml : ml[j]
-        umax_j,i_j,t_j = maxvelocity(bl[j],mlj,kwargs...)
-        if umax_j > umax
-            umax, i, tmax, bmax = umax_j, i_j, t_j, j
-        end
-    end
-    return umax, i, tmax, bmax
-end

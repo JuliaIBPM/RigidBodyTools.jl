@@ -482,24 +482,28 @@ function update_body!(b::Body,x::AbstractVector,m::RigidBodyMotion)
 end
 
 """
-    maxvelocity(b::Body,x::AbstractVector,m::RigidBodyMotion[,tmax=100,dt=0.01])
+    maxvelocity(b::Union{Body,BodyList},x::AbstractVector,m::RigidBodyMotion[,tmax=10,dt=0.05])
 
-Search through the given motion `m` applied to body `b` and return `(umax,i,t)`,
-the maximum velocity magnitude, the index of the body points where it
-occurs, and the time at which it occurs.
+Search through the given motion state vector `x` and motion `m` applied to body `b` and return `(umax,i,t,bid)`,
+the maximum velocity magnitude, the global index of the body point where it
+occurs, the time at which it occurs, and the body on which it occurs.
 """
-function maxvelocity(bl::Union{Body,BodyList},x::AbstractVector,m::RigidBodyMotion;tf=10.0,dt=0.01)
+function maxvelocity(bl::BodyList,x::AbstractVector,m::RigidBodyMotion;tf=10.0,dt=0.05)
     u, v = zeros(numpts(bl)), zeros(numpts(bl))
     i = 1
+    bid = 1
     umax = 0.0
     tmax = 0.0
     for t in 0.0:dt:tf
         surface_velocity!(u,v,bl,x,m,t)
         umag = sqrt.(u.^2+v.^2)
         umax_t, i_t = findmax(umag)
+        bid_t, iloc_t = global_to_local_index(i_t,bl)
         if umax_t > umax
-            umax, i, tmax = umax_t, i_t, t
+            umax, i, tmax, bid  = umax_t, i_t, t, bid_t
         end
     end
-    return umax, i, tmax
+    return umax, i, tmax, bid
 end
+
+maxvelocity(b::Body,x::AbstractVector,m::RigidBodyMotion;kwargs...) = maxvelocity(BodyList([b]),x,m;kwargs...)

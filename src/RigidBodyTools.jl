@@ -16,7 +16,7 @@ export Body
 export RigidBodyMotion, AbstractKinematics, d_dt, motion_velocity, motion_state,
           surface_velocity!, surface_velocity, update_body!,
           AbstractDeformationMotion, ConstantDeformationMotion, DeformationMotion,
-          NullDeformationMotion,maxvelocity, maxlistvelocity, zero_body
+          NullDeformationMotion,maxvelocity, zero_body
 
 export AbstractDOFKinematics, AbstractPrescribedDOFKinematics, DOFKinematicData, SmoothRampDOF,
         OscillatoryDOF, ConstantVelocityDOF, CustomDOF, ExogenousDOF, ConstantPositionDOF,
@@ -35,14 +35,6 @@ export Joint, joint_transform, parent_to_child_transform, LinkedSystem, position
 
 export RevoluteJoint, PrismaticJoint, CylindricalJoint, SphericalJoint, FreeJoint, FreeJoint2d
 
-#=
-export Oscillation, OscillationX, OscillationY, OscillationXY, RotationalOscillation,
-        PitchHeave, Pitchup, EldredgeRamp, ColoniusRamp, SwitchedKinematics,
-        complex_translational_position, complex_translational_velocity, complex_translational_acceleration,
-        angular_position, angular_velocity, angular_acceleration,
-        translational_position, translational_velocity, translational_acceleration,
-        KinematicData
-=#
 
 
 const NDIM = 2
