@@ -27,19 +27,22 @@ export RigidTransform, rotation_about_x, rotation_about_y, rotation_about_z, rot
           MotionTransform, ForceTransform, AbstractTransformOperator, rotation_transform,
           cross_matrix, cross_vector, translation, rotation, motion_subspace, joint_velocity
 
-export PluckerForce, PluckerMotion, motion_rhs!, zero_joint, init_motion_state
+export PluckerForce, PluckerMotion, motion_rhs!, zero_joint, zero_motion_state, init_motion_state
 
 export Joint, joint_transform, parent_to_child_transform, LinkedSystem, position_dimension,
         exogenous_dimension, constrained_dimension, unconstrained_dimension, position_and_vel_dimension,
         body_transforms, number_of_dofs
 
+export RevoluteJoint, PrismaticJoint, CylindricalJoint, SphericalJoint, FreeJoint, FreeJoint2d
+
+#=
 export Oscillation, OscillationX, OscillationY, OscillationXY, RotationalOscillation,
         PitchHeave, Pitchup, EldredgeRamp, ColoniusRamp, SwitchedKinematics,
         complex_translational_position, complex_translational_velocity, complex_translational_acceleration,
         angular_position, angular_velocity, angular_acceleration,
         translational_position, translational_velocity, translational_acceleration,
         KinematicData
-
+=#
 
 
 const NDIM = 2
