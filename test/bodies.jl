@@ -39,8 +39,8 @@ const MYEPS = 20*eps()
   @test abs(sum(ny)) < 1000.0*eps(1.0)
 
 
-  T = RigidTransform((1.0,-1.0),π/4)
-  T(c)
+  T = MotionTransform((1.0,-1.0),π/4)
+  update_body!(c,T)
   nx2, ny2 = normalmid(c,ref=true)
   @test sum(abs.(nx .- nx2)) < 1000.0*eps(1.0)
   @test sum(abs.(ny .- ny2)) < 1000.0*eps(1.0)
@@ -65,12 +65,11 @@ end
   ds = dlengthmid(b)
   @test all(ds .≈ 0.1)
 
-  T = RigidTransform((1.0,-1.0),π/2)
-  T(b)
+  T = MotionTransform((1.0,-1.0),π/2)
+  update_body!(b,T)
 
-  T2 = RigidTransform((1,-1),π/2)
-  T2(b)
-
+  T2 = MotionTransform((1,-1),π/2)
+  update_body!(b,T2)
 
   nx, ny = normalmid(b)
   @test all(isapprox.(nx[1:10],1.0,atol=MYEPS)) &&
@@ -85,8 +84,9 @@ end
   ds = dlengthmid(b)
   @test all(ds .≈ 0.1)
 
-  T = RigidTransform((1.2,-1.5),π/4)
-  T(b)
+  T = MotionTransform((1.2,-1.5),π/4)
+  update_body!(b,T)
+
   nx2, ny2 = normalmid(b,ref=true)
   @test sum(abs.(nx0 .- nx2)) < 1000.0*eps(1.0)
   @test sum(abs.(ny0 .- ny2)) < 1000.0*eps(1.0)
@@ -137,28 +137,22 @@ end
   @test sl[numpts(p)+1:numpts(bl)] == arccoord(c)
 
 
-  m1 = RigidBodyMotion(complex(0.0),0.0)
-  m2 = RigidBodyMotion(RigidBodyTools.PitchHeave(1.0, 11.0, 0.2, 0.0, 0.0, 0.5, 1.0, 0.0))
+  t1 = MotionTransform((0.0,0.0),0.0)
+  t2 = MotionTransform((1.0,0.0),π/2)
 
-  ml = MotionList([m1,m2])
-  @test length(ml) == 2
-  @test eltype(ml) == RigidBodyTools.AbstractMotion
-
-  t1 = RigidTransform((0.0,0.0),0.0)
-  t2 = RigidTransform((1.0,0.0),π/2)
-
-  tl = RigidTransformList([t1,t2])
+  tl = MotionTransformList([t1,t2])
   push!(tl,t1)
   @test length(tl) == 3
-  @test eltype(tl) == RigidTransform
+  @test eltype(tl) == MotionTransform
 
   v = rand(numpts(bl))
   @test numpts(bl) == numpts(p)+numpts(c)
   @test v[1:numpts(p)] == view(v,bl,1)
   @test v[(numpts(p)+1):(numpts(p)+numpts(c))] == view(v,bl,2)
 
-  tl = RigidTransformList([t1,t2])
-  tl(bl)
+  tl = MotionTransformList([t1,t2])
+  update_body!(bl,tl)
+
   @test [bl[1].cent...] == translation(tl[1])
   @test [bl[2].cent...] == translation(tl[2])
   @test bl[1].α == RigidBodyTools._get_angle_of_2d_transform(tl[1])
@@ -174,51 +168,6 @@ end
   nxb1, nyb1 = normalmid(b1)
   nxb2, nyb2 = normalmid(b2)
   @test nx[1:60] == nxb1 && ny[1:60] == nyb1 && nx[61:120] == nxb2 && ny[61:120] == nyb2
-
-
-end
-
-@testset "Assign velocity" begin
-    b = Circle(1.0,100)
-    T = RigidTransform((rand(),rand()),0.0)
-    T(b)
-
-    ċ = rand(ComplexF64)
-    m = RigidBodyMotion(ċ,1.0)
-    u,v = surface_velocity(b,m,0.0)
-    @test u[26] ≈ -1.0+real(ċ) atol = 1e-14
-    @test v[51] ≈ -1.0+imag(ċ) atol = 1e-14
-
-    #u2, v2 = m(0.0,b)
-    #@test u == u2 && v == v2
-
-    b2 = Circle(1.0,100)
-    T2 = RigidTransform((rand(),rand()),0.0)
-    T2(b2)
-    ċ2 = rand(ComplexF64)
-    m2 = RigidBodyMotion(ċ2,1.0)
-
-    bl = BodyList([b,b2])
-    ml = MotionList([m,m2])
-    u, v = surface_velocity(bl,ml,0.0)
-    @test u[26] ≈ -1.0+real(ċ) atol = 1e-14
-    @test u[126] ≈ -1.0+real(ċ2) atol = 1e-14
-    @test v[151] ≈ -1.0+imag(ċ2) atol = 1e-14
-
-    #u2, v2 = ml(0.0,bl)
-    #@test u2 == u && v2 == v
-
-    vel = motion_velocity(bl,ml,0.0)
-    @test vel[3] == 1.0
-    @test vel[1]+im*vel[2] ≈ ċ atol = 1e-14
-    @test vel[4]+im*vel[5] ≈ ċ2 atol = 1e-14
-    @test vel[6] == 1.0
-
-    x = rand(15)
-    tl = RigidTransformList(x)
-    @test translation(tl[4]) ≈ [x[10],x[11]]
-    @test RigidBodyTools._get_angle_of_2d_transform(tl[4]) ≈ x[12]
-
 
 
 end
