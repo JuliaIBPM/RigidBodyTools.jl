@@ -477,7 +477,7 @@ function update_body!(b::Body,x::AbstractVector,m::RigidBodyMotion)
     q = positionvector(x,m)
     _update_body!(b,deformationvector(x,m,1),deformations[1])
     T = body_transforms(q,m)[1]
-    update_body!(b,t)
+    update_body!(b,T)
     return b
 end
 
