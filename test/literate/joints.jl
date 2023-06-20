@@ -1,4 +1,4 @@
-# # Joints
+# # Joints and body-joint systems
 
 #md # ```@meta
 #md # CurrentModule = RigidBodyTools
@@ -67,7 +67,7 @@ The basic signature is
 =#
 
 #=
-### Example
+## Example
 Let's see a 2d example. Suppose we have two bodies, 1 and 2. Body 1 is to
 be connected to the inertial coordinate system, and prescribed with motion
 that causes it to oscillate rotationally (*pitch*) about a point located
@@ -282,7 +282,6 @@ macro animate_motion(b,m,dt,tmax,xlim,ylim)
             a_edof = zero_joint(ls,dimfcn=exogenous_dimension)
             a_udof = zero_joint(ls,dimfcn=unconstrained_dimension)
 
-
             @gif for t in t0:$dt:t0+$tmax
                 motion_rhs!(dxdt,x,t,a_edof,a_udof,$m,bc)
                 global x += dxdt*$dt
@@ -296,3 +295,26 @@ end
 Let's use it here
 =#
 @animate_motion bodies ls 0.01 4 (-4,4) (-4,4)
+
+
+#=
+## Outputting the surface velocities
+For use in mechanics problems, it is important to be able to output
+the velocity of the points on the surface of bodies at a given system state
+and time. We use the function `surface_velocity!` for this.
+
+First, initialize vectors for the `u` and `v` components in this 2d example,
+using the `zero_body` function.
+=#
+u, v = zero_body(bodies), zero_body(bodies)
+
+#=
+Now evaluate the velocities at time 0, with the initial state
+=#
+surface_velocity!(u,v,bodies,x0,ls,t0)
+
+#=
+We can plot these on each body using the `view` function for `BodyList`.
+For example, the vector of u velocities on body 2 is
+=#
+plot(view(u,bodies,2))

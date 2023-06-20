@@ -127,11 +127,11 @@ plot(t,dof_acceleration.(k.(t)),xlims=(0,Inf),label="ẍ")
 If the degree of freedom is to be *exogenous* or *unconstrained*,
 then it can be designated as such, e.g,
 =#
-k = ExogenousDOF
+k = ExogenousDOF()
 #=
 or
 =#
-k = UnconstrainedDOF
+k = UnconstrainedDOF()
 
 
 #md # ## Degree of freedom functions

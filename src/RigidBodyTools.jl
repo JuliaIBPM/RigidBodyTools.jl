@@ -16,7 +16,7 @@ export Body
 export RigidBodyMotion, AbstractKinematics, d_dt, motion_velocity, motion_state,
           surface_velocity!, surface_velocity, update_body!,
           AbstractDeformationMotion, ConstantDeformationMotion, DeformationMotion,
-          NullDeformationMotion,maxvelocity, maxlistvelocity
+          NullDeformationMotion,maxvelocity, maxlistvelocity, zero_body
 
 export AbstractDOFKinematics, AbstractPrescribedDOFKinematics, DOFKinematicData, SmoothRampDOF,
         OscillatoryDOF, ConstantVelocityDOF, CustomDOF, ExogenousDOF, ConstantPositionDOF,

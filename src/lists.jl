@@ -64,6 +64,9 @@ end
 
 numpts(bl::BodyList) = mapreduce(numpts,+,bl;init=0)
 
+zero_body(b::Union{Body,BodyList}) = zeros(Float64,numpts(b))
+
+
 """
     collect(bl::bodylist[,endpoints=false][,ref=false]) -> Vector{Float64}, Vector{Float64}
 
