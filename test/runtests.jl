@@ -30,7 +30,6 @@ end
 
 if GROUP == "All" || GROUP == "Auxiliary"
   include("transforms.jl")
-  include("motions.jl")
   include("bodies.jl")
 end
 
@@ -45,8 +44,8 @@ end
 if GROUP == "Notebooks"
   for (root, dirs, files) in walkdir(litdir)
     for file in files
-      endswith(file,".jl") && startswith(file,"defor") && Literate.notebook(joinpath(root, file),notebookdir)
-      #endswith(file,".jl") && Literate.notebook(joinpath(root, file),notebookdir)
+      #endswith(file,".jl") && startswith(file,"defor") && Literate.notebook(joinpath(root, file),notebookdir)
+      endswith(file,".jl") && Literate.notebook(joinpath(root, file),notebookdir)
     end
   end
 end

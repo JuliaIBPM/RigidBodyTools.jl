@@ -10,9 +10,12 @@ describing rigid-body motion and force. Plücker vectors succinctly describe
 both the angular (rotational) and linear (translational) part of motion, and the angular (moment) and
 linear (force) part of force. In three dimensions, a Plücker vector is 6-dimensional,
 e.g., Plücker velocity and force vectors are
-$$v = \begin{bmatrix} \Omega_x \\ \Omega_y \\ \Omega_z \\ U_x \\ U_y \\ U_z \end{bmatrix}\qquad
+
+$$v = \begin{bmatrix} \Omega_x \\ \Omega_y \\ \Omega_z \\ U_x \\ U_y \\ U_z \end{bmatrix}, \qquad
 f = \begin{bmatrix} M_x \\ M_y \\ M_z \\ F_x \\ F_y \\ F_z \end{bmatrix}$$
+
 In two dimensions, there is only one angular component and two linear components, e.g.,
+
 $$v = \begin{bmatrix} \Omega_z \\ U_x \\ U_y \end{bmatrix}, \qquad f = \begin{bmatrix} M_z \\ F_x \\ F_y \end{bmatrix}$$
 
 We need to be able to transform these vectors from one coordinate system to another.
