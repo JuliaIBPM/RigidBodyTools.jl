@@ -67,8 +67,8 @@ end
 if GROUP == "Notebooks"
   for (root, dirs, files) in walkdir(litdir)
     for file in files
-      #endswith(file,".jl") && startswith(file,"exog") && Literate.notebook(joinpath(root, file),notebookdir)
-      endswith(file,".jl") && Literate.notebook(joinpath(root, file),notebookdir)
+      endswith(file,".jl") && startswith(file,"def") && Literate.notebook(joinpath(root, file),notebookdir)
+      #endswith(file,".jl") && Literate.notebook(joinpath(root, file),notebookdir)
     end
   end
 end

@@ -25,11 +25,8 @@ macro animate_motion(b,m,dt,tmax,xlim,ylim)
             dxdt = zero(x0)
             x = copy(x0)
 
-            a_edof = zero_joint(ls,dimfcn=exogenous_dimension)
-            a_udof = zero_joint(ls,dimfcn=unconstrained_dimension)
-
             @gif for t in t0:$dt:t0+$tmax
-                motion_rhs!(dxdt,x,t,a_edof,a_udof,$m,bc)
+                motion_rhs!(dxdt,x,($m,bc),t)
                 global x += dxdt*$dt
                 update_body!(bc,x,$m)
                 plot(bc,xlims=$xlim,ylims=$ylim)
