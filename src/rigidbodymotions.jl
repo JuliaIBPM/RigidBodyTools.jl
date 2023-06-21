@@ -1,5 +1,13 @@
 # Linked systems #
 
+function _default_exogenous_function!(a_edof,u,p,t)
+  fill!(a_edof,0.0)
+end
+
+function _default_unconstrained_function!(a_udof,u,p,t)
+  fill!(a_udof,0.0)
+end
+
 """
     RigidBodyMotion
 
@@ -47,10 +55,20 @@ struct RigidBodyMotion{ND} <: AbstractMotion
     "Sets of indices providing the body point coordinates in the global state vector"
     deformation_indices :: Vector{Vector{Int}}
 
+    "Function to specify exogenous behavior, must be mutating and have signature (a,u,p,t)"
+    exogenous_function! :: Function
+
+    "Buffers for exogenous and unconstrained behavior"
+    a_edof_buffer :: Vector{Float64}
+
+    "Buffers for exogenous and unconstrained behavior"
+    a_udof_buffer :: Vector{Float64}
+
 end
 
 
-function RigidBodyMotion(joints::Vector{<:Joint},bodies::BodyList,deformations::Vector{<:AbstractDeformationMotion})
+function RigidBodyMotion(joints::Vector{<:Joint},bodies::BodyList,deformations::Vector{<:AbstractDeformationMotion};
+                              exogenous::Function = _default_exogenous_function!)
     nbody = length(bodies)
     parent_body = zeros(Int,nbody)
     parent_joint = zeros(Int,nbody)
@@ -92,14 +110,19 @@ function RigidBodyMotion(joints::Vector{<:Joint},bodies::BodyList,deformations::
         index_i += def_length
     end
 
+    a_edof_buffer = _zero_joint(joints,exogenous_dimension)
+    a_udof_buffer = _zero_joint(joints,unconstrained_dimension)
+
+
     RigidBodyMotion{physical_dimension(joints)}(lscnt,nbody,lslists,joints,deformations,parent_body,parent_joint,
-                                              child_bodies,child_joints,position_indices,vel_indices,deformation_indices)
+                                              child_bodies,child_joints,position_indices,vel_indices,deformation_indices,
+                                              exogenous,a_edof_buffer,a_udof_buffer)
 end
 
-RigidBodyMotion(joints::Vector{<:Joint},bodies::BodyList) = RigidBodyMotion(joints,bodies,[NullDeformationMotion() for bi in 1:length(bodies)])
+RigidBodyMotion(joints::Vector{<:Joint},bodies::BodyList;kwargs...) = RigidBodyMotion(joints,bodies,[NullDeformationMotion() for bi in 1:length(bodies)];kwargs...)
 
-RigidBodyMotion(joint::Joint,body::Body,def::AbstractDeformationMotion) = RigidBodyMotion([joint],BodyList([body]),[def])
-RigidBodyMotion(joint::Joint,body::Body) = RigidBodyMotion([joint],BodyList([body]))
+RigidBodyMotion(joint::Joint,body::Body,def::AbstractDeformationMotion;kwargs...) = RigidBodyMotion([joint],BodyList([body]),[def];kwargs...)
+RigidBodyMotion(joint::Joint,body::Body;kwargs...) = RigidBodyMotion([joint],BodyList([body]);kwargs...)
 
 
 function Base.show(io::IO, ls::RigidBodyMotion)
@@ -107,6 +130,12 @@ function Base.show(io::IO, ls::RigidBodyMotion)
     println(io, "   $(ls.nbody) bodies")
     println(io, "   $(length(ls.joints)) joints")
 end
+
+function ismoving(m::RigidBodyMotion)
+    @unpack joints = m
+    any(map(joint -> ismoving(joint),joints))
+end
+
 
 function _list_of_linked_bodies!(lslist,bodyid,child_bodies)
     push!(lslist,bodyid)
@@ -291,9 +320,10 @@ according to the state of the joint. Alternatively, one
 can use `position_dimension`, `constrained_dimension`, `unconstrained_dimension`,
 or `exogenous_dimension`.
 """
-function zero_joint(ls::RigidBodyMotion;dimfcn=position_and_vel_dimension)
-    mapreduce(joint -> zero_joint(joint;dimfcn=dimfcn),vcat,ls.joints)
-end
+zero_joint(ls::RigidBodyMotion;dimfcn=position_and_vel_dimension) = _zero_joint(ls.joints,dimfcn)
+
+
+_zero_joint(joints::Vector{<:Joint},dimfcn) = mapreduce(joint -> zero_joint(joint;dimfcn=dimfcn),vcat,joints)
 
 """
     zero_motion_state(bl::BodyList,ls::RigidBodyMotion)
@@ -370,13 +400,21 @@ function deformationvector(x::AbstractVector,ls::RigidBodyMotion,bid::Int)
   return view(x,deformation_indices[bid])
 end
 
-
 """
-    motion_rhs!(dxdt::AbstractVector,x::AbstractVector,t::Real,a_edof,a_udof,ls::RigidBodyMotion)
+    motion_rhs!(dxdt::AbstractVector,x::AbstractVector,p::Tuple{RigidBodyMotion,BodyList},t::Real)
 
-Sets the right-hand side vector `dxdt` (mutating) for linked system `ls`, using the current state vector `x`,
-the current time `t`, exogenous accelerations `a_edof` and unconstrained accelerations `a_udof`.
+Sets the right-hand side vector `dxdt` (mutating) for linked system `ls` of bodies `bl`, using the current state vector `x`,
+the current time `t`.
 """
+function motion_rhs!(dxdt::AbstractVector,x::AbstractVector,p::Tuple{RigidBodyMotion,Union{Body,BodyList}},t::Real)
+    ls, bl = p
+    @unpack a_edof_buffer, a_udof_buffer, exogenous_function! = ls
+    fill!(a_udof_buffer,0.0)
+    exogenous_function!(a_edof_buffer,x,ls,t)
+    motion_rhs!(dxdt,x,t,a_edof_buffer,a_udof_buffer,ls,bl)
+end
+
+
 function motion_rhs!(dxdt::AbstractVector,x::AbstractVector,t::Real,a_edof::AbstractVector,a_udof::AbstractVector,ls::RigidBodyMotion,bl::BodyList)
     @unpack joints, deformations = ls
     for (jid,joint) in enumerate(joints)

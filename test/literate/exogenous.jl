@@ -32,7 +32,23 @@ joints = [joint]
 b = ThickPlate(1.0,0.05,0.02)
 bodies = BodyList([b])
 
-ls = RigidBodyMotion(joints,bodies)
+#=
+Before we construct the system, we need to provide a function that will
+specify the exogenous y acceleration. By default, it sets it to zero. We
+will override that with a function that sets it to a random value chosen from a
+normal distribution. Note that the function must be mutating and have a signature
+`(a,x,p,t)`, where `a` is the exogenous acceleration vector. The arguments `x`
+and `p` are a state and a parameter, which can be flexibly defined. The last
+argument `t` is time. Here, we don't need any of those arguments.
+=#
+function my_exogenous_function!(a,x,p,t)
+    a .= randn(length(a))
+end
+
+#=
+We pass that along via the `exogenous` keyword argument.
+=#
+ls = RigidBodyMotion(joints,bodies;exogenous=my_exogenous_function!)
 
 #=
 Let's initialize the state vector and its rate of change
@@ -49,28 +65,21 @@ The third is the y position, the exogenous degree of freedom. And the
 fourth is the y velocity.
 
 Why the y velocity? Because the exogenous behavior is specified via its
-acceleration. This acceleration will need to be provided at each step in
-the time marching. To help with this, we create a zero vector:
+acceleration. Let's advance the system and animate it. We include
+a horizontal line along the hinge axis to show the effect of the exogenous
+motion.
 =#
-a_edof = zero_joint(ls,dimfcn=exogenous_dimension)
-a_udof = zero_joint(ls,dimfcn=unconstrained_dimension);
 
-#=
-Now, `a_edof` is not empty, as it was in the previous example, but has a single element. We will set this
-element's value inside the loop, using a random value chosen from a
-normal distribution. We will record the history of the state while
-we advance it
-=#
 xhist = []
 @gif for t in t0:dt:t0+tmax
-  a_edof[1] = randn()
 
-  motion_rhs!(dxdt,x,t,a_edof,a_udof,ls,bc)
+  motion_rhs!(dxdt,x,(ls,bc),t)
   global x += dxdt*dt
   update_body!(bc,x,ls)
 
   push!(xhist,copy(x))
   plot(bc,xlims=(-1,5),ylims=(-1.5,1.5))
+  hline!([0.0])
 end every 5
 
 #=

@@ -52,6 +52,13 @@ Returns the acceleration of the given kinematic data of the degree of freedom
 dof_acceleration(kd::DOFKinematicData) = kd.ẍ
 
 
+function ismoving(dof::AbstractPrescribedDOFKinematics)
+    !((dof isa ConstantVelocityDOF && dof.ẋ0 == 0.0)||(dof isa ConstantPositionDOF))
+end
+
+
+### Types of dof kinematics ###
+
 """
     ConstantPositionDOF(x0::Float64) <: AbstractPrescribedDOFKinematics
 

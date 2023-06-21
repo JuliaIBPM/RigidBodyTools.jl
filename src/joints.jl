@@ -69,6 +69,8 @@ function Joint(::Type{JT},parent_id::Int,Xp_to_j::MotionTransform{ND},child_id::
             kins,params,vbuf,Xp_to_j,Xch_to_j)
 end
 
+
+
 function Base.show(io::IO, joint::Joint{ND,JT}) where {ND,JT}
     println(io, "Joint of dimension $ND and type $JT")
     println(io, "   Constrained dofs = $(joint.cdofs)")
@@ -86,6 +88,12 @@ end
 
 position_dimension(j::Joint{ND,JT}) where {ND,JT} = position_dimension(JT)
 number_of_dofs(j::Joint{ND,JT}) where {ND,JT} = number_of_dofs(JT)
+
+function ismoving(joint::Joint)
+    @unpack kins = joint
+    any(map(dof -> ismoving(dof),kins))
+end
+
 
 """
     motion_subspace(j::Joint)
@@ -392,3 +400,25 @@ function joint_transform(q::AbstractVector,::Type{FreeJoint2d},p::Dict,::Val{2})
 end
 
 motion_subspace(::Type{FreeJoint2d},p::Dict,::Val{2}) = SMatrix{3,3,Float64}(I)
+
+## Fixed joint ##
+
+abstract type FixedJoint <: AbstractJointType end
+
+"""
+    Joint(X::MotionTransform,bid::Int)
+
+Construct a joint that simply places the body with ID `bid` rigidly in the configuration
+given by `X`.
+"""
+Joint(Xp_to_j::MotionTransform{ND},child_id::Int) where {ND} = Joint(FixedJoint,0,Xp_to_j,child_id,MotionTransform{ND}())
+
+function Joint(::Type{FixedJoint},parent_id::Int,Xp_to_j::MotionTransform{2},child_id::Int,Xch_to_j::MotionTransform{2})
+    dofs = [ConstantVelocityDOF(0.0) for i = 1:3]
+    Joint(FreeJoint2d,parent_id,Xp_to_j,child_id,Xch_to_j,dofs)
+end
+
+function Joint(::Type{FixedJoint},parent_id::Int,Xp_to_j::MotionTransform{3},child_id::Int,Xch_to_j::MotionTransform{3})
+    dofs = [ConstantVelocityDOF(0.0) for i = 1:6]
+    Joint(FreeJoint,parent_id,Xp_to_j,child_id,Xch_to_j,dofs)
+end

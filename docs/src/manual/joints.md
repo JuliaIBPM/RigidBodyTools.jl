@@ -65,6 +65,11 @@ The basic signature is
 
 `Joint(joint_type,parent_body_id,Xp_to_jp,child_body_id,Xc_to_jc,doflist)`
 
+However, there is a specialized signature if you simply wish to place
+a body in some stationary configuration `X`:
+
+`Joint(X,body_id)`
+
 ## Example
 Let's see a 2d example. Suppose we have two bodies, 1 and 2. Body 1 is to
 be connected to the inertial coordinate system, and prescribed with motion
@@ -260,6 +265,7 @@ $$\frac{\mathrm{d}x}{\mathrm{d}t} = f(x,t)$$
 The function $f(x,t)$ describing the rate of change of $x$ is given by the
 function `motion_rhs!`. This function mutates its first argument,
 the rate-of-change vector `dxdt`, which can then be used to update the state.
+The system and bodies are passed in as a tuple, followed by time.
 
 Using a simple forward Euler method, the state vector can be advanced
 as follows
@@ -270,21 +276,9 @@ dxdt = zero(x0)
 x = copy(x0)
 dt, tmax = 0.01, 4.0
 for t in t0:dt:t0+tmax
-  motion_rhs!(dxdt,x,t,[],[],ls,bodies)
+  motion_rhs!(dxdt,x,(ls,bodies),t)
   global x += dxdt*dt
 end
-````
-
-Note that `motion_rhs!` takes two arguments that are given here as empty
-vectors. Those represent, respectively, the accelerations of the exogenous and unconstrained
-degrees of freedom. In this example, there are no such degrees of freedom. However,
-it is useful to take this opportunity to point out the function `zero_joint`, which can create
-a vector of zeros of length necessary for several different dimensional aspects of the
-joint's state. For example, a vector of zeros for the joint's exogenous
-degree-of-freedom dimensionality would be generated with
-
-````@example joints
-zero_joint(ls,dimfcn=exogenous_dimension)
 ````
 
 Now that we know how to advance the state vector, let's create a macro
@@ -298,11 +292,8 @@ macro animate_motion(b,m,dt,tmax,xlim,ylim)
             dxdt = zero(x0)
             x = copy(x0)
 
-            a_edof = zero_joint(ls,dimfcn=exogenous_dimension)
-            a_udof = zero_joint(ls,dimfcn=unconstrained_dimension)
-
             @gif for t in t0:$dt:t0+$tmax
-                motion_rhs!(dxdt,x,t,a_edof,a_udof,$m,bc)
+                motion_rhs!(dxdt,x,($m,bc),t)
                 global x += dxdt*$dt
                 update_body!(bc,x,$m)
                 plot(bc,xlims=$xlim,ylims=$ylim)
@@ -361,6 +352,7 @@ deformationvector
 motion_rhs!
 surface_velocity!
 maxvelocity
+ismoving(::RigidBodyMotion)
 ```
 
 ## Joint types

@@ -20,7 +20,7 @@ export RigidBodyMotion, AbstractKinematics, d_dt, motion_velocity, motion_state,
 
 export AbstractDOFKinematics, AbstractPrescribedDOFKinematics, DOFKinematicData, SmoothRampDOF,
         OscillatoryDOF, ConstantVelocityDOF, CustomDOF, ExogenousDOF, ConstantPositionDOF,
-        UnconstrainedDOF, Kinematics, dof_position, dof_velocity, dof_acceleration
+        UnconstrainedDOF, Kinematics, dof_position, dof_velocity, dof_acceleration, ismoving
 
 export RigidTransform, rotation_about_x, rotation_about_y, rotation_about_z, rotation_from_quaternion,
           quaternion, rotation_about_axis, rotation_identity,
@@ -33,7 +33,8 @@ export Joint, joint_transform, parent_to_child_transform, LinkedSystem, position
         exogenous_dimension, constrained_dimension, unconstrained_dimension, position_and_vel_dimension,
         body_transforms, number_of_dofs
 
-export RevoluteJoint, PrismaticJoint, CylindricalJoint, SphericalJoint, FreeJoint, FreeJoint2d
+export RevoluteJoint, PrismaticJoint, CylindricalJoint, SphericalJoint, FreeJoint, FreeJoint2d,
+        FixedJoint
 
 
 
@@ -67,7 +68,6 @@ include("lists.jl")
 
 include("rigidbodymotions.jl")
 include("directmotions.jl")
-
 
 include("tools.jl")
 include("assignvelocity.jl")
