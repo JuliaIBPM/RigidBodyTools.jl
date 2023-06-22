@@ -413,6 +413,15 @@ given by `X`.
 """
 Joint(Xp_to_j::MotionTransform{ND},child_id::Int) where {ND} = Joint(FixedJoint,0,Xp_to_j,child_id,MotionTransform{ND}())
 
+"""
+    Joint(X::MotionTransform)
+
+For a problem with a single body, construct a joint that simply places the body rigidly in the configuration
+given by `X`.
+"""
+Joint(Xp_to_j::MotionTransform{ND}) where {ND} = Joint(FixedJoint,0,Xp_to_j,1,MotionTransform{ND}())
+
+
 function Joint(::Type{FixedJoint},parent_id::Int,Xp_to_j::MotionTransform{2},child_id::Int,Xch_to_j::MotionTransform{2})
     dofs = [ConstantVelocityDOF(0.0) for i = 1:3]
     Joint(FreeJoint2d,parent_id,Xp_to_j,child_id,Xch_to_j,dofs)

@@ -70,6 +70,12 @@ a body in some stationary configuration `X`:
 
 `Joint(X,body_id)`
 
+and if there is only one body and it is stationary, then
+
+`Joint(X)`
+
+will do.
+
 =#
 
 #=
@@ -125,6 +131,8 @@ kx = ConstantVelocityDOF(0)
 #-
 #=
 We put these together into a vector, to pass along to the joint constructor.
+The ordering of these in the vector is important. It must be
+[rotational, x, y].
 =#
 dofs = [kr,kx,ky];
 
@@ -158,7 +166,7 @@ Ar = π/4
 ϕr = -π/4
 kr = OscillatoryDOF(Ar,Ω,ϕr,vel)
 #=
-Put it in a one-element vector
+Put it in a one-element vector.
 =#
 dofs = [kr];
 #=
@@ -372,7 +380,13 @@ plot(view(u,bodies,2))
 #md # position_vector
 #md # velocity_vector
 #md # deformation_vector
+#md # exogenous_position_vector
+#md # exogenous_velocity_vector
+#md # unconstrained_position_vector
+#md # unconstrained_velocity_vector
 #md # motion_rhs!
+#md # zero_exogenous
+#md # update_exogenous!
 #md # surface_velocity!
 #md # maxvelocity
 #md # ismoving(::RigidBodyMotion)

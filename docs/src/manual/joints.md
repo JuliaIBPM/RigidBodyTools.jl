@@ -70,6 +70,12 @@ a body in some stationary configuration `X`:
 
 `Joint(X,body_id)`
 
+and if there is only one body and it is stationary, then
+
+`Joint(X)`
+
+will do.
+
 ## Example
 Let's see a 2d example. Suppose we have two bodies, 1 and 2. Body 1 is to
 be connected to the inertial coordinate system, and prescribed with motion
@@ -124,6 +130,8 @@ kx = ConstantVelocityDOF(0)
 ````
 
 We put these together into a vector, to pass along to the joint constructor.
+The ordering of these in the vector is important. It must be
+[rotational, x, y].
 
 ````@example joints
 dofs = [kr,kx,ky];
@@ -161,7 +169,7 @@ Ar = π/4
 kr = OscillatoryDOF(Ar,Ω,ϕr,vel)
 ````
 
-Put it in a one-element vector
+Put it in a one-element vector.
 
 ````@example joints
 dofs = [kr];
@@ -399,7 +407,13 @@ Base.view(::AbstractVector,::RigidBodyMotion,::Int)
 position_vector
 velocity_vector
 deformation_vector
+exogenous_position_vector
+exogenous_velocity_vector
+unconstrained_position_vector
+unconstrained_velocity_vector
 motion_rhs!
+zero_exogenous
+update_exogenous!
 surface_velocity!
 maxvelocity
 ismoving(::RigidBodyMotion)

@@ -1,12 +1,8 @@
 # Linked systems #
 
-function _default_exogenous_function!(a_edof,u,p,t)
-  fill!(a_edof,0.0)
-end
+function _default_exogenous_function!(a_edof,u,p,t) end
 
-function _default_unconstrained_function!(a_udof,u,p,t)
-  fill!(a_udof,0.0)
-end
+function _default_unconstrained_function!(a_udof,u,p,t) end
 
 """
     RigidBodyMotion
@@ -425,6 +421,31 @@ function position_vector(x::AbstractVector,ls::RigidBodyMotion,jid::Int)
 end
 
 """
+    exogenous_position_vector(x::AbstractVector,ls::RigidBodyMotion,jid::Int)
+
+Returns a view of the exogenous dof position(s), if any, of joint `jid` in
+the global state vector `x`.
+"""
+function exogenous_position_vector(x::AbstractVector,ls::RigidBodyMotion,jid::Int)
+  @unpack joints = ls
+  qj = position_vector(x,ls,jid)
+  return view(qj,joints[jid].edofs)
+end
+
+"""
+    unconstrained_position_vector(x::AbstractVector,ls::RigidBodyMotion,jid::Int)
+
+Returns a view of the unconstrained dof position(s), if any, of joint `jid` in
+the global state vector `x`.
+"""
+function unconstrained_position_vector(x::AbstractVector,ls::RigidBodyMotion,jid::Int)
+  @unpack joints = ls
+  qj = position_vector(x,ls,jid)
+  return view(qj,joints[jid].udofs)
+end
+
+
+"""
     velocity_vector(x::AbstractVector,ls::RigidBodyMotion)
 
 Returns a view of the global state vector for a linked system containing only the velocity.
@@ -444,6 +465,31 @@ function velocity_vector(x::AbstractVector,ls::RigidBodyMotion,jid::Int)
    @unpack joints = ls
    ir = _getrange(joints,position_and_vel_dimension,jid)[position_dimension(joints[jid])+1:position_and_vel_dimension(joints[jid])]
    return view(x,ir)
+end
+
+"""
+    exogenous_velocity_vector(x::AbstractVector,ls::RigidBodyMotion,jid::Int)
+
+Returns a view of the exogenous dof position(s), if any, of joint `jid` in
+the global state vector `x`.
+"""
+function exogenous_velocity_vector(x::AbstractVector,ls::RigidBodyMotion,jid::Int)
+  @unpack joints = ls
+  qdotj = velocity_vector(x,ls,jid)
+  return view(qdotj,1:exogenous_dimension(joints[jid]))
+end
+
+"""
+    unconstrained_velocity_vector(x::AbstractVector,ls::RigidBodyMotion,jid::Int)
+
+Returns a view of the unconstrained dof position(s), if any, of joint `jid` in
+the global state vector `x`.
+"""
+function unconstrained_velocity_vector(x::AbstractVector,ls::RigidBodyMotion,jid::Int)
+  @unpack joints = ls
+  qdotj = velocity_vector(x,ls,jid)
+  j = joints[jid]
+  return view(qdotj,exogenous_dimension(j)+1:exogenous_dimension(j)+unconstrained_dimension(j))
 end
 
 """
@@ -494,6 +540,29 @@ end
 function motion_rhs!(dxdt::AbstractVector,x::AbstractVector,t::Real,a_edof::AbstractVector,a_udof::AbstractVector,ls::RigidBodyMotion,b::Body)
   _check_for_only_one_body(ls)
   motion_rhs!(dxdt,x,t,a_edof,a_udof,ls,BodyList([b]))
+end
+
+### updating exogenous variables ###
+
+"""
+    zero_exogenous(ls::RigidBodyMotion)
+
+Generate a zero vector of exogenous acclerations for system `ls`
+"""
+zero_exogenous(ls::RigidBodyMotion) = zero(ls.a_edof_buffer)
+
+
+"""
+    update_exogenous!(ls::RigidBodyMotion,a_edof::AbstractVector)
+
+Mutates the exogenous buffer of `ls` with the supplied vector of exogenous
+accelerations `a_edof`. This function is useful for supplying time-varying exogenous
+values to the integrator from an outer loop.
+"""
+function update_exogenous!(ls::RigidBodyMotion,a_edof::AbstractVector)
+  @assert length(ls.a_edof_buffer) == length(a_edof) "Incorrect length of exogenous vector"
+  ls.a_edof_buffer .= a_edof
+  nothing
 end
 
 ### Surface velocity API ###

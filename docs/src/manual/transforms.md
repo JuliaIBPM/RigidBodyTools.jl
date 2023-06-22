@@ -46,10 +46,12 @@ v = PluckerMotion([1.0,2.0,3.0])
 This created a 2d motion vector, with angular velocity 1.0 and linear
 velocity (2.0,3.0). One can also supply the angular and linear
 parts separately, using keywords. If one of these keywords is
-omitted, it defaults to zero for that part.
+omitted, it defaults to zero for that part. Note that we also need
+to write this as `PluckerMotion{2}` to specify the physical dimensionality.
+For a 3d motion vector, one would write `PluckerMotion{3}` here.
 
 ````@example transforms
-v2 = PluckerMotion(angular=1.0,linear=[2.0,3.0])
+v2 = PluckerMotion{2}(angular=1.0,linear=[2.0,3.0])
 v2 == v
 ````
 

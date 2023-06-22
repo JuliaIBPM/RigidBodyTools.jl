@@ -16,10 +16,12 @@ export Body
 export RigidBodyMotion, AbstractKinematics, d_dt, motion_velocity, motion_state,
           surface_velocity!, surface_velocity, update_body!,
           AbstractDeformationMotion, ConstantDeformationMotion, DeformationMotion,
-          NullDeformationMotion,maxvelocity, zero_body
+          NullDeformationMotion,maxvelocity, zero_body, update_exogenous!,
+          zero_exogenous
 
 export parent_body_of_joint, child_body_of_joint, parent_joint_of_body, child_joints_of_body,
-        position_vector,velocity_vector,deformation_vector
+        position_vector,velocity_vector,deformation_vector, exogenous_position_vector,
+        exogenous_velocity_vector, unconstrained_position_vector, unconstrained_velocity_vector
 
 export AbstractDOFKinematics, AbstractPrescribedDOFKinematics, DOFKinematicData, SmoothRampDOF,
         OscillatoryDOF, ConstantVelocityDOF, CustomDOF, ExogenousDOF, ConstantPositionDOF,
