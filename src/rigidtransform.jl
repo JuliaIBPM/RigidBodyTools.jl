@@ -86,6 +86,11 @@ for typename in [:PluckerMotion,:PluckerForce]
 
   @eval $typename(v::SVector{3}) = $typename{2}(v)
 
+  @eval $typename{2}(;angular::Real = 0.0,linear::AbstractVector=[0.0,0.0]) = $typename(angular,linear)
+
+  @eval $typename{3}(;angular::AbstractVector = [0.0,0.0,0.0],linear::AbstractVector=[0.0,0.0,0.0]) = $typename(angular,linear)
+
+
   @eval $typename(Ω::Real,U::AbstractVector) = $typename([Ω,U...])
 
   @eval $typename(Ω::AbstractVector,U::AbstractVector) = $typename([Ω...,U...])
@@ -95,9 +100,10 @@ for typename in [:PluckerMotion,:PluckerForce]
 
   @eval $typename(v::AbstractVector) = $fname_underscore(v,Val(length(v)))
 
-  @eval $fname_underscore(v,::Val{3}) = $typename(SVector{3}(v))
+  # We might not want to have strictly Float64 elements, so might rethink this
+  @eval $fname_underscore(v,::Val{3}) = $typename(SVector{3}(convert(Vector{Float64},v)))
 
-  @eval $fname_underscore(v,::Val{6}) = $typename(SVector{6}(v))
+  @eval $fname_underscore(v,::Val{6}) = $typename(SVector{6}(convert(Vector{Float64},v)))
 
   @eval (+)(a::$typename{ND},b::$typename{ND}) where {ND} = $typename{ND}(a.data+b.data)
 

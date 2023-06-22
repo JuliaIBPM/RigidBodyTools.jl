@@ -534,8 +534,8 @@ _rotation_transform(X::MotionTransform,::Val{:inertial}) = rotation_transform(in
 _rotation_transform(X::MotionTransform{ND},::Val{:body}) where {ND} = MotionTransform{ND}()
 
 _body_velocity(v::PluckerMotion,::Val{:full}) = v
-_body_velocity(v::PluckerMotion,::Val{:angular}) = angular_motion(v)
-_body_velocity(v::PluckerMotion,::Val{:linear}) = linear_motion(v)
+_body_velocity(v::PluckerMotion,::Val{:angular}) = angular_only(v)
+_body_velocity(v::PluckerMotion,::Val{:linear}) = linear_only(v)
 
 function velocity_in_body_coordinates_2d(x̃,ỹ,vb::PluckerMotion{2})
     Xb_to_p = MotionTransform(x̃,ỹ,0.0)
@@ -549,8 +549,7 @@ end
 function velocity_in_body_coordinates_2d!(u::AbstractVector,v::AbstractVector,b::Body,vb::PluckerMotion{2})
     for i in 1:numpts(b)
         vp = velocity_in_body_coordinates_2d(b.x̃[i],b.ỹ[i],vb)
-        u[i] = vp[2]
-        v[i] = vp[3]
+        u[i], v[i] = vp.linear
     end
 end
 
@@ -560,10 +559,9 @@ function _surface_velocity!(u::AbstractVector,v::AbstractVector,b::Body,vb::Pluc
     _surface_velocity!(u,v,b,deformation,t)
     for i in 1:numpts(b)
         vp = velocity_in_body_coordinates_2d(b.x̃[i],b.ỹ[i],vb)
-        vp += PluckerMotion([0.0,u[i],v[i]]) # add the deformation to the rigid-body plucker vector
+        vp += PluckerMotion{2}(linear=[u[i],v[i]]) # add the deformation to the rigid-body plucker vector
         vp = Rb_to_0*vp # rotate to the inertial system
-        u[i] = vp[2]
-        v[i] = vp[3]
+        u[i], v[i] = vp.linear
     end
 end
 

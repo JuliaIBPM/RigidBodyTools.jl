@@ -152,4 +152,19 @@ end
   vA = PluckerForce(rand(3))
   TM*vA
 
+  vA = PluckerMotion{2}(angular=1)
+  vB = PluckerMotion([1,2,3])
+  @test angular_only(vA) == angular_only(vB)
+
+  vA = PluckerMotion{2}(linear=[2,3])
+  @test linear_only(vA) == linear_only(vB)
+
+  vA = PluckerMotion{3}(angular=[1,2,3])
+  vB = PluckerMotion([1,2,3,4,5,6])
+  @test angular_only(vA) == angular_only(vB)
+
+  vA = PluckerMotion{3}(linear=[4,5,6])
+  @test linear_only(vA) == linear_only(vB)
+
+
 end
