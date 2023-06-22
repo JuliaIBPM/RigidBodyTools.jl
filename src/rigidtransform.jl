@@ -61,14 +61,18 @@ x and y force components.
 """
 struct PluckerForce{ND} <: AbstractPluckerVector{ND}
   data :: SVector
+  angular :: SubArray
+  linear :: SubArray
+  PluckerForce{2}(v::SVector) = new{2}(v,view(v,1:1),view(v,2:3))
+  PluckerForce{3}(v::SVector) = new{3}(v,view(v,1:3),view(v,4:6))
 end
 
 function show(io::IO, p::PluckerForce{3})
-  print(io, "3d Plucker force vector, M = $(p.data[1:3]), F = $(p.data[4:6])")
+  print(io, "3d Plucker force vector, M = $(p.angular), F = $(p.linear)")
 end
 
 function show(io::IO, p::PluckerForce{2})
-  print(io, "2d Plucker force vector, M = $(p.data[1]), F = $(p.data[2:3])")
+  print(io, "2d Plucker force vector, M = $(p.angular[1]), F = $(p.linear)")
 end
 
 for typename in [:PluckerMotion,:PluckerForce]
@@ -109,6 +113,12 @@ for typename in [:PluckerMotion,:PluckerForce]
   @eval size(A::$typename) = size(A.data)
   @eval length(A::$typename) = length(A.data)
 
+  @eval angular_only(v::$typename{2}) = $typename([v.angular...,0,0])
+  @eval angular_only(v::$typename{3}) = $typename([v.angular...,0,0,0])
+
+  @eval linear_only(v::$typename{2}) = $typename([0,v.linear...])
+  @eval linear_only(v::$typename{3}) = $typename([0,0,0,v.linear...])
+
 
 end
 
@@ -123,22 +133,18 @@ dot(f::PluckerForce{ND},v::PluckerMotion{ND}) where {ND} = dot(f.data,v.data)
 dot(v::PluckerMotion{ND},f::PluckerForce{ND}) where {ND} = dot(f,v)
 
 """
-    angular_motion(v::PluckerMotion) -> PluckerMotion
+    angular_only(v::PluckerMotion) -> PluckerMotion
 
-Copies only the angular velocity part of a `PluckerMotion` vector `v`
+Copies only the angular part of a `PluckerMotion` or `PluckerForce` vector `v`
 into another vector
-"""
-angular_motion(v::PluckerMotion{2}) = PluckerMotion([v.angular...,0,0])
-angular_motion(v::PluckerMotion{3}) = PluckerMotion([v.angular...,0,0,0])
+""" angular_only
 
 """
     linear_motion(v::PluckerMotion) -> PluckerMotion
 
 Copies only the linear velocity part of a `PluckerMotion` vector `v`
 into another vector
-"""
-linear_motion(v::PluckerMotion{2}) = PluckerMotion([0,v.linear...])
-linear_motion(v::PluckerMotion{3}) = PluckerMotion([0,0,0,v.linear...])
+""" linear_only
 
 
 

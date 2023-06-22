@@ -40,12 +40,21 @@ A Plücker vector is easily created by simply supplying a vector of its componen
 v = PluckerMotion([1.0,2.0,3.0])
 
 #=
-This created a 2d motion vector, with angular velocity 1.0 and translational
+This created a 2d motion vector, with angular velocity 1.0 and linear
 velocity (2.0,3.0). One can also supply the angular and translational
 parts separately
 =#
 v2 = PluckerMotion(1.0,[2.0,3.0])
 v2 == v
+
+#=
+We can also pick off the angular and linear parts
+=#
+angular_only(v)
+#=
+and
+=#
+linear_only(v)
 
 #=
 Force vectors are similar
@@ -185,8 +194,8 @@ inv(XA_to_B)*vB
 #md # ```@docs
 #md # PluckerMotion
 #md # PluckerForce
-#md # angular_motion
-#md # linear_motion
+#md # angular_only
+#md # linear_only
 #md # LinearAlgebra.dot(::PluckerForce,::PluckerMotion)
 #md # MotionTransform
 #md # ForceTransform

@@ -98,21 +98,21 @@ end
 
   vA = PluckerMotion(rand(3))
 
-  vAr = angular_motion(vA)
+  vAr = angular_only(vA)
   @test vA.angular == vAr.angular
   @test all(vAr.linear .== 0.0)
 
-  vAl = linear_motion(vA)
+  vAl = linear_only(vA)
   @test vA.linear == vAl.linear
   @test all(vAl.angular .== 0.0)
 
   vA = PluckerMotion(rand(6))
 
-  vAr = angular_motion(vA)
+  vAr = angular_only(vA)
   @test vA.angular == vAr.angular
   @test all(vAr.linear .== 0.0)
 
-  vAl = linear_motion(vA)
+  vAl = linear_only(vA)
   @test vA.linear == vAl.linear
   @test all(vAl.angular .== 0.0)
 
@@ -122,6 +122,34 @@ end
   θ = rand()
   TM = MotionTransform(x,θ)
   vA = PluckerMotion(rand(3))
+  TM*vA
+
+  vA = PluckerForce(rand(3))
+
+  vAr = angular_only(vA)
+  @test vA.angular == vAr.angular
+  @test all(vAr.linear .== 0.0)
+
+  vAl = linear_only(vA)
+  @test vA.linear == vAl.linear
+  @test all(vAl.angular .== 0.0)
+
+  vA = PluckerForce(rand(6))
+
+  vAr = angular_only(vA)
+  @test vA.angular == vAr.angular
+  @test all(vAr.linear .== 0.0)
+
+  vAl = linear_only(vA)
+  @test vA.linear == vAl.linear
+  @test all(vAl.angular .== 0.0)
+
+  @test vAr + vAl == vA
+
+  x = (rand(),rand())
+  θ = rand()
+  TM = ForceTransform(x,θ)
+  vA = PluckerForce(rand(3))
   TM*vA
 
 end
