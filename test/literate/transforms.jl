@@ -185,6 +185,8 @@ inv(XA_to_B)*vB
 #md # ```@docs
 #md # PluckerMotion
 #md # PluckerForce
+#md # angular_motion
+#md # linear_motion
 #md # LinearAlgebra.dot(::PluckerForce,::PluckerMotion)
 #md # MotionTransform
 #md # ForceTransform

@@ -118,6 +118,23 @@ dot(f::PluckerForce{ND},v::PluckerMotion{ND}) where {ND} = dot(f.data,v.data)
 
 dot(v::PluckerMotion{ND},f::PluckerForce{ND}) where {ND} = dot(f,v)
 
+"""
+    angular_motion(v::PluckerMotion) -> PluckerMotion
+
+Copies only the angular velocity part of a `PluckerMotion` vector `v`
+into another vector
+"""
+angular_motion(v::PluckerMotion{2}) = PluckerMotion([v[1],0,0])
+angular_motion(v::PluckerMotion{3}) = PluckerMotion([v[1:3]...,0,0,0])
+
+"""
+    linear_motion(v::PluckerMotion) -> PluckerMotion
+
+Copies only the linear velocity part of a `PluckerMotion` vector `v`
+into another vector
+"""
+linear_motion(v::PluckerMotion{2}) = PluckerMotion([0,v[2],v[3]])
+linear_motion(v::PluckerMotion{3}) = PluckerMotion([0,0,0,v[4:6]...])
 
 
 

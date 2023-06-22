@@ -27,7 +27,8 @@ export RigidTransform, rotation_about_x, rotation_about_y, rotation_about_z, rot
           MotionTransform, ForceTransform, AbstractTransformOperator, rotation_transform,
           cross_matrix, cross_vector, translation, rotation, motion_subspace, joint_velocity
 
-export PluckerForce, PluckerMotion, motion_rhs!, zero_joint, zero_motion_state, init_motion_state
+export PluckerForce, PluckerMotion, motion_rhs!, zero_joint, zero_motion_state, init_motion_state,
+        angular_motion, linear_motion
 
 export Joint, joint_transform, parent_to_child_transform, LinkedSystem, position_dimension,
         exogenous_dimension, constrained_dimension, unconstrained_dimension, position_and_vel_dimension,

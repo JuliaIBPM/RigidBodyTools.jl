@@ -454,8 +454,7 @@ function velocity_in_body_coordinates_2d!(u::AbstractVector,v::AbstractVector,b:
     end
 end
 
-function _surface_velocity!(u::AbstractVector,v::AbstractVector,b::Body,vb::PluckerMotion{2},deformation::AbstractDeformationMotion,Xb_to_0::MotionTransform{2},t)
-    Rb_to_0 = rotation_transform(Xb_to_0)
+function _surface_velocity!(u::AbstractVector,v::AbstractVector,b::Body,vb::PluckerMotion{2},deformation::AbstractDeformationMotion,Rb_to_0::MotionTransform{2},t)
     u .= 0.0
     v .= 0.0
     _surface_velocity!(u,v,b,deformation,t)
@@ -470,13 +469,18 @@ end
 
 
 """
-    surface_velocity!(u::AbstractVector,v::AbstractVector,bl::BodyList,x::AbstractVector,m::RigidBodyMotion,t::Real)
+    surface_velocity!(u::AbstractVector,v::AbstractVector,bl::BodyList,x::AbstractVector,m::RigidBodyMotion,t::Real[;inertial=true,angular_only=false])
 
 Calculate the surface velocity components `u` and `v` for the points on bodies `bl`. The function evaluates
 prescribed kinematics at time `t` and extracts non-prescribed (exogenous and unconstrained) velocities from
-state vector `x`.
+state vector `x`. There are two Boolean keyword arguments that can change the behavior of this function:
+`inertial` determines whether the components returned are expressed in the inertial coordinate
+system (true, the default) or the body's own system (false); `angular_only` determines
+whether only the angular part of the body's velocity is applied (true) or
+the entire body velocity is used (false, the default).
 """
-function surface_velocity!(u::AbstractVector,v::AbstractVector,bl::BodyList,x::AbstractVector,m::RigidBodyMotion,t::Real)
+function surface_velocity!(u::AbstractVector,v::AbstractVector,bl::BodyList,x::AbstractVector,m::RigidBodyMotion,t::Real;
+                           inertial=true,angular_only=false)
     @unpack deformations = m
     q = positionvector(x,m)
     ml = body_transforms(q,m)
@@ -484,9 +488,18 @@ function surface_velocity!(u::AbstractVector,v::AbstractVector,bl::BodyList,x::A
     for (bid,b) in enumerate(bl)
         ub = view(u,bl,bid)
         vb = view(v,bl,bid)
-        _surface_velocity!(ub,vb,b,vl[bid],deformations[bid],inv(ml[bid]),t)
+        R = _rotation_transform(ml[bid],Val(inertial))
+        U = _body_velocity(vl[bid],Val(angular_only))
+        _surface_velocity!(ub,vb,b,U,deformations[bid],R,t)
     end
 end
+
+_rotation_transform(X::MotionTransform,::Val{true}) = rotation_transform(inv(X))
+_rotation_transform(X::MotionTransform{ND},::Val{false}) where {ND} = MotionTransform{ND}()
+
+_body_velocity(v::PluckerMotion,::Val{false}) = v
+_body_velocity(v::PluckerMotion,::Val{true}) = angular_motion(v)
+
 
 function surface_velocity!(u::AbstractVector,v::AbstractVector,b::Body,x::AbstractVector,m::RigidBodyMotion,t::Real)
     _check_for_only_one_body(m)
