@@ -149,6 +149,37 @@ function _check_for_only_one_body(ls::RigidBodyMotion)
     @assert ls.nbody == 1 "Linked system must only contain one body"
 end
 
+"""
+    parent_joint_of_body(bodyid,ls::RigidBodyMotion)
+
+Return the index of the parent joint of body `bodyid` in system `ls`.
+"""
+parent_joint_of_body(bodyid::Int,ls::RigidBodyMotion) = _parent_joint_of_body(bodyid,ls.joints)
+
+"""
+    child_joints_of_body(bodyid,ls::RigidBodyMotion)
+
+Return the indices (if any) of the child joints of body `bodyid` in system `ls`.
+This function also accepts `bodyid = 0`, and returns the indices of joints
+that connect bodies to the inertial coordinate system.
+"""
+child_joints_of_body(bodyid::Int,ls::RigidBodyMotion) = _child_joints_of_body(bodyid,ls.joints)
+
+"""
+    parent_body_of_joint(jid,ls::RigidBodyMotion)
+
+Return the index of the parent body of joint `jid` in system `ls`.
+"""
+parent_body_of_joint(jid::Int,ls::RigidBodyMotion) = ls.joints[jid].parent_id
+
+"""
+    child_body_of_joint(jid,ls::RigidBodyMotion)
+
+Return the index of the child body of joint `jid` in system `ls`.
+"""
+child_body_of_joint(jid::Int,ls::RigidBodyMotion) = ls.joints[jid].child_id
+
+
 
 # If this is empty, then there should be an error, since all bodies
 # need a parent joint. If it has more than one result, also an error,
@@ -190,6 +221,8 @@ function first_joint(lsid::Int,ls::RigidBodyMotion)
   @unpack lslists, parent_joint = ls
   parent_joint[first_body(lsid,ls)]
 end
+
+
 
 
 for f in [:number_of_dofs,:position_dimension,:position_and_vel_dimension,:constrained_dimension,
@@ -287,7 +320,7 @@ function _child_velocity_from_parent!(vl,vp::PluckerMotion,jid::Int,x::AbstractV
 
     joint = joints[jid]
     xJ = view(x,ls,jid;dimfcn=position_and_vel_dimension)
-    q = positionvector(x,ls)
+    q = position_vector(x,ls)
     vJ = joint_velocity(xJ,t,joint)
     qJ = view(q,ls,jid)
 
@@ -370,32 +403,56 @@ function init_motion_state(b::Body,ls::RigidBodyMotion;kwargs...)
 end
 
 """
-    positionvector(x::AbstractVector,ls::RigidBodyMotion)
+    position_vector(x::AbstractVector,ls::RigidBodyMotion)
 
 Returns a view of the global state vector for a linked system containing only the position.
 """
-function positionvector(x::AbstractVector,ls::RigidBodyMotion)
+function position_vector(x::AbstractVector,ls::RigidBodyMotion)
    @unpack position_indices = ls
    return view(x,position_indices)
 end
 
 """
-    velvector(x::AbstractVector,ls::RigidBodyMotion)
+    position_vector(x::AbstractVector,ls::RigidBodyMotion,jid::Int)
+
+Returns a view of the global state vector for a linked system containing only the position
+of joint `jid`.
+"""
+function position_vector(x::AbstractVector,ls::RigidBodyMotion,jid::Int)
+   @unpack position_indices = ls
+   q = view(x,position_indices)
+   return view(q,ls,jid)
+end
+
+"""
+    velocity_vector(x::AbstractVector,ls::RigidBodyMotion)
 
 Returns a view of the global state vector for a linked system containing only the velocity.
 """
-function velvector(x::AbstractVector,ls::RigidBodyMotion)
+function velocity_vector(x::AbstractVector,ls::RigidBodyMotion)
    @unpack vel_indices = ls
    return view(x,vel_indices)
 end
 
 """
-    deformationvector(x::AbstractVector,ls::RigidBodyMotion,bid::Int)
+    velocity_vector(x::AbstractVector,ls::RigidBodyMotion,jid::Int)
+
+Returns a view of the global state vector for a linked system containing only the velocity
+of joint `jid`.
+"""
+function velocity_vector(x::AbstractVector,ls::RigidBodyMotion,jid::Int)
+   @unpack joints = ls
+   ir = _getrange(joints,position_and_vel_dimension,jid)[position_dimension(joints[jid])+1:position_and_vel_dimension(joints[jid])]
+   return view(x,ir)
+end
+
+"""
+    deformation_vector(x::AbstractVector,ls::RigidBodyMotion,bid::Int)
 
 Returns a view of the global state vector for a linked system containing only
 the body surface positions of the body with id `bid`.
 """
-function deformationvector(x::AbstractVector,ls::RigidBodyMotion,bid::Int)
+function deformation_vector(x::AbstractVector,ls::RigidBodyMotion,bid::Int)
   @unpack deformation_indices = ls
   return view(x,deformation_indices[bid])
 end
@@ -426,7 +483,7 @@ function motion_rhs!(dxdt::AbstractVector,x::AbstractVector,t::Real,a_edof::Abst
     end
 
     for (bid,b) in enumerate(bl)
-        dxdt_b = deformationvector(dxdt,ls,bid)
+        dxdt_b = deformation_vector(dxdt,ls,bid)
         dxdt_b .= deformation_velocity(b,deformations[bid],t)
     end
     nothing
@@ -482,7 +539,7 @@ the entire body velocity is used (false, the default).
 function surface_velocity!(u::AbstractVector,v::AbstractVector,bl::BodyList,x::AbstractVector,m::RigidBodyMotion,t::Real;
                            inertial=true,angular_only=false)
     @unpack deformations = m
-    q = positionvector(x,m)
+    q = position_vector(x,m)
     ml = body_transforms(q,m)
     vl = body_velocities(x,t,m)
     for (bid,b) in enumerate(bl)
@@ -513,9 +570,9 @@ Update body `b` with the rigid-body motion `m` and state vector `x`.
 """
 function update_body!(bl::BodyList,x::AbstractVector,m::RigidBodyMotion)
     @unpack deformations = m
-    q = positionvector(x,m)
+    q = position_vector(x,m)
     for (bid,b) in enumerate(bl)
-        _update_body!(b,deformationvector(x,m,bid),deformations[bid])
+        _update_body!(b,deformation_vector(x,m,bid),deformations[bid])
     end
     ml = body_transforms(q,m)
     update_body!(bl,ml)
@@ -525,8 +582,8 @@ end
 function update_body!(b::Body,x::AbstractVector,m::RigidBodyMotion)
     _check_for_only_one_body(m)
     @unpack deformations = m
-    q = positionvector(x,m)
-    _update_body!(b,deformationvector(x,m,1),deformations[1])
+    q = position_vector(x,m)
+    _update_body!(b,deformation_vector(x,m,1),deformations[1])
     T = body_transforms(q,m)[1]
     update_body!(b,T)
     return b

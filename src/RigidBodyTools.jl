@@ -18,6 +18,9 @@ export RigidBodyMotion, AbstractKinematics, d_dt, motion_velocity, motion_state,
           AbstractDeformationMotion, ConstantDeformationMotion, DeformationMotion,
           NullDeformationMotion,maxvelocity, zero_body
 
+export parent_body_of_joint, child_body_of_joint, parent_joint_of_body, child_joints_of_body,
+        position_vector,velocity_vector,deformation_vector
+
 export AbstractDOFKinematics, AbstractPrescribedDOFKinematics, DOFKinematicData, SmoothRampDOF,
         OscillatoryDOF, ConstantVelocityDOF, CustomDOF, ExogenousDOF, ConstantPositionDOF,
         UnconstrainedDOF, Kinematics, dof_position, dof_velocity, dof_acceleration, ismoving

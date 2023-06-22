@@ -175,7 +175,8 @@ joint2 = Joint(RevoluteJoint,pid,Xp_to_jp,cid,Xc_to_jc,dofs)
 ````
 
 Group the two joints together into a vector. It doesn't matter what
-order this vector is.
+order this vector is in, since the connectivity will be figured out any way
+it is ordered, but it numbers the joints by the order they are provided here.
 
 ````@example joints
 joints = [joint1,joint2];
@@ -201,6 +202,36 @@ Now we can construct the system
 
 ````@example joints
 ls = RigidBodyMotion(joints,bodies)
+````
+
+Before we proceed, it is useful to demonstrate some of the tools
+we have to probe the connectivity of the system. For example,
+to find the parent joint of body 1, we use
+
+````@example joints
+parent_joint_of_body(1,ls)
+````
+
+This returns 1, since we have connected body 1 to joint 1.
+How about the child joint of body 1? We expect it to be 2. Since there
+might be more than one child, this returns a vector:
+
+````@example joints
+child_joints_of_body(1,ls)
+````
+
+We can also check the body connectivity of joints. This can be very useful
+for more complicated systems in which the joint numbering is less clear.
+The parent body of joint 1
+
+````@example joints
+parent_body_of_joint(1,ls)
+````
+
+This returns 0 since we have connected joint 1 to the inertial system. The child body of joint 2:
+
+````@example joints
+child_body_of_joint(2,ls)
 ````
 
 ## The system state vector
