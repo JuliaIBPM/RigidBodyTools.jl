@@ -31,14 +31,18 @@ x and y translational components.
 """
 struct PluckerMotion{ND} <: AbstractPluckerVector{ND}
   data :: SVector
+  angular :: SubArray
+  linear :: SubArray
+  PluckerMotion{2}(v::SVector) = new{2}(v,view(v,1:1),view(v,2:3))
+  PluckerMotion{3}(v::SVector) = new{3}(v,view(v,1:3),view(v,4:6))
 end
 
 function show(io::IO, p::PluckerMotion{3})
-  print(io, "3d Plucker motion vector, Ω = $(p.data[1:3]), v = $(p.data[4:6])")
+  print(io, "3d Plucker motion vector, Ω = $(p.angular), v = $(p.linear)")
 end
 
 function show(io::IO, p::PluckerMotion{2})
-  print(io, "2d Plucker motion vector, Ω = $(p.data[1]), U = $(p.data[2:3])")
+  print(io, "2d Plucker motion vector, Ω = $(p.angular[1]), U = $(p.linear)")
 end
 
 """
@@ -124,8 +128,8 @@ dot(v::PluckerMotion{ND},f::PluckerForce{ND}) where {ND} = dot(f,v)
 Copies only the angular velocity part of a `PluckerMotion` vector `v`
 into another vector
 """
-angular_motion(v::PluckerMotion{2}) = PluckerMotion([v[1],0,0])
-angular_motion(v::PluckerMotion{3}) = PluckerMotion([v[1:3]...,0,0,0])
+angular_motion(v::PluckerMotion{2}) = PluckerMotion([v.angular...,0,0])
+angular_motion(v::PluckerMotion{3}) = PluckerMotion([v.angular...,0,0,0])
 
 """
     linear_motion(v::PluckerMotion) -> PluckerMotion
@@ -133,8 +137,8 @@ angular_motion(v::PluckerMotion{3}) = PluckerMotion([v[1:3]...,0,0,0])
 Copies only the linear velocity part of a `PluckerMotion` vector `v`
 into another vector
 """
-linear_motion(v::PluckerMotion{2}) = PluckerMotion([0,v[2],v[3]])
-linear_motion(v::PluckerMotion{3}) = PluckerMotion([0,0,0,v[4:6]...])
+linear_motion(v::PluckerMotion{2}) = PluckerMotion([0,v.linear...])
+linear_motion(v::PluckerMotion{3}) = PluckerMotion([0,0,0,v.linear...])
 
 
 

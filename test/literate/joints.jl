@@ -338,6 +338,23 @@ For example, the vector of u velocities on body 2 is
 =#
 plot(view(u,bodies,2))
 
+#=
+In this use of `surface_velocities!`, we outputted the velocities in inertial
+coordinates. There is a keyword `axes` that allows us to relax this.
+By default, this is set to `:inertial`. However, we can also output them in their own body coordinates with
+the keyword `axes=:body`,
+=#
+surface_velocity!(u,v,bodies,x0,ls,t0;axes=:body)
+plot(view(u,bodies,2))
+
+#=
+We can also select only to evaluate a part of the body's motion on the
+surface points, using the `motion_part` keyword. This keyword defaults to `:full`,
+but we can also select `:angular` or `:linear`:
+=#
+surface_velocity!(u,v,bodies,x0,ls,t0;axes=:body,motion_part=:angular)
+plot(view(u,bodies,2))
+
 
 #md # ## Joint functions
 #md # ```@docs
