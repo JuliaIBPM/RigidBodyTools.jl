@@ -261,15 +261,15 @@ Note that neither of these functions has any mutating effect on the arguments (`
 Also, it is always possible for the user to modify the entries in the state
 vector after this function is called. In general, it would be difficult to
 determine which entry is which in this state vector, so we can use a special
-form of the `view` function for this. For example, to get access to just
-the part of the state vector for joint 2,
+function for this. For example, to get access to just
+the part of the state vector for the positions of joint 1,
 
 ````@example joints
-jid = 2
-x2 = view(x,ls,jid)
+jid = 1
+x1 = position_vector(x,ls,jid)
 ````
 
-Then, you might decide to change the entry of `x2`, which, in turn,
+This is a view on the overall state vector. This, if you decide to change an entry of `x1`, this, in turn,
 would change the correct entry in `x`.
 
 We can use the system state vector to put the bodies in their proper places,
@@ -364,6 +364,25 @@ For example, the vector of u velocities on body 2 is
 plot(view(u,bodies,2))
 ````
 
+In this use of `surface_velocities!`, we outputted the velocities in inertial
+coordinates. There is a keyword `axes` that allows us to relax this.
+By default, this is set to `:inertial`. However, we can also output them in their own body coordinates with
+the keyword `axes=:body`,
+
+````@example joints
+surface_velocity!(u,v,bodies,x0,ls,t0;axes=:body)
+plot(view(u,bodies,2))
+````
+
+We can also select only to evaluate a part of the body's motion on the
+surface points, using the `motion_part` keyword. This keyword defaults to `:full`,
+but we can also select `:angular` or `:linear`:
+
+````@example joints
+surface_velocity!(u,v,bodies,x0,ls,t0;axes=:body,motion_part=:angular)
+plot(view(u,bodies,2))
+````
+
 ## Joint functions
 ```@docs
 Joint
@@ -377,9 +396,9 @@ RigidBodyMotion
 zero_motion_state
 init_motion_state
 Base.view(::AbstractVector,::RigidBodyMotion,::Int)
-positionvector
-velvector
-deformationvector
+position_vector
+velocity_vector
+deformation_vector
 motion_rhs!
 surface_velocity!
 maxvelocity
