@@ -89,7 +89,7 @@ dot(f,v)
 Transforms are constructed by describing the relationship between the two
 coordinate systems. Consider the example in the figure below.
 
-![CoordinateSystems.svg](CoordinateSystems.svg)
+![CoordinateSystems.svg](./assets/CoordinateSystems.svg)
 
 To develop the 2d transform from A to B, we supply the position $r$ and
 the rotation angle $\theta$. For example, if B is shifted by [1,1]
