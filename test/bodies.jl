@@ -41,7 +41,7 @@ const MYEPS = 20*eps()
 
   T = MotionTransform((1.0,-1.0),π/4)
   update_body!(c,T)
-  nx2, ny2 = normalmid(c,ref=true)
+  nx2, ny2 = normalmid(c,axes=:body)
   @test sum(abs.(nx .- nx2)) < 1000.0*eps(1.0)
   @test sum(abs.(ny .- ny2)) < 1000.0*eps(1.0)
 
@@ -87,7 +87,7 @@ end
   T = MotionTransform((1.2,-1.5),π/4)
   update_body!(b,T)
 
-  nx2, ny2 = normalmid(b,ref=true)
+  nx2, ny2 = normalmid(b,axes=:body)
   @test sum(abs.(nx0 .- nx2)) < 1000.0*eps(1.0)
   @test sum(abs.(ny0 .- ny2)) < 1000.0*eps(1.0)
 
