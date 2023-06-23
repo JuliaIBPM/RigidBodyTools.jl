@@ -173,10 +173,10 @@ is the inertial coordinate system and B is the body system. Of course, the trans
 be constructed from composite transforms.
 
 Sometimes we need information about the normals in the body system.
-For these, we can use `normalmid` with the flag `ref=true`:
+For these, we can use `normalmid` with the flag `axes=:body`:
 
 ````@example transforms
-nx, ny = normalmid(b,ref=true)
+nx, ny = normalmid(b,axes=:body)
 ````
 
 ## Transforming Plücker vectors
