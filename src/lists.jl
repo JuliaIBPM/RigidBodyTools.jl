@@ -1,13 +1,13 @@
-import Base: @propagate_inbounds,getindex, setindex!,iterate,size,length,push!,
-              collect,view
 
-export BodyList, MotionList, RigidTransformList, getrange
+
+export BodyList, RigidTransformList, MotionTransformList, PluckerMotionList, getrange
 
 abstract type SetOfBodies end
 
 const LISTS = [:BodyList, :Body],
-              [:MotionList, :AbstractMotion],
-              [:RigidTransformList, :RigidTransform]
+              [:RigidTransformList, :RigidTransform],
+              [:MotionTransformList, :MotionTransform],
+              [:PluckerMotionList, :PluckerMotion]
 
 """
     BodyList([b1,b2,...])
@@ -15,17 +15,18 @@ const LISTS = [:BodyList, :Body],
 Create a list of bodies
 """ BodyList
 
-"""
-    MotionList([m1,m2,...])
-
-Create a list of motions
-""" MotionList
 
 """
     RigidTransformList([t1,t2,...])
 
 Create a list of rigid transforms
 """ RigidTransformList
+
+"""
+    MotionTransformList([t1,t2,...])
+
+Create a list of motion transforms
+""" MotionTransformList
 
 for (listtype,listelement) in LISTS
 
@@ -47,6 +48,8 @@ for (listtype,listelement) in LISTS
   @eval size(A::$listtype) = size(A.list)
   @eval length(A::$listtype) = length(A.list)
 
+  @eval findall(f::Function,A::$listtype) = findall(f,A.list)
+
   @eval push!(bl::$listtype,b::$listelement) = push!(bl.list,b)
 
 
@@ -54,6 +57,9 @@ end
 
 
 numpts(bl::BodyList) = mapreduce(numpts,+,bl;init=0)
+
+zero_body(b::Union{Body,BodyList}) = zeros(Float64,numpts(b))
+
 
 """
     collect(bl::bodylist[,endpoints=false][,ref=false]) -> Vector{Float64}, Vector{Float64}
@@ -113,10 +119,10 @@ end
 
 
 """
-    getrange(bl::BodyList,i::Int) -> Range
+    getrange(bl::BodyList,bid::Int) -> Range
 
 Return the subrange of indices in the global set of surface point data
-corresponding to body `i` in a BodyList `bl`.
+corresponding to body `bid` in a BodyList `bl`.
 """
 function getrange(bl::BodyList,i::Int)
     i <= length(bl) || error("Unavailable body")
@@ -130,6 +136,24 @@ function getrange(bl::BodyList,i::Int)
     return first:last
 end
 
+"""
+    global_to_local_index(i::Int,bl::BodyList) -> (Int, Int)
+
+Return the ID `bid` of the body in body list `bl` on which global index `i` sits,
+as well as the local index of `iloc` on that body and return as `(bid,iloc)`
+"""
+function global_to_local_index(i::Int,bl::BodyList)
+    bid = 1
+    ir = getrange(bl,bid)
+    while !(in(i,ir)) && bid <= length(bl)
+        bid += 1
+        ir = getrange(bl,bid)
+    end
+
+    return bid, i-first(ir)+1
+end
+
+#=
 """
     getrange(bl::BodyList,ml::MotionList,i::Int) -> Range
 
@@ -147,16 +171,17 @@ function getrange(bl::BodyList,ml::MotionList,i::Int)
     last = first+length(motion_state(bl[i],ml[i]))-1
     return first:last
 end
+=#
 
 """
-    view(f::AbstractVector,bl::BodyList,i::Int) -> SubArray
+    view(f::AbstractVector,bl::BodyList,bid::Int) -> SubArray
 
 Provide a view of the range of values in vector `f` corresponding to the Lagrange
-points of the body with index `i` in a BodyList `bl`.
+points of the body with index `bid` in a BodyList `bl`.
 """
-function Base.view(f::AbstractVector,bl::BodyList,i::Int)
+function Base.view(f::AbstractVector,bl::BodyList,bid::Int)
     length(f) == numpts(bl) || error("Inconsistent size of data for viewing")
-    return view(f,getrange(bl,i))
+    return view(f,getrange(bl,bid))
 end
 
 """
@@ -168,14 +193,25 @@ list `bl`.
 Base.sum(f::AbstractVector,bl::BodyList,i::Int) = sum(view(f,bl,i))
 
 """
-    (tl::RigidTransformList)(bl::BodyList) -> BodyList
+    (tl::MotionTransformList)(bl::BodyList) -> BodyList
+
+Carry out transformations of each body in `bl` with the
+corresponding transformation in `tl`, creating a new body list.
+"""
+@inline function (tl::MotionTransformList)(bl::BodyList)
+  bl_transform = deepcopy(bl)
+  update_body!(bl_transform,tl)
+end
+
+"""
+    update_body!(bl::BodyList,tl::MotionTransformList) -> BodyList
 
 Carry out in-place transformations of each body in `bl` with the
 corresponding transformation in `tl`.
 """
-@inline function (tl::RigidTransformList)(bl::BodyList)
+@inline function update_body!(bl::BodyList,tl::MotionTransformList)
   length(tl) == length(bl) || error("Inconsistent lengths of lists")
-  map((T,b) -> T(b),tl,bl)
+  map((T,b) -> update_body!(b,T),tl,bl)
 end
 
 """
@@ -205,120 +241,3 @@ function RigidTransformList(x::Vector{T}) where T <: Real
 end
 
 _length_and_mod(x::Vector{T}) where T <: Real = (n = length(x); return n ÷ CHUNK, n % CHUNK)
-
-"""
-    motion_velocity(bl::BodyList,ml::MotionList,t::Real) -> Vector
-
-Return the aggregated velocity components (as a vector) of a `MotionList`
-at the given time `t`.
-"""
-function motion_velocity(bl::BodyList,ml::MotionList,t::Real)
-    u = Float64[]
-    for (b,m) in zip(bl,ml)
-      ui = motion_velocity(b,m,t)
-      append!(u,ui)
-    end
-    return u
-end
-
-function motion_velocity(bl::BodyList,motion::AbstractMotion,t::Real)
-    u = Float64[]
-    for b in bl
-      ui = motion_velocity(b,motion,t)
-      append!(u,ui)
-    end
-    return u
-end
-
-"""
-    motion_state(bl::BodyList,ml::MotionList)
-
-Return the current state vector of body list `bl` associated with
-motion list `ml`. It returns the aggregated state vectors
-of each body.
-"""
-function motion_state(bl::BodyList,ml::MotionList)
-    x = Float64[]
-    length(bl) == length(ml) || error("body and motion lists are not the same length")
-    for (b,m) in zip(bl,ml)
-      xi = motion_state(b,m)
-      append!(x,xi)
-    end
-    return x
-end
-
-function motion_state(bl::BodyList,motion::AbstractMotion)
-    x = Float64[]
-    for b in bl
-      xi = motion_state(b,motion)
-      append!(x,xi)
-    end
-    return x
-end
-
-"""
-    surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
-                     bl::BodyList,ml::Union{AbstractMotion,MotionList},t::Real[;inertial=true])
-
-Assign the components of velocity `u` and `v` (in inertial coordinate system)
-at surface positions described by coordinates inertial coordinates in each body in `bl` at time `t`,
-based on supplied motions in the MotionList `ml` for each body. If only one motion is specified in `ml`, then it is assumed that
-  this is to be applied to all bodies.
-"""
-function surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
-                 bl::BodyList,ml::Union{AbstractMotion,MotionList},t::Real;kwargs...)
-
-   for i in 1:length(bl)
-      mli = isa(ml,AbstractMotion) ? ml : ml[i]
-      surface_velocity!(view(u,bl,i),view(v,bl,i),bl[i],mli,t;kwargs...)
-   end
-   return u, v
-end
-
-"""
-    surface_velocity(bl::BodyList,ml::Union{AbstractMotion,MotionList},t::Real[;inertial=true])
-
-Return the components of rigid body velocity (in inertial coordinate system)
-at surface positions described by coordinates inertial coordinates in each body in `bl` at time `t`,
-based on supplied motions in the MotionList `ml` for each body. If only one motion is specified in `ml`, then it is assumed that
-  this is to be applied to all bodies.
-"""
-surface_velocity(bl::BodyList,ml::Union{AbstractMotion,MotionList},t::Real;kwargs...) =
-    surface_velocity!(zeros(Float64,numpts(bl)),zeros(Float64,numpts(bl)),bl,ml,t;kwargs...)
-
-
-"""
-    update_body!(bl::BodyList,x::AbstractVector,ml::MotionList)
-
-Update the bodies in list `bl` with the given motion state vector `x`.
-The argument `ml` simply provides the information needed to parse
-the vector into each body.
-"""
-function update_body!(bl::BodyList,x::AbstractVector,ml::MotionList)
-    for i in 1:length(bl)
-        update_body!(bl[i],x[getrange(bl,ml,i)],ml[i])
-    end
-    return bl
-end
-
-"""
-    maxlistvelocity(bl::BodyList,ml::Union{AbstractMotion,List}[,tmax=100,dt=0.01])
-
-Search through the given motions `ml` applied to bodies `bl` and return `(umax,i,t,bodyindex)`,
-the maximum velocity magnitude, the index of the body points where it
-occurs, the time at which it occurs, and the body index it occurs on.
-"""
-function maxlistvelocity(bl::BodyList,ml::Union{AbstractMotion,MotionList};kwargs...)
-    i = 1
-    umax = 0.0
-    tmax = 0.0
-    bmax = 1
-    for j in 1:length(bl)
-        mlj = isa(ml,AbstractMotion) ? ml : ml[j]
-        umax_j,i_j,t_j = maxvelocity(bl[j],mlj,kwargs...)
-        if umax_j > umax
-            umax, i, tmax, bmax = umax_j, i_j, t_j, j
-        end
-    end
-    return umax, i, tmax, bmax
-end

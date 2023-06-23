@@ -1,161 +1,692 @@
-#=
-Rigid body motions
-=#
+# Linked systems #
 
+function _default_exogenous_function!(a_edof,u,p,t) end
+
+function _default_unconstrained_function!(a_udof,u,p,t) end
 
 """
-    RigidBodyMotion <: AbstractMotion
+    RigidBodyMotion
 
-A type to store the body's current kinematics
-
-# Fields
-
-- `data`: current kinematic data
-- `kin`: a [`Kinematics`](@ref) structure
-
-The first six fields are meant as a cache of the current kinematics
-while the `kin` field can be used to find the plate kinematics at any time.
+Type containing the connectivities and motions of rigid bodies, linked to the
+inertial system and possibly to each other, via joints. The basic constructor is
+`RigidBodyMotion(joints::Vector{Joint},nbody::Int)`, in which `joints` contains
+a vector of joints of [`Joint`](@ref) type, each specifying the connection between
+a parent and a child body. (The parent may be the inertial coordinate system.)
 """
-mutable struct RigidBodyMotion <: AbstractMotion
-    data::KinematicData
-    kin::Kinematics
+struct RigidBodyMotion{ND} <: AbstractMotion
+
+    "Number of distinct linked systems"
+    nls :: Int
+
+    "Number of bodies"
+    nbody :: Int
+
+    "List of linked bodies, starting with the one connected to inertial system"
+    lslists :: Vector{Vector{Int}}
+
+    "Vector of joint specifications and motions"
+    joints :: Vector{Joint}
+
+    "Vector of prescribed deformations of bodies"
+    deformations :: Vector{AbstractDeformationMotion}
+
+    "Vector specifying the parent body of a body (0 = inertial system)"
+    parent_body :: Vector{Int}
+
+    "Vector specifying the parent joint of a body"
+    parent_joint :: Vector{Int}
+
+    "Vector of vectors, specifying the list of child bodies of a body (empty if no children)"
+    child_bodies :: Vector{Vector{Int}}
+
+    "Vector of vectors, specifying the list of child joints of a body (empty if no children)"
+    child_joints :: Vector{Vector{Int}}
+
+    "Set of indices providing the joint position coordinates in the global state vector"
+    position_indices :: Vector{Int}
+
+    "Set of indices providing the joint velocity coordinates in the global state vector"
+    vel_indices :: Vector{Int}
+
+    "Sets of indices providing the body point coordinates in the global state vector"
+    deformation_indices :: Vector{Vector{Int}}
+
+    "Function to specify exogenous behavior, must be mutating and have signature (a,u,p,t)"
+    exogenous_function! :: Function
+
+    "Buffers for exogenous and unconstrained behavior"
+    a_edof_buffer :: Vector{Float64}
+
+    "Buffers for exogenous and unconstrained behavior"
+    a_udof_buffer :: Vector{Float64}
+
+end
+
+
+function RigidBodyMotion(joints::Vector{<:Joint},bodies::BodyList,deformations::Vector{<:AbstractDeformationMotion};
+                              exogenous::Function = _default_exogenous_function!)
+    nbody = length(bodies)
+    parent_body = zeros(Int,nbody)
+    parent_joint = zeros(Int,nbody)
+    child_bodies = [Int[] for i in 1:nbody]
+    child_joints = [Int[] for i in 1:nbody]
+
+    lscnt = 0
+    lsroots = Int[]
+    for bodyid in 1:nbody
+        parent_joint[bodyid] = pjid = _parent_joint_of_body(bodyid,joints)
+        parent_body[bodyid] = pbid = joints[pjid].parent_id
+        if pbid == 0
+            lscnt += 1
+            push!(lsroots,bodyid)
+        end
+        child_joints[bodyid] = cjids = _child_joints_of_body(bodyid,joints)
+        child_bodies[bodyid] = [joints[cjid].child_id for cjid in cjids]
+    end
+    @assert lscnt > 0 "There is no body connected to the inertial system"
+
+    lslists = [Int[] for lsid in 1:lscnt]
+    for (lsid,lsroot) in enumerate(lsroots)
+        lslist = lslists[lsid]
+        _list_of_linked_bodies!(lslist,lsroot,child_bodies)
+    end
+    total_members = mapreduce(x -> length(x),+,lslists)
+    @assert total_members == nbody "Not all bodies have been added as members of linked lists"
+
+    position_indices = mapreduce(jid -> _getrange(joints,position_and_vel_dimension,jid)[1:position_dimension(joints[jid])],
+                              vcat,eachindex(joints))
+    vel_indices = mapreduce(jid -> _getrange(joints,position_and_vel_dimension,jid)[position_dimension(joints[jid])+1:position_and_vel_dimension(joints[jid])],
+                              vcat,eachindex(joints))
+
+    index_i = length(position_indices) + length(vel_indices)
+    deformation_indices = Vector{Int}[]
+    for (b,m) in zip(bodies,deformations)
+        def_length = length(motion_state(b,m))
+        push!(deformation_indices,collect(index_i+1:index_i+def_length))
+        index_i += def_length
+    end
+
+    a_edof_buffer = _zero_joint(joints,exogenous_dimension)
+    a_udof_buffer = _zero_joint(joints,unconstrained_dimension)
+
+
+    RigidBodyMotion{physical_dimension(joints)}(lscnt,nbody,lslists,joints,deformations,parent_body,parent_joint,
+                                              child_bodies,child_joints,position_indices,vel_indices,deformation_indices,
+                                              exogenous,a_edof_buffer,a_udof_buffer)
+end
+
+RigidBodyMotion(joints::Vector{<:Joint},bodies::BodyList;kwargs...) = RigidBodyMotion(joints,bodies,[NullDeformationMotion() for bi in 1:length(bodies)];kwargs...)
+
+RigidBodyMotion(joint::Joint,body::Body,def::AbstractDeformationMotion;kwargs...) = RigidBodyMotion([joint],BodyList([body]),[def];kwargs...)
+RigidBodyMotion(joint::Joint,body::Body;kwargs...) = RigidBodyMotion([joint],BodyList([body]);kwargs...)
+
+
+function Base.show(io::IO, ls::RigidBodyMotion)
+    println(io, "$(ls.nls) linked system(s) of bodies")
+    println(io, "   $(ls.nbody) bodies")
+    println(io, "   $(length(ls.joints)) joints")
+end
+
+function ismoving(m::RigidBodyMotion)
+    @unpack joints = m
+    any(map(joint -> ismoving(joint),joints))
+end
+
+
+function _list_of_linked_bodies!(lslist,bodyid,child_bodies)
+    push!(lslist,bodyid)
+    for childid in child_bodies[bodyid]
+        _list_of_linked_bodies!(lslist,childid,child_bodies)
+    end
+    nothing
+end
+
+function _check_for_only_one_body(ls::RigidBodyMotion)
+    @assert ls.nbody == 1 "Linked system must only contain one body"
 end
 
 """
-    RigidBodyMotion(Up::Union{ComplexF64,Tuple},Ω[;pivot::Union{ComplexF64,Tuple}=(0.0,0.0)])
+    parent_joint_of_body(bodyid,ls::RigidBodyMotion)
 
-Create an instance of constant rigid-body motion with translational velocity Up
-and angular velocity Ω with respect to a specified point P.
-This point is established by its initial position `pivot`. By default, this
-initial position is (0,0). `Up` and `pivot` can be specified by either Tuple or by complex value.
+Return the index of the parent joint of body `bodyid` in system `ls`.
 """
-RigidBodyMotion(Up::Union{Number,Tuple}, Ω::Number;kwargs...) = (kin = Constant(Up, Ω; kwargs...); RigidBodyMotion(kin(0), kin))
+parent_joint_of_body(bodyid::Int,ls::RigidBodyMotion) = _parent_joint_of_body(bodyid,ls.joints)
 
 """
-    RigidBodyMotion(kin::Kinematics)
+    child_joints_of_body(bodyid,ls::RigidBodyMotion)
 
-Create an instance of rigid-body motion with kinematics `kin`.
+Return the indices (if any) of the child joints of body `bodyid` in system `ls`.
+This function also accepts `bodyid = 0`, and returns the indices of joints
+that connect bodies to the inertial coordinate system.
 """
-RigidBodyMotion(kin::Kinematics) = RigidBodyMotion(kin(0), kin)
-(m::RigidBodyMotion)(t) = m.kin(t)
+child_joints_of_body(bodyid::Int,ls::RigidBodyMotion) = _child_joints_of_body(bodyid,ls.joints)
+
+"""
+    parent_body_of_joint(jid,ls::RigidBodyMotion)
+
+Return the index of the parent body of joint `jid` in system `ls`.
+"""
+parent_body_of_joint(jid::Int,ls::RigidBodyMotion) = ls.joints[jid].parent_id
+
+"""
+    child_body_of_joint(jid,ls::RigidBodyMotion)
+
+Return the index of the child body of joint `jid` in system `ls`.
+"""
+child_body_of_joint(jid::Int,ls::RigidBodyMotion) = ls.joints[jid].child_id
 
 
-function (m::RigidBodyMotion)(t,x̃::Union{Number,Tuple})
-  # This expects coordinates in a comoving coordinate system
-  # based at c.
-  z̃ = complex(x̃...)
-  #m.c, m.ċ, m.c̈, m.α, m.α̇, m.α̈ = m.kin(t)
-  k = m.kin(t)
-  c = complex_translational_position(k)
-  ċ = complex_translational_velocity(k)
-  c̈ = complex_translational_acceleration(k)
-  α = angular_position(k)
-  α̇ = angular_velocity(k)
-  α̈ = angular_acceleration(k)
-  z = exp(im*α)*z̃
-  return KinematicData(t, c + z, ċ + im*α̇*z, c̈ + (im*α̈-α̇^2)*z, α, α̇, α̈)
+
+# If this is empty, then there should be an error, since all bodies
+# need a parent joint. If it has more than one result, also an error,
+# since a body can only have one parent joint
+function _parent_joint_of_body(bodyid,joints::Vector{<:Joint})
+    idx = findall(x -> x.child_id == bodyid, joints)
+    @assert length(idx) > 0 "Body "*string(bodyid)*" has no parent joint"
+    @assert length(idx) == 1 "Body "*string(bodyid)*" has too many parent joints"
+    return first(idx)
+end
+
+function _child_joints_of_body(bodyid,joints::Vector{<:Joint})
+    idx = findall(x -> x.parent_id == bodyid, joints)
+    return idx
+end
+
+number_of_linked_systems(ls::RigidBodyMotion) = ls.nls
+
+"""
+    first_body(lsid::Int,ls::RigidBodyMotion)
+
+Return the index of the first body in linked system `lsid` in
+the overall set of linked systems `ls`.  This body's parent is the
+inertial coordinate system.
+"""
+function first_body(lsid::Int,ls::RigidBodyMotion)
+  @unpack lslists, parent_joint = ls
+  first(lslists[lsid])
+end
+
+"""
+    first_joint(lsid::Int,ls::RigidBodyMotion)
+
+Return the index of the first joint in linked system `lsid` in
+the overall set of linked systems `ls`. This joint's parent is the
+inertial coordinate system.
+"""
+function first_joint(lsid::Int,ls::RigidBodyMotion)
+  @unpack lslists, parent_joint = ls
+  parent_joint[first_body(lsid,ls)]
+end
+
+
+
+
+for f in [:number_of_dofs,:position_dimension,:position_and_vel_dimension,:constrained_dimension,
+           :exogenous_dimension,:unconstrained_dimension]
+   @eval $f(ls::RigidBodyMotion) = mapreduce(x -> $f(x),+,ls.joints)
 end
 
 
 """
-    motion_velocity(b::Body,m::RigidBodyMotion,t::Real)
+    getrange(ls::RigidBodyMotion,dimfcn::Function,jid::Int) -> Range
 
-Return the velocity components (as a vector) of a `RigidBodyMotion`
-at the given time `t`.
+Return the subrange of indices in the global state vector
+for the state corresponding to joint `jid` in linked system `ls`.
 """
-function motion_velocity(b::Body,motion::RigidBodyMotion,t::Real)
-   k = motion(t)
-  #_,ċ,_,_,α̇,_ = motion(t)
-  return [translational_velocity(k)...,angular_velocity(k)]
+function getrange(ls::RigidBodyMotion,dimfcn::Function,jid::Int)
+    @unpack joints = ls
+    _getrange(joints,dimfcn,jid)
+end
+
+function _getrange(joints::Vector{<:Joint},dimfcn::Function,jid::Int)
+    0 < jid <= length(joints) || error("Unavailable joint")
+    first = 1
+    j = 1
+    while j < jid
+        first += dimfcn(joints[j])
+        j += 1
+    end
+    last = first+dimfcn(joints[jid])-1
+    return first:last
+end
+
+
+"""
+    view(q::AbstractVector,ls::RigidBodyMotion,jid::Int[;dimfcn=position_dimension]) -> SubArray
+
+Provide a view of the range of values in vector `q` corresponding to the position
+of the joint with index `jid` in a RigidBodyMotion `ls`. The optional argument `dimfcn`
+can be set to `position_dimension`, `constrained_dimension`, `unconstrained_dimension`,
+or `exogenous_dimension`.
+"""
+function Base.view(q::AbstractVector,ls::RigidBodyMotion,jid::Int;dimfcn::Function=position_dimension)
+    return view(q,getrange(ls,dimfcn,jid))
 end
 
 """
-    motion_state(b::Body,m::RigidBodyMotion)
+    body_transforms(q::AbstractVector,ls::RigidBodyMotion) -> MotionTransformList
 
-Return the current state vector of body `b` associated with
-rigid body motion `m`. It returns the current coordinates
-of the body centroid and the angle of the body.
+Parse the overall position vector `q` into the individual joints and construct
+the inertial system-to-body transforms for every body. Return these
+transforms in a `MotionTransformList`.
 """
-function motion_state(b::Body,m::RigidBodyMotion)
-    return [b.cent...,b.α]
+function body_transforms(q::AbstractVector,ls::RigidBodyMotion{ND}) where {ND}
+    X = MotionTransform{ND}()
+    ml = [deepcopy(X) for jb in 1:ls.nbody]
+    for lsid in 1:number_of_linked_systems(ls)
+      jid = first_joint(lsid,ls)
+      _joint_descendants_transform!(ml,X,jid,q,ls)
+    end
+    return MotionTransformList(ml)
+end
+
+function _joint_descendants_transform!(ml,Xp::MotionTransform,jid::Int,q::AbstractVector,ls::RigidBodyMotion)
+    @unpack joints, child_joints = ls
+    joint = joints[jid]
+    Xch = parent_to_child_transform(view(q,ls,jid),joint)*Xp
+    bid = joint.child_id
+    ml[bid] = deepcopy(Xch)
+    for jcid in child_joints[bid]
+        _joint_descendants_transform!(ml,Xch,jcid,q,ls)
+    end
+    nothing
+end
+
+
+
+"""
+    body_velocities(x::AbstractVector,t::Real,ls::RigidBodyMotion) -> PluckerMotionList
+
+Compute the velocities of bodies for the rigid body system `ls`, expressing each in its own coordinate system.
+To carry this out, the function evaluates velocities of dofs with prescribed kinematics at time `t` and
+and obtains the remaining free dofs (exogenous and unconstrained) from the state vector `x`.
+"""
+function body_velocities(x::AbstractVector,t::Real,ls::RigidBodyMotion{ND}) where {ND}
+    v0 = PluckerMotion{2}()
+    vl = [v0 for jb in 1:ls.nbody]
+    for lsid in 1:number_of_linked_systems(ls)
+      jid = first_joint(lsid,ls)
+      _child_velocity_from_parent!(vl,v0,jid,x,t,ls)
+    end
+    return PluckerMotionList(vl)
+end
+
+function _child_velocity_from_parent!(vl,vp::PluckerMotion,jid::Int,x::AbstractVector,t::Real,ls::RigidBodyMotion)
+    @unpack joints, child_joints = ls
+
+    joint = joints[jid]
+    xJ = view(x,ls,jid;dimfcn=position_and_vel_dimension)
+    q = position_vector(x,ls)
+    vJ = joint_velocity(xJ,t,joint)
+    qJ = view(q,ls,jid)
+
+    Xp_to_ch = parent_to_child_transform(qJ,joint)
+    xJ_to_ch = inv(joint.Xch_to_j)
+
+    vch = _child_velocity_from_parent(Xp_to_ch,vp,xJ_to_ch,vJ)
+    bid = joint.child_id
+    vl[bid] = deepcopy(vch)
+
+    for jcid in child_joints[bid]
+        _child_velocity_from_parent!(vl,vch,jcid,x,t,ls)
+    end
+    nothing
+
+end
+
+
+function _child_velocity_from_parent(Xp_to_ch::MotionTransform,vp::PluckerMotion,XJ_to_ch::MotionTransform,vJ::PluckerMotion)
+    vch = Xp_to_ch*vp + XJ_to_ch*vJ
+end
+
+
+"""
+    zero_joint(ls::RigidBodyMotion[;dimfcn=position_and_vel_dimension])
+
+Create a vector of zeros for some aspect of the state of the linked system(s) `ls`, based
+on the argument `dimfcn`. By default, it uses `position_and_vel_dimension` and creates a zero vector sized
+according to the state of the joint. Alternatively, one
+can use `position_dimension`, `constrained_dimension`, `unconstrained_dimension`,
+or `exogenous_dimension`.
+"""
+zero_joint(ls::RigidBodyMotion;dimfcn=position_and_vel_dimension) = _zero_joint(ls.joints,dimfcn)
+
+
+_zero_joint(joints::Vector{<:Joint},dimfcn) = mapreduce(joint -> zero_joint(joint;dimfcn=dimfcn),vcat,joints)
+
+"""
+    zero_motion_state(bl::BodyList,ls::RigidBodyMotion)
+
+Create a vector of zeros for the state of the linked system(s) `ls`.
+"""
+function zero_motion_state(bl::BodyList,ls::RigidBodyMotion)
+    @unpack deformations = ls
+    x = zero_joint(ls)
+    for (b,m) in zip(bl,deformations)
+      xi = zero_motion_state(b,m)
+      append!(x,xi)
+    end
+    return x
+end
+
+function zero_motion_state(b::Body,ls::RigidBodyMotion)
+    _check_for_only_one_body(ls)
+    zero_motion_state(BodyList([b]),ls)
 end
 
 """
-    update_body!(b::Body,x::AbstractVector,m::RigidBodyMotion)
+    init_motion_state(bl::BodyList,ls::RigidBodyMotion[;tinit = 0.0])
 
-Update body `b` with the rigid-body motion state vector `x`. The information
-in `m` is used for checking lengths only.
+Initialize the global linked system state vector, using
+the prescribed motions for constrained degrees of freedom to initialize
+the position components (evaluated at `tinit`, which by default is 0).
+The other degrees of freedom are initialized to zero, and can be
+set manually.
 """
+function init_motion_state(bl::BodyList,ls::RigidBodyMotion;kwargs...)
+    @unpack deformations = ls
+    x = mapreduce(joint -> init_joint(joint;kwargs...),vcat,ls.joints)
+    for (b,m) in zip(bl,deformations)
+      xi = motion_state(b,m)
+      append!(x,xi)
+    end
+    return x
+end
+
+function init_motion_state(b::Body,ls::RigidBodyMotion;kwargs...)
+    _check_for_only_one_body(ls)
+    init_motion_state(BodyList([b]),ls;kwargs...)
+end
+
+"""
+    position_vector(x::AbstractVector,ls::RigidBodyMotion)
+
+Returns a view of the global state vector for a linked system containing only the position.
+"""
+function position_vector(x::AbstractVector,ls::RigidBodyMotion)
+   @unpack position_indices = ls
+   return view(x,position_indices)
+end
+
+"""
+    position_vector(x::AbstractVector,ls::RigidBodyMotion,jid::Int)
+
+Returns a view of the global state vector for a linked system containing only the position
+of joint `jid`.
+"""
+function position_vector(x::AbstractVector,ls::RigidBodyMotion,jid::Int)
+   @unpack position_indices = ls
+   q = view(x,position_indices)
+   return view(q,ls,jid)
+end
+
+"""
+    exogenous_position_vector(x::AbstractVector,ls::RigidBodyMotion,jid::Int)
+
+Returns a view of the exogenous dof position(s), if any, of joint `jid` in
+the global state vector `x`.
+"""
+function exogenous_position_vector(x::AbstractVector,ls::RigidBodyMotion,jid::Int)
+  @unpack joints = ls
+  qj = position_vector(x,ls,jid)
+  return view(qj,joints[jid].edofs)
+end
+
+"""
+    unconstrained_position_vector(x::AbstractVector,ls::RigidBodyMotion,jid::Int)
+
+Returns a view of the unconstrained dof position(s), if any, of joint `jid` in
+the global state vector `x`.
+"""
+function unconstrained_position_vector(x::AbstractVector,ls::RigidBodyMotion,jid::Int)
+  @unpack joints = ls
+  qj = position_vector(x,ls,jid)
+  return view(qj,joints[jid].udofs)
+end
+
+
+"""
+    velocity_vector(x::AbstractVector,ls::RigidBodyMotion)
+
+Returns a view of the global state vector for a linked system containing only the velocity.
+"""
+function velocity_vector(x::AbstractVector,ls::RigidBodyMotion)
+   @unpack vel_indices = ls
+   return view(x,vel_indices)
+end
+
+"""
+    velocity_vector(x::AbstractVector,ls::RigidBodyMotion,jid::Int)
+
+Returns a view of the global state vector for a linked system containing only the velocity
+of joint `jid`.
+"""
+function velocity_vector(x::AbstractVector,ls::RigidBodyMotion,jid::Int)
+   @unpack joints = ls
+   ir = _getrange(joints,position_and_vel_dimension,jid)[position_dimension(joints[jid])+1:position_and_vel_dimension(joints[jid])]
+   return view(x,ir)
+end
+
+"""
+    exogenous_velocity_vector(x::AbstractVector,ls::RigidBodyMotion,jid::Int)
+
+Returns a view of the exogenous dof position(s), if any, of joint `jid` in
+the global state vector `x`.
+"""
+function exogenous_velocity_vector(x::AbstractVector,ls::RigidBodyMotion,jid::Int)
+  @unpack joints = ls
+  qdotj = velocity_vector(x,ls,jid)
+  return view(qdotj,1:exogenous_dimension(joints[jid]))
+end
+
+"""
+    unconstrained_velocity_vector(x::AbstractVector,ls::RigidBodyMotion,jid::Int)
+
+Returns a view of the unconstrained dof position(s), if any, of joint `jid` in
+the global state vector `x`.
+"""
+function unconstrained_velocity_vector(x::AbstractVector,ls::RigidBodyMotion,jid::Int)
+  @unpack joints = ls
+  qdotj = velocity_vector(x,ls,jid)
+  j = joints[jid]
+  return view(qdotj,exogenous_dimension(j)+1:exogenous_dimension(j)+unconstrained_dimension(j))
+end
+
+"""
+    deformation_vector(x::AbstractVector,ls::RigidBodyMotion,bid::Int)
+
+Returns a view of the global state vector for a linked system containing only
+the body surface positions of the body with id `bid`.
+"""
+function deformation_vector(x::AbstractVector,ls::RigidBodyMotion,bid::Int)
+  @unpack deformation_indices = ls
+  return view(x,deformation_indices[bid])
+end
+
+### motion_rhs! APIs ###
+
+"""
+    motion_rhs!(dxdt::AbstractVector,x::AbstractVector,p::Tuple{RigidBodyMotion,BodyList},t::Real)
+
+Sets the right-hand side vector `dxdt` (mutating) for linked system `ls` of bodies `bl`, using the current state vector `x`,
+the current time `t`.
+"""
+function motion_rhs!(dxdt::AbstractVector,x::AbstractVector,p::Tuple{RigidBodyMotion,Union{Body,BodyList}},t::Real)
+    ls, bl = p
+    @unpack a_edof_buffer, a_udof_buffer, exogenous_function! = ls
+    fill!(a_udof_buffer,0.0)
+    exogenous_function!(a_edof_buffer,x,ls,t)
+    motion_rhs!(dxdt,x,t,a_edof_buffer,a_udof_buffer,ls,bl)
+end
+
+
+function motion_rhs!(dxdt::AbstractVector,x::AbstractVector,t::Real,a_edof::AbstractVector,a_udof::AbstractVector,ls::RigidBodyMotion,bl::BodyList)
+    @unpack joints, deformations = ls
+    for (jid,joint) in enumerate(joints)
+        dxdt_j = view(dxdt,ls,jid;dimfcn=position_and_vel_dimension)
+        x_j = view(x,ls,jid;dimfcn=position_and_vel_dimension)
+        a_edof_j = view(a_edof,ls,jid;dimfcn=exogenous_dimension)
+        a_udof_j = view(a_udof,ls,jid;dimfcn=unconstrained_dimension)
+        joint_rhs!(dxdt_j,x_j,t,a_edof_j,a_udof_j,joint)
+    end
+
+    for (bid,b) in enumerate(bl)
+        dxdt_b = deformation_vector(dxdt,ls,bid)
+        dxdt_b .= deformation_velocity(b,deformations[bid],t)
+    end
+    nothing
+end
+
+function motion_rhs!(dxdt::AbstractVector,x::AbstractVector,t::Real,a_edof::AbstractVector,a_udof::AbstractVector,ls::RigidBodyMotion,b::Body)
+  _check_for_only_one_body(ls)
+  motion_rhs!(dxdt,x,t,a_edof,a_udof,ls,BodyList([b]))
+end
+
+### updating exogenous variables ###
+
+"""
+    zero_exogenous(ls::RigidBodyMotion)
+
+Generate a zero vector of exogenous acclerations for system `ls`
+"""
+zero_exogenous(ls::RigidBodyMotion) = zero(ls.a_edof_buffer)
+
+
+"""
+    update_exogenous!(ls::RigidBodyMotion,a_edof::AbstractVector)
+
+Mutates the exogenous buffer of `ls` with the supplied vector of exogenous
+accelerations `a_edof`. This function is useful for supplying time-varying exogenous
+values to the integrator from an outer loop.
+"""
+function update_exogenous!(ls::RigidBodyMotion,a_edof::AbstractVector)
+  @assert length(ls.a_edof_buffer) == length(a_edof) "Incorrect length of exogenous vector"
+  ls.a_edof_buffer .= a_edof
+  nothing
+end
+
+### Surface velocity API ###
+
+"""
+    surface_velocity!(u::AbstractVector,v::AbstractVector,bl::BodyList,x::AbstractVector,m::RigidBodyMotion,t::Real[;axes=:inertial,motion_part=:full])
+
+Calculate the surface velocity components `u` and `v` for the points on bodies `bl`. The function evaluates
+prescribed kinematics at time `t` and extracts non-prescribed (exogenous and unconstrained) velocities from
+state vector `x`. There are two Boolean keyword arguments that can change the behavior of this function:
+`axes` determines whether the components returned are expressed in the inertial coordinate
+system (`:inertial`, the default) or the body's own system (`:body`); `motion_part` determines
+whether the entire body velocity is used (`:full`, the default), only the angular part (`:angular`),
+or only the linear part (`:linear`).
+"""
+function surface_velocity!(u::AbstractVector,v::AbstractVector,bl::BodyList,x::AbstractVector,m::RigidBodyMotion,t::Real;
+                           axes=:inertial,motion_part=:full)
+    @unpack deformations = m
+    q = position_vector(x,m)
+    ml = body_transforms(q,m)
+    vl = body_velocities(x,t,m)
+    for (bid,b) in enumerate(bl)
+        ub = view(u,bl,bid)
+        vb = view(v,bl,bid)
+        R = _rotation_transform(ml[bid],Val(axes))
+        U = _body_velocity(vl[bid],Val(motion_part))
+        _surface_velocity!(ub,vb,b,U,deformations[bid],R,t)
+    end
+end
+
+function surface_velocity!(u::AbstractVector,v::AbstractVector,b::Body,x::AbstractVector,m::RigidBodyMotion,t::Real;kwargs...)
+    _check_for_only_one_body(m)
+    surface_velocity!(u,v,BodyList([b]),x,m,t;kwargs...)
+end
+
+
+_rotation_transform(X::MotionTransform,::Val{:inertial}) = rotation_transform(inv(X))
+_rotation_transform(X::MotionTransform{ND},::Val{:body}) where {ND} = MotionTransform{ND}()
+
+_body_velocity(v::PluckerMotion,::Val{:full}) = v
+_body_velocity(v::PluckerMotion,::Val{:angular}) = angular_only(v)
+_body_velocity(v::PluckerMotion,::Val{:linear}) = linear_only(v)
+
+function velocity_in_body_coordinates_2d(x̃,ỹ,vb::PluckerMotion{2})
+    Xb_to_p = MotionTransform(x̃,ỹ,0.0)
+    Xb_to_p*vb
+end
+
+function velocity_in_inertial_coordinates_2d(x̃,ỹ,vb::PluckerMotion{2},Xb_to_0::MotionTransform{2})
+    rotation_transform(Xb_to_0)*velocity_in_body_coordinates_2d(x̃,ỹ,vb)
+end
+
+function velocity_in_body_coordinates_2d!(u::AbstractVector,v::AbstractVector,b::Body,vb::PluckerMotion{2})
+    for i in 1:numpts(b)
+        vp = velocity_in_body_coordinates_2d(b.x̃[i],b.ỹ[i],vb)
+        u[i], v[i] = vp.linear
+    end
+end
+
+function _surface_velocity!(u::AbstractVector,v::AbstractVector,b::Body,vb::PluckerMotion{2},deformation::AbstractDeformationMotion,Rb_to_0::MotionTransform{2},t)
+    u .= 0.0
+    v .= 0.0
+    _surface_velocity!(u,v,b,deformation,t)
+    for i in 1:numpts(b)
+        vp = velocity_in_body_coordinates_2d(b.x̃[i],b.ỹ[i],vb)
+        vp += PluckerMotion{2}(linear=[u[i],v[i]]) # add the deformation to the rigid-body plucker vector
+        vp = Rb_to_0*vp # rotate to the inertial system
+        u[i], v[i] = vp.linear
+    end
+end
+
+
+
+### update_body! API ###
+
+"""
+    update_body!(bl::BodyList,x::AbstractVector,m::RigidBodyMotion)
+
+Update body `b` with the rigid-body motion `m` and state vector `x`.
+"""
+function update_body!(bl::BodyList,x::AbstractVector,m::RigidBodyMotion)
+    @unpack deformations = m
+    q = position_vector(x,m)
+    for (bid,b) in enumerate(bl)
+        _update_body!(b,deformation_vector(x,m,bid),deformations[bid])
+    end
+    ml = body_transforms(q,m)
+    update_body!(bl,ml)
+    return bl
+end
+
 function update_body!(b::Body,x::AbstractVector,m::RigidBodyMotion)
-    length(x) == length(motion_state(b,m)) || error("wrong length for motion state vector")
-    T = RigidTransform(x)
-    T(b)
+    _check_for_only_one_body(m)
+    @unpack deformations = m
+    q = position_vector(x,m)
+    _update_body!(b,deformation_vector(x,m,1),deformations[1])
+    T = body_transforms(q,m)[1]
+    update_body!(b,T)
     return b
 end
 
-
 """
-    surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
-                 body::Body,motion::AbstractMotion,t::Real[;inertial=true])
+    maxvelocity(b::Union{Body,BodyList},x::AbstractVector,m::RigidBodyMotion[,tmax=10,dt=0.05])
 
-Assign the components of body velocity `u` and `v` (in inertial coordinate system)
-at surface positions described by inertial coordinates in body `body` at time `t`,
-based on supplied motions in the `motion` for the body. If, instead,
-`inertial=false`, then it is assumed that `u`, `v` and the surface positions in `body` are all
-expressed in comoving coordinates (but velocities are relative to inertial
-  frame).
+Search through the given motion state vector `x` and motion `m` applied to body `b` and return `(umax,i,t,bid)`,
+the maximum velocity magnitude, the global index of the body point where it
+occurs, the time at which it occurs, and the body on which it occurs.
 """
-surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
-                 b::Body,m::RigidBodyMotion,t::Real;kwargs...) =
-                 surface_velocity!(u,v,b.x,b.y,b.cent...,b.α,m,t;kwargs...)
-
-"""
-    surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
-                     x::AbstractVector{Float64},y::AbstractVector{Float64},
-                     xc::Real,yc::Real,α::Real,
-                     motion::RigidBodyMotion,t::Real[;inertial=true])
-
-Assign the components of rigid body velocity `u` and `v` (in inertial coordinate system)
-at surface positions described by coordinates `x`, `y` (also in inertial coordinate system) at time `t`,
-based on supplied motion `motion` for the body. The current position and orientation
-of the rigid-body coordinate system are supplied as `xc`, `yc`, and `α`. If, instead,
-`inertial=false`, then it is assumed that `u`, `v`, `x`, `y`, `xc`, `yc` are all
-expressed in comoving coordinates (but velocities are relative to inertial
-  frame).
-"""
-function surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64},
-                          x::AbstractVector{Float64},y::AbstractVector{Float64},
-                          xc::Real,yc::Real,α::Real,m::RigidBodyMotion,t::Real;inertial=true)
-
-  length(u) == length(v) == length(x) == length(y) || error("Inconsistent lengths of vectors")
-
-  k = m(t)
-  ċ = complex_translational_velocity(k;inertial=inertial)
-  α̇ = angular_velocity(k)
-  uc = ċ .+ im*α̇*((x .- xc) .+ im*(y .- yc))
-  u .= real.(uc)
-  v .= imag.(uc)
-
-  return u, v
+function maxvelocity(bl::BodyList,x::AbstractVector,m::RigidBodyMotion;tf=10.0,dt=0.05)
+    u, v = zeros(numpts(bl)), zeros(numpts(bl))
+    i = 1
+    bid = 1
+    umax = 0.0
+    tmax = 0.0
+    for t in 0.0:dt:tf
+        surface_velocity!(u,v,bl,x,m,t)
+        umag = sqrt.(u.^2+v.^2)
+        umax_t, i_t = findmax(umag)
+        bid_t, iloc_t = global_to_local_index(i_t,bl)
+        if umax_t > umax
+            umax, i, tmax, bid  = umax_t, i_t, t, bid_t
+        end
+    end
+    return umax, i, tmax, bid
 end
 
-"""
-    surface_velocity(x::AbstractVector{Float64},y::AbstractVector{Float64},
-                    xc::Real,yc::Real,α::Real,motion::RigidBodyMotion,t::Real[;inertial=true])
-
-Return the components of rigid body velocities (in inertial components) at surface positions
-described by coordinates `x`, `y` (also in inertial coordinate system) at time `t`,
-based on supplied motion `motion` for the body. If, instead,
-`inertial=false`, then it is assumed that `u`, `v`, `x`, `y`, `xc`, `yc` are all
-expressed in comoving coordinates (but velocities are relative to inertial
-  frame).
-"""
-surface_velocity(x::AbstractVector{Float64},y::AbstractVector{Float64},
-                xc::Real,yc::Real,α::Real,m::RigidBodyMotion,t::Real;kwargs...) =
-                surface_velocity!(similar(x),similar(y),x,y,xc,yc,α,m,t;kwargs...)
-
-
-function show(io::IO, m::RigidBodyMotion)
-    println(io, "Rigid Body Motion:")
-    print(io, "  $(m.kin)")
-end
+maxvelocity(b::Body,x::AbstractVector,m::RigidBodyMotion;kwargs...) = maxvelocity(BodyList([b]),x,m;kwargs...)

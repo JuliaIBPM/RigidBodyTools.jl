@@ -9,12 +9,12 @@ _Tools for creating, moving, and discretizing rigid bodies_
 ## About the package
 
 The purpose of this package is to provide tools for rigid bodies with
-point-discretized surfaces. It includes methods for
+point-discretized surfaces. It currently includes methods for
 
-* a library of surface shape definitions and associated point discretizations
+* a library of 2D surface shape definitions and associated point discretizations
 * calculation of geometric properties
-* rigid-body and prescribing deformation motion and transformation of surface points
 * collections of multiple rigid bodies
+* prescribed kinematics of single or linked systems of rigid and deforming bodies, with a library of joints
 
 These tools support a variety of classes of problems, including those that involve bodies interacting with fluids, in which we would immerse these point-discretized representations into a computational grid.
 
