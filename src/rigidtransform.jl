@@ -112,11 +112,8 @@ for typename in [:PluckerMotion,:PluckerForce]
   @eval size(A::$typename) = size(A.data)
   @eval length(A::$typename) = length(A.data)
 
-  @eval angular_only(v::$typename{2}) = $typename([v.angular...,0,0])
-  @eval angular_only(v::$typename{3}) = $typename([v.angular...,0,0,0])
-
-  @eval linear_only(v::$typename{2}) = $typename([0,v.linear...])
-  @eval linear_only(v::$typename{3}) = $typename([0,0,0,v.linear...])
+  @eval _get_angular_part(v::$typename) = v.angular
+  @eval _get_linear_part(v::$typename) = v.linear
 
 
 end
@@ -145,7 +142,10 @@ for motname in [:Motion,:Force]
   for partname in [:Angular,:Linear]
 
     newtype = Symbol(typename,partname)
-    @eval export $newtype
+    fname = Symbol(lowercase(string(partname)),"_only")
+    getpartfunc = Symbol("_get_",lowercase(string(partname)),"_part")
+
+    @eval export $newtype, $fname
 
      @eval struct $newtype{ND} <: $abstype{ND}
         plucker :: $abstype{ND}
@@ -158,12 +158,32 @@ for motname in [:Motion,:Force]
 
      @eval (-)(a::$newtype{ND}) where {ND} = $newtype{ND}(-a.plucker)
 
+     @eval $fname(v::$typename) = $newtype(v::$typename)
+
+     @eval $getpartfunc(v::$newtype) = $getpartfunc(v.plucker)
+
   end
 
 
 end
 
+"""
+    angular_only(v::AbstractPluckerVector)
 
+Returns a Plucker vector with only the angular part of the motion or force vector `v`
+available for subsequent operations. Note that no copy of the original data
+in `v` is made. Rather, this simply provides a lazy reference to the angular data
+in `v`.
+""" angular_only
+
+"""
+    linear_only(v::AbstractPluckerVector)
+
+Returns a Plucker vector with only the linear part of the motion or force vector `v`
+available for subsequent operations. Note that no copy of the original data
+in `v` is made. Rather, this simply provides a lazy reference to the linear data
+in `v`.
+""" linear_only
 
 
 
@@ -177,19 +197,21 @@ dot(f::PluckerForce{ND},v::PluckerMotion{ND}) where {ND} = dot(f.data,v.data)
 
 dot(v::PluckerMotion{ND},f::PluckerForce{ND}) where {ND} = dot(f,v)
 
-"""
-    angular_only(v::PluckerMotion) -> PluckerMotion
+dot(f::PluckerForceAngular{ND},v::AbstractPluckerMotionVector{ND}) where {ND} = dot(_get_angular_part(f),_get_angular_part(v))
 
-Copies only the angular part of a `PluckerMotion` or `PluckerForce` vector `v`
-into another vector
-""" angular_only
+dot(f::PluckerForceLinear{ND},v::AbstractPluckerMotionVector{ND}) where {ND} = dot(_get_linear_part(f),_get_linear_part(v))
 
-"""
-    linear_motion(v::PluckerMotion) -> PluckerMotion
+dot(f::AbstractPluckerForceVector{ND},v::PluckerMotionAngular{ND}) where {ND} = dot(_get_angular_part(f),_get_angular_part(v))
 
-Copies only the linear velocity part of a `PluckerMotion` vector `v`
-into another vector
-""" linear_only
+dot(f::AbstractPluckerForceVector{ND},v::PluckerMotionLinear{ND}) where {ND} = dot(_get_linear_part(f),_get_linear_part(v))
+
+dot(v::PluckerMotionAngular{ND},f::AbstractPluckerForceVector{ND}) where {ND} = dot(_get_angular_part(f),_get_angular_part(v))
+
+dot(v::PluckerMotionLinear{ND},f::AbstractPluckerForceVector{ND}) where {ND} = dot(_get_linear_part(f),_get_linear_part(v))
+
+dot(v::AbstractPluckerMotionVector{ND},f::PluckerForceAngular{ND}) where {ND} = dot(_get_angular_part(f),_get_angular_part(v))
+
+dot(v::AbstractPluckerMotionVector{ND},f::PluckerForceLinear{ND}) where {ND} = dot(_get_linear_part(f),_get_linear_part(v))
 
 
 
@@ -247,11 +269,11 @@ for motname in [:Motion,:Force]
   newangulartype = Symbol(typename,"Angular")
   newlineartype = Symbol(typename,"Linear")
 
-  @eval (*)(T::$transname,v::$newangulartype{2}) = $typename(T.matrix[1:3,PLUCKER2DANG]*v.plucker.angular)
-  @eval (*)(T::$transname,v::$newangulartype{3}) = $typename(T.matrix[1:6,PLUCKER3DANG]*v.plucker.angular)
+  @eval (*)(T::$transname,v::$newangulartype{2}) = $typename(T.matrix[1:3,PLUCKER2DANG]*_get_angular_part(v))
+  @eval (*)(T::$transname,v::$newangulartype{3}) = $typename(T.matrix[1:6,PLUCKER3DANG]*_get_angular_part(v))
 
-  @eval (*)(T::$transname,v::$newlineartype{2}) = $typename(T.matrix[1:3,PLUCKER2DLIN]*v.linear)
-  @eval (*)(T::$transname,v::$newlineartype{3}) = $typename(T.matrix[1:6,PLUCKER3DLIN]*v.linear)
+  @eval (*)(T::$transname,v::$newlineartype{2}) = $typename(T.matrix[1:3,PLUCKER2DLIN]*_get_linear_part(v))
+  @eval (*)(T::$transname,v::$newlineartype{3}) = $typename(T.matrix[1:6,PLUCKER3DLIN]*_get_linear_part(v))
 
 end
 
