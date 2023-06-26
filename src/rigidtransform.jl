@@ -9,14 +9,25 @@ const O3VECTOR = SVector{3}(zeros(Float64,3))
 const I3 = SMatrix{3,3}(I)
 const O3 = SMatrix{3,3}(zeros(Float64,9))
 
+const PLUCKER2DANG = 1:1
+const PLUCKER2DLIN = 2:3
+
+const PLUCKER3DANG = 1:3
+const PLUCKER3DLIN = 4:6
+
+
 plucker_dimension(::Val{2}) = 3
 plucker_dimension(::Val{3}) = 6
 
 ### Plucker vectors ###
 abstract type AbstractPluckerVector{ND} end
 
+abstract type AbstractPluckerMotionVector{ND} <: AbstractPluckerVector{ND} end
+abstract type AbstractPluckerForceVector{ND} <: AbstractPluckerVector{ND} end
+
+
 """
-    PluckerMotion(data::AbstractVector) -> SVector
+    PluckerMotion(data::AbstractVector)
 
 Creates an instance of a Plucker motion vector,
 
@@ -28,25 +39,11 @@ translational component `U`. If `data` is of length 3, then it creates
 a 2d motion vector, assuming that the first entry in `data` represents
 the rotational component and the second and third entries the
 x and y translational components.
-"""
-struct PluckerMotion{ND} <: AbstractPluckerVector{ND}
-  data :: SVector
-  angular :: SubArray
-  linear :: SubArray
-  PluckerMotion{2}(v::SVector) = new{2}(v,view(v,1:1),view(v,2:3))
-  PluckerMotion{3}(v::SVector) = new{3}(v,view(v,1:3),view(v,4:6))
-end
+""" PluckerMotion
 
-function show(io::IO, p::PluckerMotion{3})
-  print(io, "3d Plucker motion vector, Ω = $(p.angular), v = $(p.linear)")
-end
-
-function show(io::IO, p::PluckerMotion{2})
-  print(io, "2d Plucker motion vector, Ω = $(p.angular[1]), U = $(p.linear)")
-end
 
 """
-    PluckerForce(data::AbstractVector) -> SVector
+    PluckerForce(data::AbstractVector)
 
 Creates an instance of a Plucker force vector,
 
@@ -58,24 +55,20 @@ force component `F`. If `data` is of length 3, then it creates
 a 2d force vector, assuming that the first entry in `data` represents
 the moment component and the second and third entries the
 x and y force components.
-"""
-struct PluckerForce{ND} <: AbstractPluckerVector{ND}
-  data :: SVector
-  angular :: SubArray
-  linear :: SubArray
-  PluckerForce{2}(v::SVector) = new{2}(v,view(v,1:1),view(v,2:3))
-  PluckerForce{3}(v::SVector) = new{3}(v,view(v,1:3),view(v,4:6))
-end
+""" PluckerForce
 
-function show(io::IO, p::PluckerForce{3})
-  print(io, "3d Plucker force vector, M = $(p.angular), F = $(p.linear)")
-end
-
-function show(io::IO, p::PluckerForce{2})
-  print(io, "2d Plucker force vector, M = $(p.angular[1]), F = $(p.linear)")
-end
 
 for typename in [:PluckerMotion,:PluckerForce]
+
+  abstype = Symbol("Abstract",typename,"Vector")
+
+  @eval struct $typename{ND} <: $abstype{ND}
+    data :: SVector
+    angular :: SubArray
+    linear :: SubArray
+    $typename{2}(v::SVector) = new{2}(v,view(v,PLUCKER2DANG),view(v,PLUCKER2DLIN))
+    $typename{3}(v::SVector) = new{3}(v,view(v,PLUCKER3DANG),view(v,PLUCKER3DLIN))
+  end
 
   fname_underscore = Symbol("_",lowercase(string(typename)))
 
@@ -86,9 +79,9 @@ for typename in [:PluckerMotion,:PluckerForce]
 
   @eval $typename(v::SVector{3}) = $typename{2}(v)
 
-  @eval $typename{2}(;angular::Real = 0.0,linear::AbstractVector=[0.0,0.0]) = $typename(angular,linear)
+  @eval $typename{2}(;angular::Real = zero(Float64),linear::AbstractVector = zeros(Float64,2)) = $typename(angular,linear)
 
-  @eval $typename{3}(;angular::AbstractVector = [0.0,0.0,0.0],linear::AbstractVector=[0.0,0.0,0.0]) = $typename(angular,linear)
+  @eval $typename{3}(;angular::AbstractVector = zeros(Float64,3),linear::AbstractVector = zeros(Float64,3)) = $typename(angular,linear)
 
 
   @eval $typename(Ω::Real,U::AbstractVector) = $typename([Ω,U...])
@@ -119,14 +112,80 @@ for typename in [:PluckerMotion,:PluckerForce]
   @eval size(A::$typename) = size(A.data)
   @eval length(A::$typename) = length(A.data)
 
-  @eval angular_only(v::$typename{2}) = $typename([v.angular...,0,0])
-  @eval angular_only(v::$typename{3}) = $typename([v.angular...,0,0,0])
-
-  @eval linear_only(v::$typename{2}) = $typename([0,v.linear...])
-  @eval linear_only(v::$typename{3}) = $typename([0,0,0,v.linear...])
+  @eval _get_angular_part(v::$typename) = v.angular
+  @eval _get_linear_part(v::$typename) = v.linear
 
 
 end
+
+function show(io::IO, p::PluckerMotion{3})
+  print(io, "3d Plucker motion vector, Ω = $(p.angular), v = $(p.linear)")
+end
+
+function show(io::IO, p::PluckerMotion{2})
+  print(io, "2d Plucker motion vector, Ω = $(p.angular[1]), U = $(p.linear)")
+end
+
+function show(io::IO, p::PluckerForce{3})
+  print(io, "3d Plucker force vector, M = $(p.angular), F = $(p.linear)")
+end
+
+function show(io::IO, p::PluckerForce{2})
+  print(io, "2d Plucker force vector, M = $(p.angular[1]), F = $(p.linear)")
+end
+
+for motname in [:Motion,:Force]
+  typename = Symbol("Plucker",motname)
+  transname = Symbol(motname,"Transform")
+  abstype = Symbol("Abstract",typename,"Vector")
+
+  for partname in [:Angular,:Linear]
+
+    newtype = Symbol(typename,partname)
+    fname = Symbol(lowercase(string(partname)),"_only")
+    getpartfunc = Symbol("_get_",lowercase(string(partname)),"_part")
+
+    @eval export $newtype, $fname
+
+     @eval struct $newtype{ND} <: $abstype{ND}
+        plucker :: $abstype{ND}
+        $newtype(v::$typename{ND}) where {ND} = new{ND}(v)
+     end
+
+     @eval (+)(a::$newtype{ND},b::$newtype{ND}) where {ND} = $newtype{ND}(a.plucker+b.plucker)
+
+     @eval (-)(a::$newtype{ND},b::$newtype{ND}) where {ND} = $newtype{ND}(a.plucker-b.plucker)
+
+     @eval (-)(a::$newtype{ND}) where {ND} = $newtype{ND}(-a.plucker)
+
+     @eval $fname(v::$typename) = $newtype(v::$typename)
+
+     @eval $getpartfunc(v::$newtype) = $getpartfunc(v.plucker)
+
+  end
+
+
+end
+
+"""
+    angular_only(v::AbstractPluckerVector)
+
+Returns a Plucker vector with only the angular part of the motion or force vector `v`
+available for subsequent operations. Note that no copy of the original data
+in `v` is made. Rather, this simply provides a lazy reference to the angular data
+in `v`.
+""" angular_only
+
+"""
+    linear_only(v::AbstractPluckerVector)
+
+Returns a Plucker vector with only the linear part of the motion or force vector `v`
+available for subsequent operations. Note that no copy of the original data
+in `v` is made. Rather, this simply provides a lazy reference to the linear data
+in `v`.
+""" linear_only
+
+
 
 """
     dot(f::PluckerForce,v::PluckerMotion) -> Real
@@ -138,19 +197,21 @@ dot(f::PluckerForce{ND},v::PluckerMotion{ND}) where {ND} = dot(f.data,v.data)
 
 dot(v::PluckerMotion{ND},f::PluckerForce{ND}) where {ND} = dot(f,v)
 
-"""
-    angular_only(v::PluckerMotion) -> PluckerMotion
+dot(f::PluckerForceAngular{ND},v::AbstractPluckerMotionVector{ND}) where {ND} = dot(_get_angular_part(f),_get_angular_part(v))
 
-Copies only the angular part of a `PluckerMotion` or `PluckerForce` vector `v`
-into another vector
-""" angular_only
+dot(f::PluckerForceLinear{ND},v::AbstractPluckerMotionVector{ND}) where {ND} = dot(_get_linear_part(f),_get_linear_part(v))
 
-"""
-    linear_motion(v::PluckerMotion) -> PluckerMotion
+dot(f::AbstractPluckerForceVector{ND},v::PluckerMotionAngular{ND}) where {ND} = dot(_get_angular_part(f),_get_angular_part(v))
 
-Copies only the linear velocity part of a `PluckerMotion` vector `v`
-into another vector
-""" linear_only
+dot(f::AbstractPluckerForceVector{ND},v::PluckerMotionLinear{ND}) where {ND} = dot(_get_linear_part(f),_get_linear_part(v))
+
+dot(v::PluckerMotionAngular{ND},f::AbstractPluckerForceVector{ND}) where {ND} = dot(_get_angular_part(f),_get_angular_part(v))
+
+dot(v::PluckerMotionLinear{ND},f::AbstractPluckerForceVector{ND}) where {ND} = dot(_get_linear_part(f),_get_linear_part(v))
+
+dot(v::AbstractPluckerMotionVector{ND},f::PluckerForceAngular{ND}) where {ND} = dot(_get_angular_part(f),_get_angular_part(v))
+
+dot(v::AbstractPluckerMotionVector{ND},f::PluckerForceLinear{ND}) where {ND} = dot(_get_linear_part(f),_get_linear_part(v))
 
 
 
@@ -199,6 +260,22 @@ rotation(T::AbstractTransformOperator{2}) = SMatrix{2,2}(T.R[1:2,1:2])
 
 (*)(T::MotionTransform,v::PluckerMotion) = PluckerMotion(T*v.data)
 (*)(T::ForceTransform,v::PluckerForce) = PluckerForce(T*v.data)
+
+
+for motname in [:Motion,:Force]
+  typename = Symbol("Plucker",motname)
+  transname = Symbol(motname,"Transform")
+  #abstype = Symbol("Abstract",typename,"Vector")
+  newangulartype = Symbol(typename,"Angular")
+  newlineartype = Symbol(typename,"Linear")
+
+  @eval (*)(T::$transname,v::$newangulartype{2}) = $typename(T.matrix[1:3,PLUCKER2DANG]*_get_angular_part(v))
+  @eval (*)(T::$transname,v::$newangulartype{3}) = $typename(T.matrix[1:6,PLUCKER3DANG]*_get_angular_part(v))
+
+  @eval (*)(T::$transname,v::$newlineartype{2}) = $typename(T.matrix[1:3,PLUCKER2DLIN]*_get_linear_part(v))
+  @eval (*)(T::$transname,v::$newlineartype{3}) = $typename(T.matrix[1:6,PLUCKER3DLIN]*_get_linear_part(v))
+
+end
 
 
 function transpose(T::MotionTransform{ND}) where {ND}

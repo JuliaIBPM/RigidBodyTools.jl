@@ -99,24 +99,18 @@ end
   vA = PluckerMotion(rand(3))
 
   vAr = angular_only(vA)
-  @test vA.angular == vAr.angular
-  @test all(vAr.linear .== 0.0)
+  @test RigidBodyTools._get_angular_part(vA) === RigidBodyTools._get_angular_part(vAr)
 
   vAl = linear_only(vA)
-  @test vA.linear == vAl.linear
-  @test all(vAl.angular .== 0.0)
+  @test RigidBodyTools._get_linear_part(vA) === RigidBodyTools._get_linear_part(vAl)
 
   vA = PluckerMotion(rand(6))
 
   vAr = angular_only(vA)
-  @test vA.angular == vAr.angular
-  @test all(vAr.linear .== 0.0)
+  @test RigidBodyTools._get_angular_part(vA) === RigidBodyTools._get_angular_part(vAr)
 
   vAl = linear_only(vA)
-  @test vA.linear == vAl.linear
-  @test all(vAl.angular .== 0.0)
-
-  @test vAr + vAl == vA
+  @test RigidBodyTools._get_linear_part(vA) === RigidBodyTools._get_linear_part(vAl)
 
   x = (rand(),rand())
   θ = rand()
@@ -127,24 +121,18 @@ end
   vA = PluckerForce(rand(3))
 
   vAr = angular_only(vA)
-  @test vA.angular == vAr.angular
-  @test all(vAr.linear .== 0.0)
+  @test RigidBodyTools._get_angular_part(vA) === RigidBodyTools._get_angular_part(vAr)
 
   vAl = linear_only(vA)
-  @test vA.linear == vAl.linear
-  @test all(vAl.angular .== 0.0)
+  @test RigidBodyTools._get_linear_part(vA) === RigidBodyTools._get_linear_part(vAl)
 
   vA = PluckerForce(rand(6))
 
   vAr = angular_only(vA)
-  @test vA.angular == vAr.angular
-  @test all(vAr.linear .== 0.0)
+  @test RigidBodyTools._get_angular_part(vA) === RigidBodyTools._get_angular_part(vAr)
 
   vAl = linear_only(vA)
-  @test vA.linear == vAl.linear
-  @test all(vAl.angular .== 0.0)
-
-  @test vAr + vAl == vA
+  @test RigidBodyTools._get_linear_part(vA) === RigidBodyTools._get_linear_part(vAl)
 
   x = (rand(),rand())
   θ = rand()
@@ -152,19 +140,38 @@ end
   vA = PluckerForce(rand(3))
   TM*vA
 
+  TM*angular_only(vA)
+
+  TM*linear_only(vA)
+
+
+  TM = MotionTransform(x,θ)
   vA = PluckerMotion{2}(angular=1)
   vB = PluckerMotion([1,2,3])
-  @test angular_only(vA) == angular_only(vB)
+  @test TM*angular_only(vA) == TM*angular_only(vB)
 
   vA = PluckerMotion{2}(linear=[2,3])
-  @test linear_only(vA) == linear_only(vB)
+  @test TM*linear_only(vA) == TM*linear_only(vB)
 
+  TM = MotionTransform(rand(3),rotation_about_axis(rand(),rand(3)))
   vA = PluckerMotion{3}(angular=[1,2,3])
   vB = PluckerMotion([1,2,3,4,5,6])
-  @test angular_only(vA) == angular_only(vB)
+  @test TM*angular_only(vA) == TM*angular_only(vB)
 
   vA = PluckerMotion{3}(linear=[4,5,6])
-  @test linear_only(vA) == linear_only(vB)
+  @test TM*linear_only(vA) == TM*linear_only(vB)
+
+  vA = PluckerMotion(rand(3))
+  fA = PluckerForce(rand(3))
+
+  @test dot(angular_only(fA),vA) == dot(fA,angular_only(vA)) == dot(angular_only(vA),fA) == dot(vA,angular_only(fA))
+  @test dot(linear_only(fA),vA) == dot(fA,linear_only(vA)) == dot(linear_only(vA),fA) == dot(vA,linear_only(fA))
+
+  vA = PluckerMotion(rand(6))
+  fA = PluckerForce(rand(6))
+
+  @test dot(angular_only(fA),vA) == dot(fA,angular_only(vA)) == dot(angular_only(vA),fA) == dot(vA,angular_only(fA))
+  @test dot(linear_only(fA),vA) == dot(fA,linear_only(vA)) == dot(linear_only(vA),fA) == dot(vA,linear_only(fA))
 
 
 end
