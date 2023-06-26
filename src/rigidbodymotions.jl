@@ -132,6 +132,29 @@ function ismoving(m::RigidBodyMotion)
     any(map(joint -> ismoving(joint),joints))
 end
 
+"""
+    is_system_in_relative_motion(lsid::Int,ls::RigidBodyMotion) -> Bool
+
+Returns `true` if the linked system with ID `lsid` is in relative motion,
+i.e., if one or more of the joints (not connected to the inertial system)
+returns `true` for the function `ismoving(joint)`.
+"""
+function is_system_in_relative_motion(lsid::Int,m::RigidBodyMotion)
+    @unpack lslists = m
+    bodyid = first_body(lsid,m)
+    ismove = false
+    return _ismoving_tree(ismove,bodyid,m)
+end
+
+function _ismoving_tree(ismove::Bool,bodyid::Int,m::RigidBodyMotion)
+    @unpack joints = m
+    for jid in child_joints_of_body(bodyid,m)
+        ismove |= ismoving(joints[jid])
+        bodyid = child_body_of_joint(jid,m)
+        ismove = _ismoving_tree(ismove,bodyid,m)
+    end
+    return ismove
+end
 
 function _list_of_linked_bodies!(lslist,bodyid,child_bodies)
     push!(lslist,bodyid)

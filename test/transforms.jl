@@ -175,3 +175,53 @@ end
 
 
 end
+
+@testset "Linked systems" begin
+  Xp_to_j1 = MotionTransform(0.0,0.0,0.0)
+  Xch_to_j1 = MotionTransform(-0.5,0.0,0.0)
+
+  Xp_to_j2 = MotionTransform(1.02,0.0,0.0)
+  Xch_to_j2 = MotionTransform(-1.02,0.0,0.0)
+
+  Xp_to_j3 = MotionTransform(-5.0,0.0,0.0)
+  Xch_to_j3 = MotionTransform(-0.5,0.0,0.0)
+
+  dofs1 = [OscillatoryDOF(π/4,2π,0.0,0.0),ConstantPositionDOF(0.0),OscillatoryDOF(1.0,2π,-π/2,0.0)]
+  #dofs11 = [OscillatoryDOF(π/4,2π,0.0,0.0),UnconstrainedDOF(),ExogenousDOF()]
+  #dofs12 = [OscillatoryDOF(π/4,2π,π/3,0.0),ConstantPositionDOF(0.0),ExogenousDOF()]
+
+
+  dofs2 = [OscillatoryDOF(π/4,2π,π/4,0.0)]
+  dofs3 = [OscillatoryDOF(π/4,2π,π/2,0.0)]
+  dofs4 = [ConstantVelocityDOF(0)]
+
+
+  joint1 = Joint(FreeJoint2d,0,Xp_to_j1,1,Xch_to_j1,dofs1)
+  joint2 = Joint(RevoluteJoint,1,Xp_to_j2,2,Xch_to_j2,dofs2)
+  joint3 = Joint(RevoluteJoint,2,Xp_to_j2,3,Xch_to_j2,dofs3)
+  joint4 = Joint(RevoluteJoint,2,Xp_to_j2,4,Xch_to_j2,dofs4)
+  joint5 = Joint(FreeJoint2d,0,Xp_to_j3,5,Xch_to_j3,dofs1)
+  joint6 = Joint(RevoluteJoint,5,Xp_to_j2,6,Xch_to_j2,dofs4)
+
+  @test ismoving(joint3)
+  @test !ismoving(joint4)
+
+  joints = [joint2,joint6,joint3,joint4,joint5,joint1]
+
+
+  body1 = Ellipse(1.0,0.2,200)
+  body2 = deepcopy(body1)
+  body3 = deepcopy(body1)
+  body4 = deepcopy(body1)
+  body5 = deepcopy(body1)
+  body6 = deepcopy(body1)
+  bl = BodyList([body1,body2,body3,body4,body5,body6])
+
+  ls = RigidBodyMotion(joints,bl)
+
+  lsid = 1 # this system should be internally in motion
+  @test is_system_in_relative_motion(lsid,ls)
+
+  lsid = 2 # this system should be internally fixed
+  @test !is_system_in_relative_motion(lsid,ls)
+end

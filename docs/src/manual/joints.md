@@ -417,6 +417,7 @@ update_exogenous!
 surface_velocity!
 maxvelocity
 ismoving(::RigidBodyMotion)
+is_system_in_relative_motion
 ```
 
 ## Joint types
