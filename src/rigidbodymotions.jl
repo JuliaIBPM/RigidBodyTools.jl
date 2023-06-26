@@ -311,7 +311,7 @@ function body_velocities(x::AbstractVector,t::Real,ls::RigidBodyMotion{ND}) wher
     return PluckerMotionList(vl)
 end
 
-function _child_velocity_from_parent!(vl,vp::PluckerMotion,jid::Int,x::AbstractVector,t::Real,ls::RigidBodyMotion)
+function _child_velocity_from_parent!(vl,vp::AbstractPluckerMotionVector,jid::Int,x::AbstractVector,t::Real,ls::RigidBodyMotion)
     @unpack joints, child_joints = ls
 
     joint = joints[jid]
@@ -335,7 +335,7 @@ function _child_velocity_from_parent!(vl,vp::PluckerMotion,jid::Int,x::AbstractV
 end
 
 
-function _child_velocity_from_parent(Xp_to_ch::MotionTransform,vp::PluckerMotion,XJ_to_ch::MotionTransform,vJ::PluckerMotion)
+function _child_velocity_from_parent(Xp_to_ch::MotionTransform,vp::AbstractPluckerMotionVector,XJ_to_ch::MotionTransform,vJ::AbstractPluckerMotionVector)
     vch = Xp_to_ch*vp + XJ_to_ch*vJ
 end
 
@@ -606,23 +606,23 @@ _body_velocity(v::PluckerMotion,::Val{:full}) = v
 _body_velocity(v::PluckerMotion,::Val{:angular}) = angular_only(v)
 _body_velocity(v::PluckerMotion,::Val{:linear}) = linear_only(v)
 
-function velocity_in_body_coordinates_2d(x̃,ỹ,vb::PluckerMotion{2})
+function velocity_in_body_coordinates_2d(x̃,ỹ,vb::AbstractPluckerMotionVector{2})
     Xb_to_p = MotionTransform(x̃,ỹ,0.0)
     Xb_to_p*vb
 end
 
-function velocity_in_inertial_coordinates_2d(x̃,ỹ,vb::PluckerMotion{2},Xb_to_0::MotionTransform{2})
+function velocity_in_inertial_coordinates_2d(x̃,ỹ,vb::AbstractPluckerMotionVector{2},Xb_to_0::MotionTransform{2})
     rotation_transform(Xb_to_0)*velocity_in_body_coordinates_2d(x̃,ỹ,vb)
 end
 
-function velocity_in_body_coordinates_2d!(u::AbstractVector,v::AbstractVector,b::Body,vb::PluckerMotion{2})
+function velocity_in_body_coordinates_2d!(u::AbstractVector,v::AbstractVector,b::Body,vb::AbstractPluckerMotionVector{2})
     for i in 1:numpts(b)
         vp = velocity_in_body_coordinates_2d(b.x̃[i],b.ỹ[i],vb)
         u[i], v[i] = vp.linear
     end
 end
 
-function _surface_velocity!(u::AbstractVector,v::AbstractVector,b::Body,vb::PluckerMotion{2},deformation::AbstractDeformationMotion,Rb_to_0::MotionTransform{2},t)
+function _surface_velocity!(u::AbstractVector,v::AbstractVector,b::Body,vb::AbstractPluckerMotionVector{2},deformation::AbstractDeformationMotion,Rb_to_0::MotionTransform{2},t)
     u .= 0.0
     v .= 0.0
     _surface_velocity!(u,v,b,deformation,t)
