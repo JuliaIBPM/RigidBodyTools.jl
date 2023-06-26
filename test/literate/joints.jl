@@ -390,6 +390,7 @@ plot(view(u,bodies,2))
 #md # surface_velocity!
 #md # maxvelocity
 #md # ismoving(::RigidBodyMotion)
+#md # is_system_in_relative_motion
 #md # ```
 
 #md # ## Joint types
