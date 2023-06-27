@@ -1,5 +1,9 @@
 ### JOINTS ###
-
+#=
+Note that all 3-d joints with Revolute, Prismatic, Helical, Cylindrical
+joints all need the joint to be along its z axis, so this dictates
+how the parent-to-joint and child-to-joint transforms are to be created.
+=#
 
 abstract type AbstractJointType end
 
