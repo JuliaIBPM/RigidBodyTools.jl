@@ -384,6 +384,8 @@ plot(view(u,bodies,2))
 #md # exogenous_velocity_vector
 #md # unconstrained_position_vector
 #md # unconstrained_velocity_vector
+#md # body_transforms
+#md # body_velocities
 #md # motion_rhs!
 #md # zero_exogenous
 #md # update_exogenous!

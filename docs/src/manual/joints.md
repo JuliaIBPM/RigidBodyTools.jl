@@ -411,6 +411,8 @@ exogenous_position_vector
 exogenous_velocity_vector
 unconstrained_position_vector
 unconstrained_velocity_vector
+body_transforms
+body_velocities
 motion_rhs!
 zero_exogenous
 update_exogenous!
