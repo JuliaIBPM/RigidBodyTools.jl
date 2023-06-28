@@ -593,28 +593,32 @@ end
 ### Surface velocity API ###
 
 """
-    surface_velocity!(u::AbstractVector,v::AbstractVector,bl::BodyList,x::AbstractVector,m::RigidBodyMotion,t::Real[;axes=:inertial,motion_part=:full])
+    surface_velocity!(u::AbstractVector,v::AbstractVector,bl::BodyList,x::AbstractVector,m::RigidBodyMotion,t::Real[;axes=0,frame=axes,motion_part=:full])
 
 Calculate the surface velocity components `u` and `v` for the points on bodies `bl`. The function evaluates
 prescribed kinematics at time `t` and extracts non-prescribed (exogenous and unconstrained) velocities from
-state vector `x`. There are two Boolean keyword arguments that can change the behavior of this function:
+state vector `x`. There are three keyword arguments that can change the behavior of this function:
 `axes` determines whether the components returned are expressed in the inertial coordinate
-system (`:inertial`, the default) or the body's own system (`:body`); `motion_part` determines
-whether the entire body velocity is used (`:full`, the default), only the angular part (`:angular`),
+system (0, the default) or another body's coordinates (the body ID); `frame`
+specifies that the motion should be measured relative to another reference body's velocity (by default, 0); and `motion_part` determines
+whether the entire reference body velocity is used (`:full`, the default), only the angular part (`:angular`),
 or only the linear part (`:linear`).
 """
-function surface_velocity!(u::AbstractVector,v::AbstractVector,bl::BodyList,x::AbstractVector,m::RigidBodyMotion,t::Real;
-                           axes=:inertial,motion_part=:full)
+function surface_velocity!(u::AbstractVector,v::AbstractVector,bl::BodyList,x::AbstractVector,m::RigidBodyMotion{ND},t::Real;
+                           axes=0,frame=0,motion_part=:full) where {ND}
     @unpack deformations = m
     q = position_vector(x,m)
-    ml = body_transforms(q,m)
+    Xl = body_transforms(q,m)
     vl = body_velocities(x,t,m)
+    Xref = _reference_transform(Xl,ND,Val(axes))
+    Xframe = _reference_transform(Xl,ND,Val(frame))
+    vref_0 = inv(Xframe)*_reference_velocity(vl,ND,motion_part,Val(frame))
     for (bid,b) in enumerate(bl)
         ub = view(u,bl,bid)
         vb = view(v,bl,bid)
-        R = _rotation_transform(ml[bid],Val(axes))
-        U = _body_velocity(vl[bid],Val(motion_part))
-        _surface_velocity!(ub,vb,b,U,deformations[bid],R,t)
+        R = _rotation_transform(Xl[bid],Xref,Val(bid==axes))
+        vrel = vl[bid] - Xl[bid]*vref_0    # relative velocity
+        _surface_velocity!(ub,vb,b,vrel,deformations[bid],R,t)
     end
 end
 
@@ -623,9 +627,14 @@ function surface_velocity!(u::AbstractVector,v::AbstractVector,b::Body,x::Abstra
     surface_velocity!(u,v,BodyList([b]),x,m,t;kwargs...)
 end
 
+_reference_transform(ml,ND,::Val{0}) = MotionTransform{ND}()
+_reference_transform(ml,ND,::Val{N}) where N = ml[N]
 
-_rotation_transform(X::MotionTransform,::Val{:inertial}) = rotation_transform(inv(X))
-_rotation_transform(X::MotionTransform{ND},::Val{:body}) where {ND} = MotionTransform{ND}()
+_reference_velocity(vl,ND,motion_part,::Val{0}) = PluckerMotion{ND}()
+_reference_velocity(vl,ND,motion_part,::Val{N}) where N = _body_velocity(vl[N],Val(motion_part))
+
+_rotation_transform(X::MotionTransform,Xref::MotionTransform,::Val{false}) = rotation_transform(Xref*inv(X))
+_rotation_transform(X::MotionTransform{ND},Xref::MotionTransform,::Val{true}) where {ND} = MotionTransform{ND}()
 
 _body_velocity(v::PluckerMotion,::Val{:full}) = v
 _body_velocity(v::PluckerMotion,::Val{:angular}) = angular_only(v)
