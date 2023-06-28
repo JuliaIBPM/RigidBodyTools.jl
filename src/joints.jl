@@ -106,7 +106,7 @@ Return the `6 x ndof` (3d) or `3 x ndof` (2d) matrix providing the mapping from 
 to the full Plucker velocity vector of the joint. This matrix represents
 the subspace of free motion in the full space. It is orthogonal to the constrained subspace.
 """
-motion_subspace(j::Joint{ND,JT}) where {ND,JT} = motion_subspace(JT,j.params,Val(ND))
+motion_subspace(j::Joint{ND,JT},q::AbstractVector) where {ND,JT} = motion_subspace(JT,j.params,Val(ND),q)
 
 constrained_dimension(j::Joint) = length(j.cdofs)
 exogenous_dimension(j::Joint) = length(j.edofs)
@@ -223,7 +223,9 @@ function joint_velocity(x::AbstractVector,t::Real,joint::Joint)
 
     _joint_velocity!(x,t,joint)
 
-    return PluckerMotion(motion_subspace(joint)*vbuf)
+    q = view(x,1:position_dimension(joint))
+
+    return PluckerMotion(motion_subspace(joint,q)*vbuf)
 
 end
 
@@ -276,8 +278,8 @@ function joint_dqdt!(dqdt,q,v::Vector,::Type{T}) where T<:AbstractJointType
   nothing
 end
 
-function motion_subspace(JT::Type{<:AbstractJointType},p::Dict,::Val{2})
-  S3 = motion_subspace(JT,p,Val(3))
+function motion_subspace(JT::Type{<:AbstractJointType},p::Dict,::Val{2},q)
+  S3 = motion_subspace(JT,p,Val(3),q)
   m, n = size(S3)
   SMatrix{3,n}(S3[3:5,:])
 end
@@ -295,7 +297,7 @@ function joint_transform(q::AbstractVector,::Type{RevoluteJoint},p::Dict,::Val{N
   return MotionTransform{ND}(x,R)
 end
 
-motion_subspace(::Type{RevoluteJoint},p::Dict,::Val{3}) = SMatrix{6,1,Float64}([0 0 1 0 0 0]')
+motion_subspace(::Type{RevoluteJoint},p::Dict,::Val{3},q) = SMatrix{6,1,Float64}([0 0 1 0 0 0]')
 
 ## Prismatic joint ##
 
@@ -310,7 +312,7 @@ function joint_transform(q::AbstractVector,::Type{PrismaticJoint},p::Dict,::Val{
   return MotionTransform{3}(x,R)
 end
 
-motion_subspace(::Type{PrismaticJoint},p::Dict,::Val{3}) = SMatrix{6,1,Float64}([0 0 0 0 0 1]')
+motion_subspace(::Type{PrismaticJoint},p::Dict,::Val{3},q) = SMatrix{6,1,Float64}([0 0 0 0 0 1]')
 
 
 ## Helical joint ##
@@ -326,7 +328,7 @@ function joint_transform(q::AbstractVector,C::Type{HelicalJoint},p::Dict,::Val{3
   return MotionTransform{3}(x,R)
 end
 
-motion_subspace(::Type{HelicalJoint},p::Dict,::Val{3}) = SMatrix{6,1,Float64}([0 0 1 0 0 p["pitch"]]')
+motion_subspace(::Type{HelicalJoint},p::Dict,::Val{3},q) = SMatrix{6,1,Float64}([0 0 1 0 0 p["pitch"]]')
 
 ## Cylindrical joint ##
 
@@ -341,7 +343,7 @@ function joint_transform(q::AbstractVector,::Type{CylindricalJoint},p::Dict,::Va
   return MotionTransform{3}(x,R)
 end
 
-motion_subspace(::Type{CylindricalJoint},p::Dict,::Val{3}) = SMatrix{6,2,Float64}([0 0 1 0 0 0; 0 0 0 0 0 1]')
+motion_subspace(::Type{CylindricalJoint},p::Dict,::Val{3},q) = SMatrix{6,2,Float64}([0 0 1 0 0 0; 0 0 0 0 0 1]')
 
 ## Spherical joint ##
 
@@ -356,7 +358,7 @@ function joint_transform(q::AbstractVector,::Type{SphericalJoint},p::Dict,::Val{
   return MotionTransform{3}(x,R)
 end
 
-motion_subspace(::Type{SphericalJoint},p::Dict,::Val{3}) = SMatrix{6,3,Float64}([1 0 0 0 0 0;
+motion_subspace(::Type{SphericalJoint},p::Dict,::Val{3},q) = SMatrix{6,3,Float64}([1 0 0 0 0 0;
                                                                                  0 1 0 0 0 0;
                                                                                  0 0 1 0 0 0]')
 
@@ -378,7 +380,7 @@ function joint_transform(q::AbstractVector,::Type{FreeJoint},p::Dict,::Val{3})
   return MotionTransform{3}(R'*x,R)
 end
 
-motion_subspace(::Type{FreeJoint},p::Dict,::Val{3}) = SMatrix{6,6,Float64}(I)
+motion_subspace(::Type{FreeJoint},p::Dict,::Val{3},q) = SMatrix{6,6,Float64}(I)
 
 
 function joint_dqdt!(dqdt,q,v,::Type{FreeJoint})
@@ -403,7 +405,10 @@ function joint_transform(q::AbstractVector,::Type{FreeJoint2d},p::Dict,::Val{2})
   return MotionTransform{2}(x,R)
 end
 
-motion_subspace(::Type{FreeJoint2d},p::Dict,::Val{2}) = SMatrix{3,3,Float64}(I)
+function motion_subspace(JT::Type{FreeJoint2d},p::Dict,::Val{2},q)
+  R = rotation_transform(joint_transform(q,JT,p,Val(2)))
+  R*SMatrix{3,3,Float64}(I)
+end
 
 ## Fixed joint ##
 

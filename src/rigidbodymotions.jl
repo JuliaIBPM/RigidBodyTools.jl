@@ -344,7 +344,9 @@ function _child_velocity_from_parent!(vl,vp::AbstractPluckerMotionVector,jid::In
     qJ = view(q,ls,jid)
 
     Xp_to_ch = parent_to_child_transform(qJ,joint)
+    #xJ_to_ch = Xp_to_ch*inv(joint.Xp_to_j)
     xJ_to_ch = inv(joint.Xch_to_j)
+
 
     vch = _child_velocity_from_parent(Xp_to_ch,vp,xJ_to_ch,vJ)
     bid = joint.child_id
@@ -629,6 +631,12 @@ _body_velocity(v::PluckerMotion,::Val{:full}) = v
 _body_velocity(v::PluckerMotion,::Val{:angular}) = angular_only(v)
 _body_velocity(v::PluckerMotion,::Val{:linear}) = linear_only(v)
 
+"""
+    velocity_in_body_coordinates_2d(x,y,v::AbstractPluckerMotionVector)
+
+Evaluate the rigid-body velocity `v` at position ``(x,y)``, in the same
+coordinate system as `v` itself.
+"""
 function velocity_in_body_coordinates_2d(x̃,ỹ,vb::AbstractPluckerMotionVector{2})
     Xb_to_p = MotionTransform(x̃,ỹ,0.0)
     Xb_to_p*vb
