@@ -286,6 +286,11 @@ end
 
 ## Revolute joint ##
 
+"""
+    RevoluteJoint <: AbstractJointType
+
+A 2d or 3d joint with one rotational (about z axis) degree of freedom.
+"""
 abstract type RevoluteJoint <: AbstractJointType end
 
 number_of_dofs(::Type{RevoluteJoint}) = 1
@@ -301,6 +306,11 @@ motion_subspace(::Type{RevoluteJoint},p::Dict,::Val{3},q) = SMatrix{6,1,Float64}
 
 ## Prismatic joint ##
 
+"""
+    PrismaticJoint <: AbstractJointType
+
+A 3d joint with one translational (along z axis) degree of freedom.
+"""
 abstract type PrismaticJoint <: AbstractJointType end
 
 number_of_dofs(::Type{PrismaticJoint}) = 1
@@ -317,6 +327,12 @@ motion_subspace(::Type{PrismaticJoint},p::Dict,::Val{3},q) = SMatrix{6,1,Float64
 
 ## Helical joint ##
 
+"""
+    HelicalJoint <: AbstractJointType
+
+A 3d joint with one rotational (angle about z axis) degree of freedom,
+and coupled translational motion along the z axis based on pitch.
+"""
 abstract type HelicalJoint <: AbstractJointType end
 
 number_of_dofs(::Type{HelicalJoint}) = 1
@@ -332,6 +348,11 @@ motion_subspace(::Type{HelicalJoint},p::Dict,::Val{3},q) = SMatrix{6,1,Float64}(
 
 ## Cylindrical joint ##
 
+"""
+    CylindricalJoint <: AbstractJointType
+
+A 3d joint with one rotational (angle about z axis) and one translational (z axis) degrees of freedom.
+"""
 abstract type CylindricalJoint <: AbstractJointType end
 
 number_of_dofs(::Type{CylindricalJoint}) = 2
@@ -346,7 +367,12 @@ end
 motion_subspace(::Type{CylindricalJoint},p::Dict,::Val{3},q) = SMatrix{6,2,Float64}([0 0 1 0 0 0; 0 0 0 0 0 1]')
 
 ## Spherical joint ##
+"""
+    SphericalJoint <: AbstractJointType
 
+A 3d joint with three rotational degrees of freedom. It uses a quaternion
+to define its orientation, so it has four position coordinates.
+"""
 abstract type SphericalJoint <: AbstractJointType end
 
 number_of_dofs(::Type{SphericalJoint}) = 3
@@ -368,7 +394,12 @@ function joint_dqdt!(dqdt,q,v,::Type{SphericalJoint})
 end
 
 ## Free joint (3d) ##
+"""
+    FreeJoint <: AbstractJointType
 
+A 3d joint with all six degrees of freedom. It uses a quaternion
+to define its orientation, so it has seven position coordinates.
+"""
 abstract type FreeJoint <: AbstractJointType end
 
 number_of_dofs(::Type{FreeJoint}) = 6
@@ -394,6 +425,11 @@ end
 
 ## Free joint (2d) ##
 
+"""
+    FreeJoint2d <: AbstractJointType
+
+A 2d joint with three degrees of freedom (angle, x, y).
+"""
 abstract type FreeJoint2d <: AbstractJointType end
 
 number_of_dofs(::Type{FreeJoint2d}) = 3

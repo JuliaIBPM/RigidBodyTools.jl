@@ -215,6 +215,17 @@ corresponding transformation in `tl`.
 end
 
 """
+    transform_body!(bl::BodyList,tl::MotionTransformList) -> BodyList
+
+Carry out in-place transformations of body coordinate systems for each body in `bl` with the
+corresponding transformation in `tl`.
+"""
+@inline function transform_body!(bl::BodyList,tl::MotionTransformList)
+  length(tl) == length(bl) || error("Inconsistent lengths of lists")
+  map((T,b) -> transform_body!(b,T),tl,bl)
+end
+
+"""
     vec(tl::RigidTransformList) -> Vector{Float64}
 
 Returns a concatenation of length-3 vectors of the form [x,y,α] corresponding to the translation

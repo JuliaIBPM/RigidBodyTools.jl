@@ -340,7 +340,7 @@ function (T::MotionTransform{2})(b::Body)
 end
 
 """
-    update_body!(b::Body,t::MotionTransform)
+    update_body!(b::Body,T::MotionTransform)
 
 Transforms a body (in-place) using the given `MotionTransform`. In using this
 transform `T` (which defines a transform from system A to system B), A is interpreted as an inertial coordinate
@@ -351,6 +351,29 @@ operator is applied to transform body-fixed coordinates to the inertial frame.
 function update_body!(b::Body{N,C},T::MotionTransform{2}) where {N,C}
   b.xend, b.yend = T(b.x̃end,b.ỹend)
   b.x, b.y = _midpoints(b.xend,b.yend,C)
+
+  b.α = _get_angle_of_2d_transform(T)
+  b.cent = (T.x[1], T.x[2])
+  return b
+end
+
+"""
+    transform_body!(b::Body,T::MotionTransform)
+
+Transforms a body's own coordinate system (in-place) using the given `MotionTransform`.
+This function differs from [update_body!](@ref) because it changes the
+coordinates of the body in its own coordinate system, whereas the latter function
+only changes the inertial coordinates of the body. `T` is interpreted
+as a transform from the new system to the old system.
+"""
+function transform_body!(b::Body{N,C},T::MotionTransform{2}) where {N,C}
+  b.xend, b.yend = T(b.x̃end,b.ỹend)
+  b.x̃end .= b.xend
+  b.ỹend .= b.yend
+
+  b.x, b.y = _midpoints(b.xend,b.yend,C)
+  b.x̃ .= b.x
+  b.ỹ .= b.y
 
   b.α = _get_angle_of_2d_transform(T)
   b.cent = (T.x[1], T.x[2])

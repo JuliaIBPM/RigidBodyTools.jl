@@ -225,6 +225,7 @@ MotionTransform
 ForceTransform
 Base.inv(::AbstractTransformOperator)
 update_body!
+transform_body!
 ```
 
 ---

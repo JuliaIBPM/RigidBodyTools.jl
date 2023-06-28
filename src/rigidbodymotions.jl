@@ -670,9 +670,9 @@ end
 ### update_body! API ###
 
 """
-    update_body!(bl::BodyList,x::AbstractVector,m::RigidBodyMotion)
+    update_body!(bl::Union{Body,BodyList},x::AbstractVector,m::RigidBodyMotion)
 
-Update body `b` with the rigid-body motion `m` and state vector `x`.
+Update body/bodies in `bl` with the rigid-body motion `m` and state vector `x`.
 """
 function update_body!(bl::BodyList,x::AbstractVector,m::RigidBodyMotion)
     @unpack deformations = m
@@ -692,6 +692,32 @@ function update_body!(b::Body,x::AbstractVector,m::RigidBodyMotion)
     _update_body!(b,deformation_vector(x,m,1),deformations[1])
     T = body_transforms(q,m)[1]
     update_body!(b,T)
+    return b
+end
+
+"""
+    update_body!(bl::Union{Body,BodyList},x::AbstractVector,m::RigidBodyMotion)
+
+Transform body/bodies in `bl` with the rigid-body motion `m` and state vector `x`.
+"""
+function transform_body!(bl::BodyList,x::AbstractVector,m::RigidBodyMotion)
+    @unpack deformations = m
+    q = position_vector(x,m)
+    for (bid,b) in enumerate(bl)
+        _update_body!(b,deformation_vector(x,m,bid),deformations[bid])
+    end
+    ml = body_transforms(q,m)
+    transform_body!(bl,ml)
+    return bl
+end
+
+function transform_body!(b::Body,x::AbstractVector,m::RigidBodyMotion)
+    _check_for_only_one_body(m)
+    @unpack deformations = m
+    q = position_vector(x,m)
+    _update_body!(b,deformation_vector(x,m,1),deformations[1])
+    T = body_transforms(q,m)[1]
+    transform_body!(b,T)
     return b
 end
 
