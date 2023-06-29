@@ -287,13 +287,14 @@ function Base.view(q::AbstractVector,ls::RigidBodyMotion,jid::Int;dimfcn::Functi
 end
 
 """
-    body_transforms(q::AbstractVector,ls::RigidBodyMotion) -> MotionTransformList
+    body_transforms(x::AbstractVector,ls::RigidBodyMotion) -> MotionTransformList
 
-Parse the overall position vector `q` into the individual joints and construct
+Parse the overall state vector `x` into the individual joints and construct
 the inertial system-to-body transforms for every body. Return these
 transforms in a `MotionTransformList`.
 """
-function body_transforms(q::AbstractVector,ls::RigidBodyMotion{ND}) where {ND}
+function body_transforms(x::AbstractVector,ls::RigidBodyMotion{ND}) where {ND}
+    q = position_vector(x,ls)
     X = MotionTransform{ND}()
     ml = [deepcopy(X) for jb in 1:ls.nbody]
     for lsid in 1:number_of_linked_systems(ls)
@@ -344,7 +345,9 @@ function _child_velocity_from_parent!(vl,vp::AbstractPluckerMotionVector,jid::In
     qJ = view(q,ls,jid)
 
     Xp_to_ch = parent_to_child_transform(qJ,joint)
+    #xJ_to_ch = Xp_to_ch*inv(joint.Xp_to_j)
     xJ_to_ch = inv(joint.Xch_to_j)
+
 
     vch = _child_velocity_from_parent(Xp_to_ch,vp,xJ_to_ch,vJ)
     bid = joint.child_id
@@ -591,28 +594,31 @@ end
 ### Surface velocity API ###
 
 """
-    surface_velocity!(u::AbstractVector,v::AbstractVector,bl::BodyList,x::AbstractVector,m::RigidBodyMotion,t::Real[;axes=:inertial,motion_part=:full])
+    surface_velocity!(u::AbstractVector,v::AbstractVector,bl::BodyList,x::AbstractVector,m::RigidBodyMotion,t::Real[;axes=0,frame=axes,motion_part=:full])
 
 Calculate the surface velocity components `u` and `v` for the points on bodies `bl`. The function evaluates
 prescribed kinematics at time `t` and extracts non-prescribed (exogenous and unconstrained) velocities from
-state vector `x`. There are two Boolean keyword arguments that can change the behavior of this function:
+state vector `x`. There are three keyword arguments that can change the behavior of this function:
 `axes` determines whether the components returned are expressed in the inertial coordinate
-system (`:inertial`, the default) or the body's own system (`:body`); `motion_part` determines
-whether the entire body velocity is used (`:full`, the default), only the angular part (`:angular`),
+system (0, the default) or another body's coordinates (the body ID); `frame`
+specifies that the motion should be measured relative to another reference body's velocity (by default, 0); and `motion_part` determines
+whether the entire reference body velocity is used (`:full`, the default), only the angular part (`:angular`),
 or only the linear part (`:linear`).
 """
-function surface_velocity!(u::AbstractVector,v::AbstractVector,bl::BodyList,x::AbstractVector,m::RigidBodyMotion,t::Real;
-                           axes=:inertial,motion_part=:full)
+function surface_velocity!(u::AbstractVector,v::AbstractVector,bl::BodyList,x::AbstractVector,m::RigidBodyMotion{ND},t::Real;
+                           axes=0,frame=0,motion_part=:full) where {ND}
     @unpack deformations = m
-    q = position_vector(x,m)
-    ml = body_transforms(q,m)
+    Xl = body_transforms(x,m)
     vl = body_velocities(x,t,m)
+    Xref = _reference_transform(Xl,ND,Val(axes))
+    Xframe = _reference_transform(Xl,ND,Val(frame))
+    vref_0 = inv(Xframe)*_reference_velocity(vl,ND,motion_part,Val(frame))
     for (bid,b) in enumerate(bl)
         ub = view(u,bl,bid)
         vb = view(v,bl,bid)
-        R = _rotation_transform(ml[bid],Val(axes))
-        U = _body_velocity(vl[bid],Val(motion_part))
-        _surface_velocity!(ub,vb,b,U,deformations[bid],R,t)
+        R = _rotation_transform(Xl[bid],Xref,Val(bid==axes))
+        vrel = vl[bid] - Xl[bid]*vref_0    # relative velocity
+        _surface_velocity!(ub,vb,b,vrel,deformations[bid],R,t)
     end
 end
 
@@ -621,14 +627,25 @@ function surface_velocity!(u::AbstractVector,v::AbstractVector,b::Body,x::Abstra
     surface_velocity!(u,v,BodyList([b]),x,m,t;kwargs...)
 end
 
+_reference_transform(ml,ND,::Val{0}) = MotionTransform{ND}()
+_reference_transform(ml,ND,::Val{N}) where N = ml[N]
 
-_rotation_transform(X::MotionTransform,::Val{:inertial}) = rotation_transform(inv(X))
-_rotation_transform(X::MotionTransform{ND},::Val{:body}) where {ND} = MotionTransform{ND}()
+_reference_velocity(vl,ND,motion_part,::Val{0}) = PluckerMotion{ND}()
+_reference_velocity(vl,ND,motion_part,::Val{N}) where N = _body_velocity(vl[N],Val(motion_part))
+
+_rotation_transform(X::MotionTransform,Xref::MotionTransform,::Val{false}) = rotation_transform(Xref*inv(X))
+_rotation_transform(X::MotionTransform{ND},Xref::MotionTransform,::Val{true}) where {ND} = MotionTransform{ND}()
 
 _body_velocity(v::PluckerMotion,::Val{:full}) = v
 _body_velocity(v::PluckerMotion,::Val{:angular}) = angular_only(v)
 _body_velocity(v::PluckerMotion,::Val{:linear}) = linear_only(v)
 
+"""
+    velocity_in_body_coordinates_2d(x,y,v::AbstractPluckerMotionVector)
+
+Evaluate the rigid-body velocity `v` at position ``(x,y)``, in the same
+coordinate system as `v` itself.
+"""
 function velocity_in_body_coordinates_2d(x̃,ỹ,vb::AbstractPluckerMotionVector{2})
     Xb_to_p = MotionTransform(x̃,ỹ,0.0)
     Xb_to_p*vb
@@ -662,17 +679,16 @@ end
 ### update_body! API ###
 
 """
-    update_body!(bl::BodyList,x::AbstractVector,m::RigidBodyMotion)
+    update_body!(bl::Union{Body,BodyList},x::AbstractVector,m::RigidBodyMotion)
 
-Update body `b` with the rigid-body motion `m` and state vector `x`.
+Update body/bodies in `bl` with the rigid-body motion `m` and state vector `x`.
 """
 function update_body!(bl::BodyList,x::AbstractVector,m::RigidBodyMotion)
     @unpack deformations = m
-    q = position_vector(x,m)
     for (bid,b) in enumerate(bl)
         _update_body!(b,deformation_vector(x,m,bid),deformations[bid])
     end
-    ml = body_transforms(q,m)
+    ml = body_transforms(x,m)
     update_body!(bl,ml)
     return bl
 end
@@ -680,10 +696,33 @@ end
 function update_body!(b::Body,x::AbstractVector,m::RigidBodyMotion)
     _check_for_only_one_body(m)
     @unpack deformations = m
-    q = position_vector(x,m)
     _update_body!(b,deformation_vector(x,m,1),deformations[1])
-    T = body_transforms(q,m)[1]
+    T = body_transforms(x,m)[1]
     update_body!(b,T)
+    return b
+end
+
+"""
+    update_body!(bl::Union{Body,BodyList},x::AbstractVector,m::RigidBodyMotion)
+
+Transform body/bodies in `bl` with the rigid-body motion `m` and state vector `x`.
+"""
+function transform_body!(bl::BodyList,x::AbstractVector,m::RigidBodyMotion)
+    @unpack deformations = m
+    for (bid,b) in enumerate(bl)
+        _update_body!(b,deformation_vector(x,m,bid),deformations[bid])
+    end
+    ml = body_transforms(x,m)
+    transform_body!(bl,ml)
+    return bl
+end
+
+function transform_body!(b::Body,x::AbstractVector,m::RigidBodyMotion)
+    _check_for_only_one_body(m)
+    @unpack deformations = m
+    _update_body!(b,deformation_vector(x,m,1),deformations[1])
+    T = body_transforms(x,m)[1]
+    transform_body!(b,T)
     return b
 end
 

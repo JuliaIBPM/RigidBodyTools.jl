@@ -14,7 +14,8 @@ makedocs(
         "Motions" => ["manual/dofmotions.md",
                       "manual/joints.md",
                       "manual/exogenous.md",
-                      "manual/deformation.md"]
+                      "manual/deformation.md",
+                      "manual/surfacevelocities.md"]
         #"Internals" => [ "internals/properties.md"]
     ],
     #format = Documenter.HTML(assets = ["assets/custom.css"])

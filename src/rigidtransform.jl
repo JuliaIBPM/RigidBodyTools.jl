@@ -8,6 +8,7 @@
 const O3VECTOR = SVector{3}(zeros(Float64,3))
 const I3 = SMatrix{3,3}(I)
 const O3 = SMatrix{3,3}(zeros(Float64,9))
+const I6 = SMatrix{6,6}(I)
 
 const PLUCKER2DANG = 1:1
 const PLUCKER2DLIN = 2:3
@@ -277,7 +278,14 @@ for motname in [:Motion,:Force]
 
 end
 
+"""
+    transpose(X::MotionTransform) -> ForceTransform
+    transpose(X::ForceTransform) -> MotionTransform
 
+For a motion transform `X` mapping from system A to B,
+returns the force transform mapping from B to A. Alternatively,
+if `X` is a force transform, it returns the motion transform.
+"""
 function transpose(T::MotionTransform{ND}) where {ND}
     x = cross_vector(T.R*cross_matrix(-T.x)*T.R')
     ForceTransform{ND}(x,transpose(T.R),transpose(T.matrix))
@@ -295,8 +303,24 @@ Return the inverse of the motion or force transform `X`.
 inv(T::MotionTransform{ND}) where {ND} = transpose(ForceTransform{ND}(T.x,T.R))
 inv(T::ForceTransform{ND}) where {ND} = transpose(MotionTransform{ND}(T.x,T.R))
 
+# Should be able to do the following in a lazy way, by wrapping the original transform
+# rather than making a whole new transform.
+
+"""
+    rotation_transform(T::AbstractTransformOperator) -> AbstractTransformOperator
+
+Returns a transform operator consisting of only the rotational part of `T`.
+"""
 rotation_transform(T::MotionTransform{ND}) where {ND} = MotionTransform{ND}(O3VECTOR,T.R)
 rotation_transform(T::ForceTransform{ND}) where {ND} = ForceTransform{ND}(O3VECTOR,T.R)
+
+"""
+    translation_transform(T::AbstractTransformOperator) -> AbstractTransformOperator
+
+Returns a transform operator consisting of only the translational part of `T`.
+"""
+translation_transform(T::MotionTransform{ND}) where {ND} = MotionTransform{ND}(T.x,I3)
+translation_transform(T::ForceTransform{ND}) where {ND} = ForceTransform{ND}(T.x,I3)
 
 
 vec(T::AbstractTransformOperator{2}) = [T.x[1],T.x[2],_get_angle_of_2d_transform(T)]
@@ -339,7 +363,7 @@ function (T::MotionTransform{2})(b::Body)
 end
 
 """
-    update_body!(b::Body,t::MotionTransform)
+    update_body!(b::Body,T::MotionTransform)
 
 Transforms a body (in-place) using the given `MotionTransform`. In using this
 transform `T` (which defines a transform from system A to system B), A is interpreted as an inertial coordinate
@@ -350,6 +374,29 @@ operator is applied to transform body-fixed coordinates to the inertial frame.
 function update_body!(b::Body{N,C},T::MotionTransform{2}) where {N,C}
   b.xend, b.yend = T(b.x̃end,b.ỹend)
   b.x, b.y = _midpoints(b.xend,b.yend,C)
+
+  b.α = _get_angle_of_2d_transform(T)
+  b.cent = (T.x[1], T.x[2])
+  return b
+end
+
+"""
+    transform_body!(b::Body,T::MotionTransform)
+
+Transforms a body's own coordinate system (in-place) using the given `MotionTransform`.
+This function differs from [update_body!](@ref) because it changes the
+coordinates of the body in its own coordinate system, whereas the latter function
+only changes the inertial coordinates of the body. `T` is interpreted
+as a transform from the new system to the old system.
+"""
+function transform_body!(b::Body{N,C},T::MotionTransform{2}) where {N,C}
+  b.xend, b.yend = T(b.x̃end,b.ỹend)
+  b.x̃end .= b.xend
+  b.ỹend .= b.yend
+
+  b.x, b.y = _midpoints(b.xend,b.yend,C)
+  b.x̃ .= b.x
+  b.ỹ .= b.y
 
   b.α = _get_angle_of_2d_transform(T)
   b.cent = (T.x[1], T.x[2])
@@ -378,6 +425,32 @@ function _force_transform_matrix(xA_to_B::SVector{3},RA_to_B::SMatrix{3,3})
     return Mrot*Mtrans
 end
 
+function _motion_transform_matrix(xA_to_B::SVector{3})
+    xM = cross_matrix(xA_to_B)
+    Mtrans = SMatrix{6,6}([I3 O3;
+                          -xM I3])
+    return Mtrans
+end
+
+function _force_transform_matrix(xA_to_B::SVector{3})
+    xM = cross_matrix(xA_to_B)
+    Mtrans = SMatrix{6,6}([I3 -xM;
+                           O3 I3])
+    return Mtrans
+end
+
+function _motion_transform_matrix(RA_to_B::SMatrix{3,3})
+    Mrot = SMatrix{6,6}([RA_to_B O3;
+                         O3 RA_to_B])
+    return Mrot
+end
+
+function _force_transform_matrix(RA_to_B::SMatrix{3,3})
+    Mrot = SMatrix{6,6}([RA_to_B O3;
+                          O3   RA_to_B])
+    return Mrot
+end
+
 for f in [:motion, :force]
 
     fname_underscore = Symbol("_",f,"_transform_matrix")
@@ -401,6 +474,12 @@ for f in [:motion, :force]
         x_3d = SVector{3}([x_2d... 0.0])
         M = $fname2d_underscore(x_3d,R_3d)
         return $typename{2}(x_3d,R_3d,M)
+    end
+
+    @eval function $typename(x_2d::SVector{2})
+        x_3d = SVector{3}([x_2d... 0.0])
+        M = $fname2d_underscore(x_3d)
+        return $typename{2}(x_3d,I3,M)
     end
 
     @eval function $typename(x_2d::SVector{2},R_2d::SMatrix{2,2})
@@ -433,6 +512,16 @@ for f in [:motion, :force]
 
     @eval function $fname2d_underscore(x_3d::SVector{3},R_3d::SMatrix{3,3})
         M_3d = $fname_underscore(x_3d,R_3d)
+        return SMatrix{3,3}(M_3d[3:5,3:5])
+    end
+
+    @eval function $fname2d_underscore(x_3d::SVector{3})
+        M_3d = $fname_underscore(x_3d)
+        return SMatrix{3,3}(M_3d[3:5,3:5])
+    end
+
+    @eval function $fname2d_underscore(R_3d::SMatrix{3,3})
+        M_3d = $fname_underscore(R_3d)
         return SMatrix{3,3}(M_3d[3:5,3:5])
     end
 

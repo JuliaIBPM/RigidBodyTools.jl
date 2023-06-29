@@ -14,10 +14,10 @@ import LinearAlgebra: dot
 
 export Body
 export RigidBodyMotion, AbstractKinematics, d_dt, motion_velocity, motion_state,
-          surface_velocity!, surface_velocity, update_body!,
+          surface_velocity!, surface_velocity, update_body!, transform_body!,
           AbstractDeformationMotion, ConstantDeformationMotion, DeformationMotion,
           NullDeformationMotion,maxvelocity, zero_body, update_exogenous!,
-          zero_exogenous
+          zero_exogenous, body_velocities, velocity_in_body_coordinates_2d
 
 export parent_body_of_joint, child_body_of_joint, parent_joint_of_body, child_joints_of_body,
         position_vector,velocity_vector,deformation_vector, exogenous_position_vector,
@@ -31,6 +31,7 @@ export AbstractDOFKinematics, AbstractPrescribedDOFKinematics, DOFKinematicData,
 export RigidTransform, rotation_about_x, rotation_about_y, rotation_about_z, rotation_from_quaternion,
           quaternion, rotation_about_axis, rotation_identity,
           MotionTransform, ForceTransform, AbstractTransformOperator, rotation_transform,
+          translation_transform, motion_transform_from_A_to_B, force_transform_from_A_to_B,
           cross_matrix, cross_vector, translation, rotation, motion_subspace, joint_velocity
 
 export PluckerForce, PluckerMotion, motion_rhs!, zero_joint, zero_motion_state, init_motion_state,

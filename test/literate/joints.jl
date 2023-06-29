@@ -324,46 +324,6 @@ Let's use it here
 @animate_motion bodies ls 0.01 4 (-4,4) (-4,4)
 
 
-#=
-## Outputting the surface velocities
-For use in mechanics problems, it is important to be able to output
-the velocity of the points on the surface of bodies at a given system state
-and time. We use the function `surface_velocity!` for this.
-
-First, initialize vectors for the `u` and `v` components in this 2d example,
-using the `zero_body` function.
-=#
-u, v = zero_body(bodies), zero_body(bodies)
-
-#=
-Now evaluate the velocities at time 0, with the initial state
-=#
-surface_velocity!(u,v,bodies,x0,ls,t0)
-
-#=
-We can plot these on each body using the `view` function for `BodyList`.
-For example, the vector of u velocities on body 2 is
-=#
-plot(view(u,bodies,2))
-
-#=
-In this use of `surface_velocities!`, we outputted the velocities in inertial
-coordinates. There is a keyword `axes` that allows us to relax this.
-By default, this is set to `:inertial`. However, we can also output them in their own body coordinates with
-the keyword `axes=:body`,
-=#
-surface_velocity!(u,v,bodies,x0,ls,t0;axes=:body)
-plot(view(u,bodies,2))
-
-#=
-We can also select only to evaluate a part of the body's motion on the
-surface points, using the `motion_part` keyword. This keyword defaults to `:full`,
-but we can also select `:angular` or `:linear`:
-=#
-surface_velocity!(u,v,bodies,x0,ls,t0;axes=:body,motion_part=:angular)
-plot(view(u,bodies,2))
-
-
 #md # ## Joint functions
 #md # ```@docs
 #md # Joint
@@ -384,10 +344,13 @@ plot(view(u,bodies,2))
 #md # exogenous_velocity_vector
 #md # unconstrained_position_vector
 #md # unconstrained_velocity_vector
+#md # body_transforms
+#md # motion_transform_from_A_to_B
+#md # force_transform_from_A_to_B
+#md # body_velocities
 #md # motion_rhs!
 #md # zero_exogenous
 #md # update_exogenous!
-#md # surface_velocity!
 #md # maxvelocity
 #md # ismoving(::RigidBodyMotion)
 #md # is_system_in_relative_motion
