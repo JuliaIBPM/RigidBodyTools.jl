@@ -224,6 +224,9 @@ LinearAlgebra.dot(::PluckerForce,::PluckerMotion)
 MotionTransform
 ForceTransform
 Base.inv(::AbstractTransformOperator)
+Base.transpose(::AbstractTransformOperator)
+rotation_transform
+translation_transform
 update_body!
 transform_body!
 ```
