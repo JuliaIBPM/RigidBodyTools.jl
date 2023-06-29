@@ -203,6 +203,7 @@ inv(XA_to_B)*vB
 #md # MotionTransform
 #md # ForceTransform
 #md # Base.inv(::AbstractTransformOperator)
+#md # Base.transpose(::AbstractTransformOperator)
 #md # update_body!
 #md # transform_body!
 #md # ```

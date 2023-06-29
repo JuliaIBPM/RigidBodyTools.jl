@@ -278,7 +278,14 @@ for motname in [:Motion,:Force]
 
 end
 
+"""
+    transpose(X::MotionTransform) -> ForceTransform
+    transpose(X::ForceTransform) -> MotionTransform
 
+For a motion transform `X` mapping from system A to B,
+returns the force transform mapping from B to A. Alternatively,
+if `X` is a force transform, it returns the motion transform.
+"""
 function transpose(T::MotionTransform{ND}) where {ND}
     x = cross_vector(T.R*cross_matrix(-T.x)*T.R')
     ForceTransform{ND}(x,transpose(T.R),transpose(T.matrix))
@@ -296,8 +303,24 @@ Return the inverse of the motion or force transform `X`.
 inv(T::MotionTransform{ND}) where {ND} = transpose(ForceTransform{ND}(T.x,T.R))
 inv(T::ForceTransform{ND}) where {ND} = transpose(MotionTransform{ND}(T.x,T.R))
 
+# Should be able to do the following in a lazy way, by wrapping the original transform
+# rather than making a whole new transform.
+
+"""
+    rotation_transform(T::AbstractTransformOperator) -> AbstractTransformOperator
+
+Returns a transform operator consisting of only the rotational part of `T`.
+"""
 rotation_transform(T::MotionTransform{ND}) where {ND} = MotionTransform{ND}(O3VECTOR,T.R)
 rotation_transform(T::ForceTransform{ND}) where {ND} = ForceTransform{ND}(O3VECTOR,T.R)
+
+"""
+    translation_transform(T::AbstractTransformOperator) -> AbstractTransformOperator
+
+Returns a transform operator consisting of only the translational part of `T`.
+"""
+translation_transform(T::MotionTransform{ND}) where {ND} = MotionTransform{ND}(T.x,I3)
+translation_transform(T::ForceTransform{ND}) where {ND} = ForceTransform{ND}(T.x,I3)
 
 
 vec(T::AbstractTransformOperator{2}) = [T.x[1],T.x[2],_get_angle_of_2d_transform(T)]

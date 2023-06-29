@@ -31,6 +31,7 @@ export AbstractDOFKinematics, AbstractPrescribedDOFKinematics, DOFKinematicData,
 export RigidTransform, rotation_about_x, rotation_about_y, rotation_about_z, rotation_from_quaternion,
           quaternion, rotation_about_axis, rotation_identity,
           MotionTransform, ForceTransform, AbstractTransformOperator, rotation_transform,
+          translation_transform,
           cross_matrix, cross_vector, translation, rotation, motion_subspace, joint_velocity
 
 export PluckerForce, PluckerMotion, motion_rhs!, zero_joint, zero_motion_state, init_motion_state,
