@@ -225,6 +225,39 @@ corresponding transformation in `tl`.
   map((T,b) -> transform_body!(b,T),tl,bl)
 end
 
+
+"""
+    motion_transform_from_A_to_B(tl::MotionTransformList,bodyidA::Int,bodyidB::Int) -> MotionTransform
+
+Returns a motion transform mapping from the coordinate system of body `bodyidA` to body `bodyidB`.
+Either of these bodies might be 0.
+"""
+motion_transform_from_A_to_B(Xl::MotionTransformList,bodyA::Int,bodyB::Int) =
+    _motion_transform_from_A_to_B(Xl,_dimensionality(Xl),Val(bodyA),Val(bodyB))
+
+
+"""
+    force_transform_from_A_to_B(tl::MotionTransformList,bodyidA::Int,bodyidB::Int) -> ForceTransform
+
+Returns a force transform mapping from the coordinate system of body `bodyidA` to body `bodyidB`.
+Either of these bodies might be 0.
+"""
+force_transform_from_A_to_B(Xl::MotionTransformList,bodyA::Int,bodyB::Int) =
+        transpose(motion_transform_from_A_to_B(Xl,bodyB,bodyA))
+
+
+_motion_transform_from_A_to_B(Xl,ND,::Val{bodyA},::Val{bodyB}) where {bodyA,bodyB} = Xl[bodyB]*inv(Xl[bodyA])
+_motion_transform_from_A_to_B(Xl,ND,::Val{0},::Val{bodyB}) where {bodyB} = Xl[bodyB]
+_motion_transform_from_A_to_B(Xl,ND,::Val{bodyA},::Val{0}) where {bodyA} = inv(Xl[bodyA])
+_motion_transform_from_A_to_B(Xl,ND,::Val{bodyA},::Val{bodyA}) where {bodyA} = MotionTransform{ND}()
+_motion_transform_from_A_to_B(Xl,ND,::Val{0},::Val{0}) = MotionTransform{ND}()
+
+
+_dimensionality(tl::MotionTransformList) = _dimensionality(first(tl))
+_dimensionality(t::MotionTransform{ND}) where {ND} = ND
+
+
+
 """
     vec(tl::RigidTransformList) -> Vector{Float64}
 

@@ -287,13 +287,14 @@ function Base.view(q::AbstractVector,ls::RigidBodyMotion,jid::Int;dimfcn::Functi
 end
 
 """
-    body_transforms(q::AbstractVector,ls::RigidBodyMotion) -> MotionTransformList
+    body_transforms(x::AbstractVector,ls::RigidBodyMotion) -> MotionTransformList
 
-Parse the overall position vector `q` into the individual joints and construct
+Parse the overall state vector `x` into the individual joints and construct
 the inertial system-to-body transforms for every body. Return these
 transforms in a `MotionTransformList`.
 """
-function body_transforms(q::AbstractVector,ls::RigidBodyMotion{ND}) where {ND}
+function body_transforms(x::AbstractVector,ls::RigidBodyMotion{ND}) where {ND}
+    q = position_vector(x,ls)
     X = MotionTransform{ND}()
     ml = [deepcopy(X) for jb in 1:ls.nbody]
     for lsid in 1:number_of_linked_systems(ls)
@@ -607,8 +608,7 @@ or only the linear part (`:linear`).
 function surface_velocity!(u::AbstractVector,v::AbstractVector,bl::BodyList,x::AbstractVector,m::RigidBodyMotion{ND},t::Real;
                            axes=0,frame=0,motion_part=:full) where {ND}
     @unpack deformations = m
-    q = position_vector(x,m)
-    Xl = body_transforms(q,m)
+    Xl = body_transforms(x,m)
     vl = body_velocities(x,t,m)
     Xref = _reference_transform(Xl,ND,Val(axes))
     Xframe = _reference_transform(Xl,ND,Val(frame))
@@ -685,11 +685,10 @@ Update body/bodies in `bl` with the rigid-body motion `m` and state vector `x`.
 """
 function update_body!(bl::BodyList,x::AbstractVector,m::RigidBodyMotion)
     @unpack deformations = m
-    q = position_vector(x,m)
     for (bid,b) in enumerate(bl)
         _update_body!(b,deformation_vector(x,m,bid),deformations[bid])
     end
-    ml = body_transforms(q,m)
+    ml = body_transforms(x,m)
     update_body!(bl,ml)
     return bl
 end
@@ -697,9 +696,8 @@ end
 function update_body!(b::Body,x::AbstractVector,m::RigidBodyMotion)
     _check_for_only_one_body(m)
     @unpack deformations = m
-    q = position_vector(x,m)
     _update_body!(b,deformation_vector(x,m,1),deformations[1])
-    T = body_transforms(q,m)[1]
+    T = body_transforms(x,m)[1]
     update_body!(b,T)
     return b
 end
@@ -711,11 +709,10 @@ Transform body/bodies in `bl` with the rigid-body motion `m` and state vector `x
 """
 function transform_body!(bl::BodyList,x::AbstractVector,m::RigidBodyMotion)
     @unpack deformations = m
-    q = position_vector(x,m)
     for (bid,b) in enumerate(bl)
         _update_body!(b,deformation_vector(x,m,bid),deformations[bid])
     end
-    ml = body_transforms(q,m)
+    ml = body_transforms(x,m)
     transform_body!(bl,ml)
     return bl
 end
@@ -723,9 +720,8 @@ end
 function transform_body!(b::Body,x::AbstractVector,m::RigidBodyMotion)
     _check_for_only_one_body(m)
     @unpack deformations = m
-    q = position_vector(x,m)
     _update_body!(b,deformation_vector(x,m,1),deformations[1])
-    T = body_transforms(q,m)[1]
+    T = body_transforms(x,m)[1]
     transform_body!(b,T)
     return b
 end

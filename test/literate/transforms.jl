@@ -164,6 +164,13 @@ For these, we can use `normalmid` with the flag `axes=:body`:
 nx, ny = normalmid(b,axes=:body)
 
 #=
+Finally, if you wish to transform the body's own coordinate system, rather
+than use the transform to simply place the body in the inertial system, then
+use `transform_body!`. This transforms the intrinsic coordinates of the body.
+=#
+transform_body!(b,Xm1)
+
+#=
 ## Transforming Plücker vectors
 Transforms can be applied to Plücker vectors to transform their components
 between systems. Let's consider a 2d example in which the motion based at system A

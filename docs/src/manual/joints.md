@@ -368,6 +368,8 @@ exogenous_velocity_vector
 unconstrained_position_vector
 unconstrained_velocity_vector
 body_transforms
+motion_transform_from_A_to_B
+force_transform_from_A_to_B
 body_velocities
 motion_rhs!
 zero_exogenous

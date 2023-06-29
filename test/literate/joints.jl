@@ -345,6 +345,8 @@ Let's use it here
 #md # unconstrained_position_vector
 #md # unconstrained_velocity_vector
 #md # body_transforms
+#md # motion_transform_from_A_to_B
+#md # force_transform_from_A_to_B
 #md # body_velocities
 #md # motion_rhs!
 #md # zero_exogenous
