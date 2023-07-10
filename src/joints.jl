@@ -94,7 +94,7 @@ position_dimension(j::Joint{ND,JT}) where {ND,JT} = position_dimension(JT)
 number_of_dofs(j::Joint{ND,JT}) where {ND,JT} = number_of_dofs(JT)
 
 function ismoving(joint::Joint)
-    @unpack edofs, kins = joint
+    @unpack edofs, udofs, kins = joint
     any(map(dof -> ismoving(dof),kins)) || !isempty(edofs)
 end
 
