@@ -206,7 +206,7 @@ inv(XA_to_B)*vB
 #md # PluckerForce
 #md # angular_only
 #md # linear_only
-#md # LinearAlgebra.dot(::PluckerForce,::PluckerMotion)
+#md # dot(::PluckerForce,::PluckerMotion)
 #md # MotionTransform
 #md # ForceTransform
 #md # Base.inv(::AbstractTransformOperator)
