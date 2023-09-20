@@ -1,5 +1,5 @@
 ```@meta
-EditURL = "<unknown>/literate/dofmotions.jl"
+EditURL = "../../../test/literate/dofmotions.jl"
 ```
 
 # Behaviors of degrees of freedom

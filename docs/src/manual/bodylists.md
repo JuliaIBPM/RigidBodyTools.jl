@@ -1,5 +1,5 @@
 ```@meta
-EditURL = "<unknown>/literate/bodylists.jl"
+EditURL = "../../../test/literate/bodylists.jl"
 ```
 
 # Lists of bodies and their transforms

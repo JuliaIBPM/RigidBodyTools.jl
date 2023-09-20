@@ -1,5 +1,5 @@
 ```@meta
-EditURL = "<unknown>/literate/exogenous.jl"
+EditURL = "../../../test/literate/exogenous.jl"
 ```
 
 # Exogenous degrees of freedom
