@@ -1,5 +1,5 @@
 ```@meta
-EditURL = "<unknown>/literate/shapes.jl"
+EditURL = "../../../test/literate/shapes.jl"
 ```
 
 # Creating bodies

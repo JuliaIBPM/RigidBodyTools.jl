@@ -1,5 +1,5 @@
 ```@meta
-EditURL = "<unknown>/literate/deformation.jl"
+EditURL = "../../../test/literate/deformation.jl"
 ```
 
 # Deforming bodies

@@ -1,5 +1,5 @@
 ```@meta
-EditURL = "<unknown>/literate/joints.jl"
+EditURL = "../../../test/literate/joints.jl"
 ```
 
 # Joints and body-joint systems

@@ -1,5 +1,5 @@
 ```@meta
-EditURL = "<unknown>/literate/surfacevelocities.jl"
+EditURL = "../../../test/literate/surfacevelocities.jl"
 ```
 
 # Evaluating velocities on body surfaces

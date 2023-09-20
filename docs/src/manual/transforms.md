@@ -1,5 +1,5 @@
 ```@meta
-EditURL = "<unknown>/literate/transforms.jl"
+EditURL = "../../../test/literate/transforms.jl"
 ```
 
 # Plucker vectors and coordinate transforms
@@ -228,7 +228,7 @@ PluckerMotion
 PluckerForce
 angular_only
 linear_only
-LinearAlgebra.dot(::PluckerForce,::PluckerMotion)
+LinearAlgebra.dot(::AbstractPluckerForceVector,::AbstractPluckerMotionVector)
 MotionTransform
 ForceTransform
 Base.inv(::AbstractTransformOperator)
