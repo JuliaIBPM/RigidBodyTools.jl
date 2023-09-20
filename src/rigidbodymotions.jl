@@ -127,6 +127,11 @@ function Base.show(io::IO, ls::RigidBodyMotion)
     println(io, "   $(length(ls.joints)) joints")
 end
 
+"""
+    ismoving(m::RigidBodyMotion)
+
+Checks if any joint in `m` is in motion
+"""
 function ismoving(m::RigidBodyMotion)
     @unpack joints = m
     any(map(joint -> ismoving(joint),joints))

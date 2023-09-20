@@ -189,7 +189,7 @@ in `v`.
 
 
 """
-    dot(f::PluckerForce,v::PluckerMotion) -> Real
+    LinearAlgebra.dot(f::PluckerForce,v::PluckerMotion) -> Real
 
 Calculate the scalar product between force `f` and motion `v`. The
 commutation of this is also possible, `dot(v,f)`.
