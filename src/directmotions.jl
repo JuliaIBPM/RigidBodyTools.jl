@@ -25,6 +25,10 @@ zero_motion_state(b::Body,m::NullDeformationMotion) = Float64[]
 motion_state(b::Body,m::NullDeformationMotion) = Float64[]
 
 
+ismoving(m::AbstractDeformationMotion) = true
+ismoving(m::NullDeformationMotion) = false
+
+
 function update_body!(b::Body,x::AbstractVector,m::NullDeformationMotion) end
 
 

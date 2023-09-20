@@ -133,8 +133,8 @@ end
 Checks if any joint in `m` is in motion
 """
 function ismoving(m::RigidBodyMotion)
-    @unpack joints = m
-    any(map(joint -> ismoving(joint),joints))
+    @unpack joints, deformations = m
+    any(map(joint -> ismoving(joint),joints)) || any(map(def -> ismoving(def),deformations))
 end
 
 """
@@ -152,7 +152,8 @@ function is_system_in_relative_motion(lsid::Int,m::RigidBodyMotion)
 end
 
 function _ismoving_tree(ismove::Bool,bodyid::Int,m::RigidBodyMotion)
-    @unpack joints = m
+    @unpack joints, deformations = m
+    ismove |= ismoving(deformations[bodyid])
     for jid in child_joints_of_body(bodyid,m)
         ismove |= ismoving(joints[jid])
         bodyid = child_body_of_joint(jid,m)

@@ -224,4 +224,24 @@ end
 
   lsid = 2 # this system should be internally fixed
   @test !is_system_in_relative_motion(lsid,ls)
+
+  ufcn(x,y,t) = 0.25*2π*x*y*cos(2π*t)
+  vfcn(x,y,t) = 0.25*2π*(x^2-y^2)*cos(2π*t)
+  def = DeformationMotion(ufcn,vfcn)
+  X = MotionTransform([0,0],0)
+  joint = Joint(X)
+  ls = RigidBodyMotion(joint,body1,def)
+
+  @test ismoving(ls)
+
+  defs = AbstractDeformationMotion[NullDeformationMotion(),
+                                   NullDeformationMotion(),
+                                   NullDeformationMotion(),
+                                   NullDeformationMotion(),
+                                   def,
+                                   NullDeformationMotion()]
+  ls = RigidBodyMotion(joints,bl,defs)
+  lsid = 2 # now this system is no longer internally fixed, because body 5 deforms
+  @test is_system_in_relative_motion(lsid,ls)
+
 end
