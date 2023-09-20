@@ -193,7 +193,9 @@ in `v`.
 
 Calculate the scalar product between force `f` and motion `v`. The
 commutation of this is also possible, `dot(v,f)`.
-"""
+""" dot(::AbstractPluckerForceVector,::AbstractPluckerMotionVector)
+
+
 dot(f::PluckerForce{ND},v::PluckerMotion{ND}) where {ND} = dot(f.data,v.data)
 
 dot(v::PluckerMotion{ND},f::PluckerForce{ND}) where {ND} = dot(f,v)

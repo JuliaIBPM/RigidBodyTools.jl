@@ -228,7 +228,7 @@ PluckerMotion
 PluckerForce
 angular_only
 linear_only
-dot(::PluckerForce,::PluckerMotion)
+LinearAlgebra.dot(::AbstractPluckerForceVector,::AbstractPluckerMotionVector)
 MotionTransform
 ForceTransform
 Base.inv(::AbstractTransformOperator)
