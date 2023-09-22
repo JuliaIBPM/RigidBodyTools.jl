@@ -244,4 +244,14 @@ end
   lsid = 2 # now this system is no longer internally fixed, because body 5 deforms
   @test is_system_in_relative_motion(lsid,ls)
 
+  x = init_motion_state(bl,ls)
+  Xl = body_transforms(x,ls)
+  X1_to_2 = rebase_from_inertial_to_reference(Xl[2],x,ls,1)
+  X0_to_2 = X1_to_2*Xl[1]
+  @test X0_to_2.x ≈ Xl[2].x && X0_to_2.R ≈ Xl[2].R
+
+  X1_to_4 = rebase_from_inertial_to_reference(Xl[4],x,ls,1)
+  X0_to_4 = X1_to_4*Xl[1]
+  @test X0_to_4.x ≈ Xl[4].x && X0_to_4.R ≈ Xl[4].R
+
 end

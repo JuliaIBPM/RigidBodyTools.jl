@@ -377,6 +377,7 @@ update_exogenous!
 maxvelocity
 ismoving(::RigidBodyMotion)
 is_system_in_relative_motion
+rebase_from_inertial_to_reference
 ```
 
 ## Joint types
