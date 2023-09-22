@@ -354,6 +354,7 @@ Let's use it here
 #md # maxvelocity
 #md # ismoving(::RigidBodyMotion)
 #md # is_system_in_relative_motion
+#md # rebase_from_inertial_to_reference
 #md # ```
 
 #md # ## Joint types

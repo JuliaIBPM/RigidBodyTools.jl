@@ -17,7 +17,8 @@ export RigidBodyMotion, AbstractKinematics, d_dt, motion_velocity, motion_state,
           surface_velocity!, surface_velocity, update_body!, transform_body!,
           AbstractDeformationMotion, ConstantDeformationMotion, DeformationMotion,
           NullDeformationMotion,maxvelocity, zero_body, update_exogenous!,
-          zero_exogenous, body_velocities, velocity_in_body_coordinates_2d
+          zero_exogenous, body_velocities, velocity_in_body_coordinates_2d,
+          rebase_from_inertial_to_reference
 
 export parent_body_of_joint, child_body_of_joint, parent_joint_of_body, child_joints_of_body,
         position_vector,velocity_vector,deformation_vector, exogenous_position_vector,
