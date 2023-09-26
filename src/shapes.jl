@@ -414,22 +414,8 @@ parametric spline algorithm is used. If the optional parameter `closuretype` is 
 to `OpenBody`, then the end points are not joined together.
 """
 function SplinedBody(Xpts_raw::Array{Float64,2},Δx::Float64;closuretype::Type{<:BodyClosureType}=ClosedBody)
-    # Assume Xpts are in the form N x 2
-    Xpts = copy(Xpts_raw)
-    if Xpts[1,:] != Xpts[end,:]
-        Xpts = vcat(Xpts,Xpts[1,:]')
-    end
 
-    spl = (closuretype == ClosedBody) ? ParametricSpline(Xpts',periodic=true) : ParametricSpline(Xpts')
-    tfine = range(0,1,length=1001)
-    dX = derivative(spl,tfine)
-
-    np = ceil(Int,sqrt(sum(dX.^2)*(tfine[2]-tfine[1]))/Δx)
-
-    tsamp = range(0,1,length=np)
-    x = [X[1] for X in spl.(tsamp[1:end-1])]
-    y = [X[2] for X in spl.(tsamp[1:end-1])]
-
+    x, y = _splined_body(Xpts_raw,Δx,closuretype)
     return BasicBody(x,y,closuretype=closuretype)
 end
 
@@ -444,6 +430,25 @@ to `OpenBody`, then the end points are not joined together.
 SplinedBody(x::AbstractVector{Float64},y::AbstractVector{Float64},Δx::Float64;kwargs...) =
       SplinedBody(hcat(x,y),Δx;kwargs...)
 
+
+function _splined_body(Xpts_raw::Array{Float64,2},Δx::Float64,closuretype::Type{<:BodyClosureType})
+  # Assume Xpts are in the form N x 2
+  Xpts = copy(Xpts_raw)
+  if Xpts[1,:] != Xpts[end,:]
+      Xpts = vcat(Xpts,Xpts[1,:]')
+  end
+
+  spl = (closuretype == ClosedBody) ? ParametricSpline(Xpts',periodic=true) : ParametricSpline(Xpts')
+  tfine = range(0,1,length=1001)
+  dX = derivative(spl,tfine)
+
+  np = ceil(Int,sqrt(sum(dX.^2)*(tfine[2]-tfine[1]))/Δx)
+
+  tsamp = range(0,1,length=np)
+  x = [X[1] for X in spl.(tsamp[1:end-1])]
+  y = [X[2] for X in spl.(tsamp[1:end-1])]
+  return x, y
+end
 
 """
     ThickPlate(length,thick,n,[λ=1.0]) <: Body
@@ -529,19 +534,18 @@ end
 #### NACA 4-digit airfoil ####
 
 """
-    NACA4(cam,pos,thick,np,[len=1.0]) <: Body{N}
+    NACA4(cam,pos,thick,ds::Float64,[len=1.0]) <: Body{N}
 
-Generates points in the shape of a NACA 4-digit airfoil of chord length 1. The
+Generates points in the shape of a NACA 4-digit airfoil. The
 relative camber is specified by `cam`, the position of
 maximum camber (as fraction of chord) by `pos`, and the relative thickness
-by `thick`. The parameter `np` specifies the number of points on the upper
-or lower surface. The optional parameter `len` specifies the chord length,
+by `thick`. The parameter `ds` specifies the distance between points. The optional parameter `len` specifies the chord length,
 which defaults to 1.0.
 
 # Example
 
 ```jldoctest
-julia> b = NACA4(0.0,0.0,0.12);
+julia> b = NACA4(0.0,0.0,0.12,0.02);
 ```
 """
 mutable struct NACA4{N} <: Body{N,ClosedBody}
@@ -567,11 +571,42 @@ mutable struct NACA4{N} <: Body{N,ClosedBody}
 
 end
 
+NACA4(cam::Float64,pos::Float64,t::Float64,ds::Float64;len=1.0) = _naca4(cam,pos,t,ds,len)
 
-function NACA4(cam::Real,pos::Real,t::Real,np::Int;len=1.0)
+function NACA4(cam::Float64,pos::Float64,t::Float64,n::Int;len=1.0)
+  # Determine the perimeter of the shape
+  ds_refined = 0.005
+  perim = arclength(_naca4(cam,pos,t,ds_refined,len))
+  return NACA4(cam,pos,t,perim/n;len=len)
+end
+
+
+"""
+    NACA4(n4::Int,ds::Float64,[len=1.0]) <: Body{N}
+
+Generates points in the shape of a NACA 4-digit airfoil, specified by `n4`,
+with distance between points specified by `ds`. The optional parameter `len` specifies the chord length,
+which defaults to 1.0.
+
+# Example
+
+```jldoctest
+julia> b = NACA4(0012,0.02);
+```
+"""
+function NACA4(num4::Int,a...;kwargs...)
+  num4_str = string(num4,pad=4)
+  cam = parse(Int,num4_str[1])/100
+  pos = parse(Int,num4_str[2])/10
+  t = parse(Int,num4_str[3:4])/100
+  NACA4(cam,pos,t,a...;kwargs...)
+end
+
+function _naca4(cam,pos,t,ds,len)
 
 # Here, cam is the fractional camber, pos is the fractional chordwise position
 # of max camber, and t is the fractional thickness.
+np = 200
 
 npan = 2*np-2
 
@@ -655,6 +690,8 @@ w .-= mean(w)
 x̃end = real.(w)
 ỹend = imag.(w)
 
+x̃end, ỹend = _splined_body(hcat(x̃end,ỹend),ds,OpenBody)
+
 x̃, ỹ = _midpoints(x̃end,ỹend,ClosedBody)
 
 
@@ -679,7 +716,7 @@ function _adjustnumber(targetsize::Real,shapefcn::Type{T},params...;kwargs...) w
 end
 
 
-for shape in (:Ellipse,:ThickPlate,:NACA4)
+for shape in (:Ellipse,:ThickPlate)
     @eval RigidBodyTools.$shape(params...;kwargs...) =
         $shape(Base.front(params)...,
           _adjustnumber(Base.last(params),$shape,Base.front(params)...;kwargs...);kwargs...)
