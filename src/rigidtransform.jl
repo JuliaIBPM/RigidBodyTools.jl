@@ -272,11 +272,11 @@ for motname in [:Motion,:Force]
   newangulartype = Symbol(typename,"Angular")
   newlineartype = Symbol(typename,"Linear")
 
-  @eval (*)(T::$transname,v::$newangulartype{2}) = $typename(T.matrix[1:3,PLUCKER2DANG]*_get_angular_part(v))
-  @eval (*)(T::$transname,v::$newangulartype{3}) = $typename(T.matrix[1:6,PLUCKER3DANG]*_get_angular_part(v))
+  @eval (*)(T::$transname,v::$newangulartype{2}) = $typename(view(T.matrix,1:3,PLUCKER2DANG)*_get_angular_part(v))
+  @eval (*)(T::$transname,v::$newangulartype{3}) = $typename(view(T.matrix,1:6,PLUCKER3DANG)*_get_angular_part(v))
 
-  @eval (*)(T::$transname,v::$newlineartype{2}) = $typename(T.matrix[1:3,PLUCKER2DLIN]*_get_linear_part(v))
-  @eval (*)(T::$transname,v::$newlineartype{3}) = $typename(T.matrix[1:6,PLUCKER3DLIN]*_get_linear_part(v))
+  @eval (*)(T::$transname,v::$newlineartype{2}) = $typename(view(T.matrix,1:3,PLUCKER2DLIN)*_get_linear_part(v))
+  @eval (*)(T::$transname,v::$newlineartype{3}) = $typename(view(T.matrix,1:6,PLUCKER3DLIN)*_get_linear_part(v))
 
 end
 
@@ -462,7 +462,7 @@ for f in [:motion, :force]
 
     @eval $typename{3}(x_3d::SVector{3},R_3d::SMatrix{3,3}) = $typename(x_3d,R_3d)
 
-    @eval $typename{2}(x_3d::SVector{3},R_3d::SMatrix{3,3}) = $typename(SVector{2}(x_3d[1:2]),R_3d)
+    @eval $typename{2}(x_3d::SVector{3},R_3d::SMatrix{3,3}) = $typename(SVector{2}(view(x_3d,1:2)),R_3d)
 
     @eval $typename{ND}() where {ND} = $typename{ND}(O3VECTOR,rotation_identity())
 
@@ -514,17 +514,17 @@ for f in [:motion, :force]
 
     @eval function $fname2d_underscore(x_3d::SVector{3},R_3d::SMatrix{3,3})
         M_3d = $fname_underscore(x_3d,R_3d)
-        return SMatrix{3,3}(M_3d[3:5,3:5])
+        return SMatrix{3,3}(view(M_3d,3:5,3:5))
     end
 
     @eval function $fname2d_underscore(x_3d::SVector{3})
         M_3d = $fname_underscore(x_3d)
-        return SMatrix{3,3}(M_3d[3:5,3:5])
+        return SMatrix{3,3}(view(M_3d,3:5,3:5))
     end
 
     @eval function $fname2d_underscore(R_3d::SMatrix{3,3})
         M_3d = $fname_underscore(R_3d)
-        return SMatrix{3,3}(M_3d[3:5,3:5])
+        return SMatrix{3,3}(view(M_3d,3:5,3:5))
     end
 
     @eval function (*)(T1::$typename{ND},T2::$typename{ND}) where {ND}
