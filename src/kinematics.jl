@@ -110,6 +110,8 @@ end
     SmoothRampDOF(ẋ0,Δx,t0[;ramp=EldredgeRamp(11.0)]) <: AbstractPrescribedDOFKinematics
 
 Kinematics describing a smooth ramp change in position `Δx` starting at time `t0` with nominal rate `ẋ0`.
+Note that the sign of `ẋ0` should be the same as the sign of `Δx`, and will be automatically changed
+if they differ.
 The optional ramp argument is assumed to be
 given by the smooth ramp `EldredgeRamp` with a smoothness factor of 11 (larger values
 lead to sharper transitions on/off the ramp), but this
@@ -119,6 +121,7 @@ struct SmoothRampDOF <: AbstractPrescribedDOFKinematics
     ẋ0 :: Float64
     Δx :: Float64
     t0 :: Float64
+    ramp :: Abstract1DProfile
 
     x :: Abstract1DProfile
     ẋ :: Abstract1DProfile
@@ -126,15 +129,56 @@ struct SmoothRampDOF <: AbstractPrescribedDOFKinematics
 end
 
 function SmoothRampDOF(ẋ0,Δx,t0; ramp = EldredgeRamp(11.0))
-    Δt = Δx/ẋ0
-    x = ẋ0*((ramp >> t0) - (ramp >> (t0 + Δt)))
+    ẋ0_sign = sign(Δx)*abs(ẋ0)
+    Δt = abs(Δx/ẋ0_sign)
+    x = ẋ0_sign*((ramp >> t0) - (ramp >> (t0 + Δt)))
     ẋ = d_dt(x)
     ẍ = d_dt(ẋ)
-    SmoothRampDOF(ẋ0,Δx,t0,x,ẋ,ẍ)
+    SmoothRampDOF(ẋ0_sign,Δx,t0,ramp,x,ẋ,ẍ)
 end
 
 function show(io::IO, p::SmoothRampDOF)
-  print(io, "Smooth position ramp kinematics (nominal rate = $(p.ẋ0), amplitude = $(p.Δx), nominal time = $(p.t0))")
+  print(io, "Smooth position ramp kinematics (nominal rate = $(p.ẋ0), amplitude = $(p.Δx), nominal time = $(p.t0)), smoothing=$(p.ramp)")
+end
+
+"""
+    SmoothVelocityRampDOF(ẍ0,ẋ1,ẋ2,t0[;ramp=EldredgeRamp(11.0)]) <: AbstractPrescribedDOFKinematics
+
+Kinematics describing a smooth ramp change in velocity from `ẋ1` to `ẋ2` starting at time `t0` with nominal acceleration `ẍ0`.
+Note that the sign of `ẍ0` should be the same as the sign of `ẋ2-ẋ1`, and will be automatically changed
+if they differ.
+The optional ramp argument is assumed to be
+given by the smooth ramp `EldredgeRamp` with a smoothness factor of 11 (larger values
+lead to sharper transitions on/off the ramp), but this
+can be replaced by another Eldredge ramp with a different value.
+"""
+struct SmoothVelocityRampDOF <: AbstractPrescribedDOFKinematics
+    ẍ0 :: Float64
+    ẋ1 :: Float64
+    ẋ2 :: Float64
+    t0 :: Float64
+    ramp :: Abstract1DProfile
+
+    x :: Abstract1DProfile
+    ẋ :: Abstract1DProfile
+    ẍ :: Abstract1DProfile
+end
+
+function SmoothVelocityRampDOF(ẍ0,ẋ1,ẋ2,t0; ramp::EldredgeRamp = EldredgeRamp(11.0))
+    Δẋ = ẋ2 - ẋ1
+    ẍ0_sign = sign(Δẋ)*abs(ẍ0)
+    Δt = Δẋ/ẍ0_sign
+    ri = _ramp_int(ramp)
+    x = FunctionProfile(t -> ẋ1*t) + ẍ0_sign*((ri >> t0) - (ri >> (t0 + Δt)))
+    ẋ = d_dt(x)
+    ẍ = d_dt(ẋ)
+    SmoothVelocityRampDOF(ẍ0_sign,ẋ1,ẋ2,t0,ramp,x,ẋ,ẍ)
+end
+
+_ramp_int(ramp::EldredgeRamp) = EldredgeRampIntegral(ramp.aₛ)
+
+function show(io::IO, p::SmoothVelocityRampDOF)
+  print(io, "Smooth velocity ramp kinematics (nominal rate = $(p.ẍ0), initial velocity = $(p.ẋ1), final velocity = $(p.ẋ2), nominal time = $(p.t0)), smoothing = $(p.ramp)")
 end
 
 
