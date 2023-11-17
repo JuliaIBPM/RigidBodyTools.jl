@@ -110,6 +110,8 @@ end
     SmoothRampDOF(ẋ0,Δx,t0[;ramp=EldredgeRamp(11.0)]) <: AbstractPrescribedDOFKinematics
 
 Kinematics describing a smooth ramp change in position `Δx` starting at time `t0` with nominal rate `ẋ0`.
+Note that the sign of `ẋ0` should be the same as the sign of `Δx`, and will be automatically changed
+if they differ.
 The optional ramp argument is assumed to be
 given by the smooth ramp `EldredgeRamp` with a smoothness factor of 11 (larger values
 lead to sharper transitions on/off the ramp), but this
@@ -127,11 +129,12 @@ struct SmoothRampDOF <: AbstractPrescribedDOFKinematics
 end
 
 function SmoothRampDOF(ẋ0,Δx,t0; ramp = EldredgeRamp(11.0))
-    Δt = Δx/ẋ0
-    x = ẋ0*((ramp >> t0) - (ramp >> (t0 + Δt)))
+    ẋ0_sign = sign(Δx)*abs(ẋ0)
+    Δt = abs(Δx/ẋ0_sign)
+    x = ẋ0_sign*((ramp >> t0) - (ramp >> (t0 + Δt)))
     ẋ = d_dt(x)
     ẍ = d_dt(ẋ)
-    SmoothRampDOF(ẋ0,Δx,t0,ramp,x,ẋ,ẍ)
+    SmoothRampDOF(ẋ0_sign,Δx,t0,ramp,x,ẋ,ẍ)
 end
 
 function show(io::IO, p::SmoothRampDOF)
@@ -142,6 +145,8 @@ end
     SmoothVelocityRampDOF(ẍ0,ẋ1,ẋ2,t0[;ramp=EldredgeRamp(11.0)]) <: AbstractPrescribedDOFKinematics
 
 Kinematics describing a smooth ramp change in velocity from `ẋ1` to `ẋ2` starting at time `t0` with nominal acceleration `ẍ0`.
+Note that the sign of `ẍ0` should be the same as the sign of `ẋ2-ẋ1`, and will be automatically changed
+if they differ.
 The optional ramp argument is assumed to be
 given by the smooth ramp `EldredgeRamp` with a smoothness factor of 11 (larger values
 lead to sharper transitions on/off the ramp), but this
@@ -161,12 +166,13 @@ end
 
 function SmoothVelocityRampDOF(ẍ0,ẋ1,ẋ2,t0; ramp::EldredgeRamp = EldredgeRamp(11.0))
     Δẋ = ẋ2 - ẋ1
-    Δt = Δẋ/ẍ0
+    ẍ0_sign = sign(Δẋ)*abs(ẍ0)
+    Δt = Δẋ/ẍ0_sign
     ri = _ramp_int(ramp)
-    x = FunctionProfile(t -> ẋ1*t) + ẍ0*((ri >> t0) - (ri >> (t0 + Δt)))
+    x = FunctionProfile(t -> ẋ1*t) + ẍ0_sign*((ri >> t0) - (ri >> (t0 + Δt)))
     ẋ = d_dt(x)
     ẍ = d_dt(ẋ)
-    SmoothVelocityRampDOF(ẍ0,ẋ1,ẋ2,t0,ramp,x,ẋ,ẍ)
+    SmoothVelocityRampDOF(ẍ0_sign,ẋ1,ẋ2,t0,ramp,x,ẋ,ẍ)
 end
 
 _ramp_int(ramp::EldredgeRamp) = EldredgeRampIntegral(ramp.aₛ)
