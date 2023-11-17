@@ -109,6 +109,29 @@ Plot the position
 plot(t,dof_position.(k.(t)),xlims=(0,Inf),label="x")
 ````
 
+We can also ramp up the velocity from one value to another, using
+`SmoothVelocityRampDOF`. For example,
+
+````@example dofmotions
+u1 = 1.0 ## initial velocity
+u2 = 2.0 ## final velocity
+acc = 1.0 ## nominal acceleration of the ramp
+t0 = 1.0 ## time of ramp start
+k = SmoothVelocityRampDOF(acc,u1,u2,t0)
+````
+
+Plot the velocity
+
+````@example dofmotions
+plot(t,dof_velocity.(k.(t)),xlims=(0,Inf),label="u")
+````
+
+and the position
+
+````@example dofmotions
+plot(t,dof_position.(k.(t)),xlims=(0,Inf),label="x")
+````
+
 ### User-defined motion
 The user can specify the time-varying position by supplying a function of time
 and using `CustomDOF`. It automatically differentiates this function to

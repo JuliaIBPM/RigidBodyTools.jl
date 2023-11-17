@@ -25,6 +25,7 @@ export parent_body_of_joint, child_body_of_joint, parent_joint_of_body, child_jo
         exogenous_velocity_vector, unconstrained_position_vector, unconstrained_velocity_vector
 
 export AbstractDOFKinematics, AbstractPrescribedDOFKinematics, DOFKinematicData, SmoothRampDOF,
+        SmoothVelocityRampDOF,
         OscillatoryDOF, ConstantVelocityDOF, CustomDOF, ExogenousDOF, ConstantPositionDOF,
         UnconstrainedDOF, Kinematics, dof_position, dof_velocity, dof_acceleration, ismoving,
         is_system_in_relative_motion
