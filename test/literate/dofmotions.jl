@@ -161,6 +161,7 @@ k = UnconstrainedDOF()
 #md # ConstantVelocityDOF
 #md # OscillatoryDOF
 #md # SmoothRampDOF
+#md # SmoothVelocityRampDOF
 #md # CustomDOF
 #md # ExogenousDOF
 #md # UnconstrainedDOF
