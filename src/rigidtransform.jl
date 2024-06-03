@@ -382,6 +382,10 @@ function update_body!(b::Body{N,C},T::MotionTransform{2}) where {N,C}
   return b
 end
 
+function update_body!(b::NullBody,T::MotionTransform{2})
+    return b
+end
+
 """
     transform_body!(b::Body,T::MotionTransform)
 
