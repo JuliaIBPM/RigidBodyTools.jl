@@ -48,6 +48,11 @@ const MYEPS = 20*eps()
 
 end
 
+@testset "Null body" begin
+   b1 = NullBody()
+   @test numpts(b1) == 0
+end
+
 @testset "Rectangle" begin
 
   b = Rectangle(0.5,1.0,60)

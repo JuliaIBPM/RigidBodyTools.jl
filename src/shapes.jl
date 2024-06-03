@@ -17,7 +17,7 @@ Approach:
 - may not need the x̃, ỹ coordinates.
 =#
 
-export BasicBody,Ellipse,Circle,Rectangle,Square,Plate,ThickPlate,SplinedBody,NACA4,Polygon
+export BasicBody,Ellipse,Circle,Rectangle,Square,Plate,ThickPlate,SplinedBody,NACA4,Polygon,NullBody
 
 """
     BasicBody(x,y[,closuretype=ClosedBody]) <: Body

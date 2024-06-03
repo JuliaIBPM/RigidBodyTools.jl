@@ -33,6 +33,8 @@ const myblue = RGBA{Float64}(74/255,144/255,226/255,1)
     ()
 end
 
+@recipe function plot(b::NullBody) end
+
 @recipe function f(m::RigidBodyMotion;tmax=10)
 
     t = 0.0:0.01:tmax
