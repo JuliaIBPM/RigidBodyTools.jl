@@ -1,4 +1,4 @@
-using Statistics
+using Statistics, LinearAlgebra
 
 const MYEPS = 20*eps()
 
@@ -13,6 +13,7 @@ const MYEPS = 20*eps()
   @test maximum(dy) ≈ minimum(dy) ≈ 0.0
 
   @test sum(dlength(p)) ≈ sum(dlengthmid(p))
+  @test all(curvature(p) .== 0.0)
 
 
   c = Rectangle(1,2,400)
@@ -29,10 +30,15 @@ const MYEPS = 20*eps()
   c = Square(1,0.01)
   @test isapprox(mean(dlength(c)),0.01,atol=1e-4)
 
-  c = Ellipse(1,2,0.01)
+  aa, bb = 1, 2
+  c = Ellipse(aa,bb,0.01)
   @test isapprox(mean(dlength(c)),0.01,atol=1e-4)
 
-  c = Ellipse(1,2,100)
+  curv_ex1 = 1/(aa*bb)^2 ./(c.x.^2/aa^4 + c.y.^2/bb^4).^(3/2)
+  @test norm(curvature(c)-curv_ex1) < 1e-2
+
+
+  c = Ellipse(aa,bb,100)
   nx, ny = normalmid(c)
   #@test nx[1] == ny[26] == -nx[51] == -ny[76] == 1.0
   @test abs(sum(nx)) < 1000.0*eps(1.0)
@@ -173,6 +179,9 @@ end
   nxb1, nyb1 = normalmid(b1)
   nxb2, nyb2 = normalmid(b2)
   @test nx[1:60] == nxb1 && ny[1:60] == nyb1 && nx[61:120] == nxb2 && ny[61:120] == nyb2
+
+  @test curvature(b1) == view(curvature(bl),bl,1)
+  @test curvature(b2) == view(curvature(bl),bl,2)
 
 
 end
