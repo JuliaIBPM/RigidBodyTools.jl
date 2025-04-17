@@ -375,7 +375,7 @@ operator is applied to transform body-fixed coordinates to the inertial frame.
 """
 function update_body!(b::Body{N,C},T::MotionTransform{2}) where {N,C}
   b.xend, b.yend = T(b.x̃end,b.ỹend)
-  b.x, b.y = _midpoints(b.xend,b.yend,C)
+  b.x, b.y = _midpoints(b.xend,b.yend,N,C)
 
   b.α = _get_angle_of_2d_transform(T)
   b.cent = (T.x[1], T.x[2])
@@ -400,7 +400,7 @@ function transform_body!(b::Body{N,C},T::MotionTransform{2}) where {N,C}
   b.x̃end .= b.xend
   b.ỹend .= b.yend
 
-  b.x, b.y = _midpoints(b.xend,b.yend,C)
+  b.x, b.y = _midpoints(b.xend,b.yend,N,C)
   b.x̃ .= b.x
   b.ỹ .= b.y
 

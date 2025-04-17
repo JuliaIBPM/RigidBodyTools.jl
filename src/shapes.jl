@@ -49,7 +49,8 @@ end
 
 function BasicBody(xend::Vector{T},yend::Vector{T};closuretype::Type{<:BodyClosureType}=ClosedBody) where {T <: Real}
     @assert length(xend) == length(yend)
-    x, y = _midpoints(xend,yend,closuretype)
+    Nface = closuretype == ClosedBody ? length(xend) : length(xend) - 1
+    x, y = _midpoints(xend,yend,Nface,closuretype)
     BasicBody{length(x),closuretype}((0.0,0.0),0.0,x,y,x,y,xend,yend,xend,yend)
 end
 
@@ -120,7 +121,7 @@ function Ellipse(a::Real,b::Real,N::Int;endpointson=false,shifted=false)
     # otherwise, these are the endpoints
     if endpointson
       xend, yend = copy(xt), copy(yt)
-      x, y = _midpoints(xt,yt,ClosedBody)
+      x, y = _midpoints(xt,yt,length(xt),ClosedBody)
     else
        x, y = copy(xt), copy(yt)
        midinv = midpoint_inverse(length(x))
@@ -364,7 +365,8 @@ function _polygon(xv::AbstractVector{T},yv::AbstractVector{T},ds::Float64,closur
     append!(yend,yi[1:len])
     push!(side,totlen+1:totlen+len)
 
-    x, y = _midpoints(xend,yend,closuretype)
+    Nface = closuretype == ClosedBody ? length(xend) : length(xend) - 1
+    x, y = _midpoints(xend,yend,Nface,closuretype)
 
     return xend, yend, x, y, side
 end
@@ -519,7 +521,7 @@ function ThickPlate(len::Real,thick::Real,N::Int;λ::Float64=1.0)
     x̃end .= reverse(x̃end)
     ỹend .= reverse(ỹend)
 
-    x̃, ỹ = _midpoints(x̃end,ỹend,ClosedBody)
+    x̃, ỹ = _midpoints(x̃end,ỹend,length(x̃end),ClosedBody)
 
     ThickPlate{length(x̃)}(len,thick,(0.0,0.0),0.0,x̃,ỹ,x̃,ỹ,x̃end,ỹend,x̃end,ỹend)
 
@@ -692,7 +694,7 @@ ỹend = imag.(w)
 
 x̃end, ỹend = _splined_body(hcat(x̃end,ỹend),ds,OpenBody)
 
-x̃, ỹ = _midpoints(x̃end,ỹend,ClosedBody)
+x̃, ỹ = _midpoints(x̃end,ỹend,length(x̃end),ClosedBody)
 
 
 NACA4{length(x̃)}(len,cam,pos,t,(0.0,0.0),0.0,x̃,ỹ,x̃,ỹ,x̃end,ỹend,x̃end,ỹend)

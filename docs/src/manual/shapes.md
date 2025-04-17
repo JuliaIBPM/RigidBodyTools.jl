@@ -187,6 +187,7 @@ midpoints(::Body)
 midpoints(::BodyList)
 normal
 normalmid
+curvature
 arccoord
 arccoordmid
 arclength(::Body)

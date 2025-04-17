@@ -180,6 +180,7 @@ k = UnconstrainedDOF()
 ConstantVelocityDOF
 OscillatoryDOF
 SmoothRampDOF
+SmoothVelocityRampDOF
 CustomDOF
 ExogenousDOF
 UnconstrainedDOF
