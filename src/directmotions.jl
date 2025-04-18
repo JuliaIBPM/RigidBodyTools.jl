@@ -104,7 +104,7 @@ function _surface_velocity!(u::AbstractVector{Float64},v::AbstractVector{Float64
 
      # interpolate to the midpoints
      if lenx > 0
-       umid, vmid = _midpoints(vel[1:lenx÷2],vel[lenx÷2+1:lenx],C)
+       umid, vmid = _midpoints(vel[1:lenx÷2],vel[lenx÷2+1:lenx],N,C)
        u .= umid
        v .= vmid
      end
