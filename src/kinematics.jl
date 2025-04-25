@@ -81,6 +81,16 @@ function show(io::IO, p::ConstantPositionDOF)
   print(io, "Constant position kinematics (position = $(p.x0))")
 end
 
+struct ConstantPositionDOFSerialization
+    x0 :: Float64
+end
+
+JLD2.writeas(::Type{ConstantPositionDOF}) = ConstantPositionDOFSerialization
+
+Base.convert(::Type{ConstantPositionDOFSerialization}, a::ConstantPositionDOF) = ConstantPositionDOFSerialization(a.x0)
+Base.convert(::Type{ConstantPositionDOF}, a::ConstantPositionDOFSerialization) = ConstantPositionDOF(a.x0)
+
+
 """
     ConstantVelocityDOF(ẋ0::Float64) <: AbstractPrescribedDOFKinematics
 
@@ -104,6 +114,15 @@ end
 function show(io::IO, p::ConstantVelocityDOF)
   print(io, "Constant velocity kinematics (velocity = $(p.ẋ0))")
 end
+
+struct ConstantVelocityDOFSerialization
+    ẋ0 :: Float64
+end
+
+JLD2.writeas(::Type{ConstantVelocityDOF}) = ConstantVelocityDOFSerialization
+
+Base.convert(::Type{ConstantVelocityDOFSerialization}, a::ConstantVelocityDOF) = ConstantVelocityDOFSerialization(a.ẋ0)
+Base.convert(::Type{ConstantVelocityDOF}, a::ConstantVelocityDOFSerialization) = ConstantVelocityDOF(a.ẋ0)
 
 
 """
@@ -140,6 +159,8 @@ end
 function show(io::IO, p::SmoothRampDOF)
   print(io, "Smooth position ramp kinematics (nominal rate = $(p.ẋ0), amplitude = $(p.Δx), nominal time = $(p.t0)), smoothing=$(p.ramp)")
 end
+
+
 
 """
     SmoothVelocityRampDOF(ẍ0,ẋ1,ẋ2,t0[;ramp=EldredgeRamp(11.0)]) <: AbstractPrescribedDOFKinematics
@@ -181,6 +202,20 @@ function show(io::IO, p::SmoothVelocityRampDOF)
   print(io, "Smooth velocity ramp kinematics (nominal rate = $(p.ẍ0), initial velocity = $(p.ẋ1), final velocity = $(p.ẋ2), nominal time = $(p.t0)), smoothing = $(p.ramp)")
 end
 
+struct SmoothVelocityRampDOFSerialization
+    ẍ0 :: Float64
+    ẋ1 :: Float64
+    ẋ2 :: Float64
+    t0 :: Float64
+    ramp :: Abstract1DProfile
+end
+
+JLD2.writeas(::Type{SmoothVelocityRampDOF}) = SmoothVelocityRampDOFSerialization
+
+Base.convert(::Type{SmoothVelocityRampDOFSerialization}, a::SmoothVelocityRampDOF) = SmoothVelocityRampDOFSerialization(a.ẍ0,a.ẋ1,a.ẋ2,a.t0,a.ramp)
+Base.convert(::Type{SmoothVelocityRampDOF}, a::SmoothVelocityRampDOFSerialization) = SmoothVelocityRampDOF(a.ẍ0,a.ẋ1,a.ẋ2,a.t0;ramp=a.ramp)
+
+
 
 """
     OscillatoryDOF(amp,angfreq,phase,ẋ0) <: AbstractPrescribedDOFKinematics
@@ -219,14 +254,26 @@ function show(io::IO, p::OscillatoryDOF)
   print(io, "Oscillatory kinematics (amplitude = $(p.A), ang freq = $(p.Ω), phase = $(p.ϕ), mean velocity = $(p.ẋ0))")
 end
 
+struct OscillatoryDOFSerialization
+    A :: Float64
+    Ω :: Float64
+    ϕ :: Float64
+    ẋ0 :: Float64
+end
+
+JLD2.writeas(::Type{OscillatoryDOF}) = OscillatoryDOFSerialization
+
+Base.convert(::Type{OscillatoryDOFSerialization}, a::OscillatoryDOF) = OscillatoryDOFSerialization(a.A,a.Ω,a.ϕ,a.ẋ0)
+Base.convert(::Type{OscillatoryDOF}, a::OscillatoryDOFSerialization) = OscillatoryDOF(a.A,a.Ω,a.ϕ,a.ẋ0)
+
 """
     CustomDOF(f::Function) <: AbstractPrescribedDOFKinematics
 
 Set custom kinematics for a degree of freedom with a function `f`
 that specifies its value at any given time.
 """
-struct CustomDOF <: AbstractPrescribedDOFKinematics
-    f :: Function
+struct CustomDOF{F<:Function} <: AbstractPrescribedDOFKinematics
+    f :: F
 
     x :: Abstract1DProfile
     ẋ :: Abstract1DProfile
@@ -236,12 +283,26 @@ function CustomDOF(f::Function)
     x = FunctionProfile(f)
     ẋ = d_dt(x)
     ẍ = d_dt(ẋ)
-    CustomDOF(f,x,ẋ,ẍ)
+    CustomDOF{typeof(f)}(f,x,ẋ,ẍ)
 end
 
 function show(io::IO, p::CustomDOF)
   print(io, "Custom kinematics")
 end
+
+# This still does not get rid of warning about anonymous functions
+struct CustomDOFSerialization
+    A :: Float64
+    Ω :: Float64
+    ϕ :: Float64
+    ẋ0 :: Float64
+end
+
+JLD2.writeas(::Type{CustomDOF}) = CustomDOFSerialization
+
+Base.convert(::Type{CustomDOFSerialization}, a::CustomDOF) = CustomDOFSerialization(a.f)
+Base.convert(::Type{CustomDOF}, a::CustomDOFSerialization) = CustomDOF(a.f)
+
 
 """
     ExogenousDOF() <: AbstractDOFKinematics

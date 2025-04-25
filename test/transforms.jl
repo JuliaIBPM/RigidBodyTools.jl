@@ -1,4 +1,5 @@
 using LinearAlgebra
+using JLD2
 
 @testset "Rotations" begin
 
@@ -224,6 +225,20 @@ end
 
   lsid = 2 # this system should be internally fixed
   @test !is_system_in_relative_motion(lsid,ls)
+
+  # test saving and loading in JLD2
+  filen = "testmotion.jld2"
+  save(filen,"motion",ls)
+  data = load(filen)
+  ls_new = data["motion"]
+
+  lsid = 1
+  @test is_system_in_relative_motion(lsid,ls_new)
+  lsid = 2 # this system should be internally fixed
+  @test !is_system_in_relative_motion(lsid,ls_new)
+  @test ismoving(ls_new.joints[3])
+
+
 
   ufcn(x,y,t) = 0.25*2π*x*y*cos(2π*t)
   vfcn(x,y,t) = 0.25*2π*(x^2-y^2)*cos(2π*t)
